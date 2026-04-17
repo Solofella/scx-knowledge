@@ -182,6 +182,8 @@ Each draft written to client-specific Google Sheet with columns:
 **Fix needed:** Strengthen system prompt to describe signal meaning only
 
 **Example fix:**
+Current: "Add this item to the menu"
+Fixed: "Guest expressed interest in menu item not currently offered - potential demand signal"
 
 ### Issue 2: Brand Voice Variation
 
