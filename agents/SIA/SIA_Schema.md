@@ -1,0 +1,358 @@
+# SIA Schema
+
+**NocoDB Table ID:** `mdn68l4lm609fve`  
+**Base ID:** `pq249fix22t3ofv`
+
+---
+
+## Table Fields
+
+| Field Name | Type | Source | Purpose |
+|------------|------|--------|---------|
+| SIA Record ID | Auto-increment | System | Primary key |
+| Client ID | SingleLineText | Query parameter | PAK-001, EDO-001, etc. |
+| **Domain** | SingleSelect | **EIP aggregation** | Cluster key: Food Quality, Service Quality, etc. |
+| **Signal Tier** | SingleSelect | **EIP aggregation** | Cluster key: T-NEGATIVE / T-AMBIGUOUS / T-POSITIVE |
+| **Count** | Number | **SIA computation** | Number of reviews in this cluster |
+| **Percentage** | Number | **SIA computation** | % of total reviews in date range |
+| **Enriched Pain Points JSON** | JSON | **SIA computation** | Array of pain points with frequency counts in cluster |
+| **Enriched Emotions JSON** | JSON | **SIA computation** | Array of emotions with frequency counts in cluster |
+| **Trend Direction** | SingleSelect | **SIA computation** | UP / DOWN / STABLE / NEW (vs prior period) |
+| Date Range Start | Date | Query parameter | Start of aggregation window |
+| Date Range End | Date | Query parameter | End of aggregation window |
+| Created At | DateTime | System | Record creation timestamp |
+
+---
+
+## Relationships
+
+**Upstream:** EIP (reads from EIP NocoDB table, no webhook)
+
+**Downstream:**
+- **Dashboard** (reads SIA table for Signal Pulse, Signal Distribution, Trend Signals)
+- **MRA** (future: reads SIA table for weekly/monthly intelligence briefs)
+
+---
+
+## Field Computation Details
+
+### Domain + Signal Tier (Aggregation Cluster Keys)
+
+**Source:** EIP NocoDB table records
+
+**Logic:**
+```javascript
+// Group EIP records by Domain + Signal Tier
+const clusters = {};
+
+for (let i = 0; i < eipRecords.length; i++) {
+  const record = eipRecords[i];
+  const key = `${record.domain}|${record.signalType}`;
+  
+  if (!clusters[key]) {
+    clusters[key] = {
+      domain: record.domain,
+      tier: record.signalType,
+      count: 0,
+      painPoints: [],
+      emotions: []
+    };
+  }
+  
+  clusters[key].count += 1;
+  clusters[key].painPoints.push(record.enrichedPainPoint);
+  clusters[key].emotions.push(record.enrichedEmotionTag);
+}
+```
+
+**Possible domain values (from EIP):**
+- Food Quality
+- Service Quality
+- Ambiance
+- Value
+- Wait Time
+- Cleanliness
+- Menu Variety
+- Beverage Quality
+- Accessibility
+- Parking
+- Location
+- Technology
+- Special Requests
+
+**Signal Tier values:**
+- T-NEGATIVE (low satisfaction, high pain point severity)
+- T-AMBIGUOUS (mixed signals, moderate pain points)
+- T-POSITIVE (high satisfaction, low/no pain points)
+
+---
+
+### Count (Number of Reviews per Cluster)
+
+**Computation:** Simple frequency count
+
+```javascript
+clusters[key].count += 1; // Increment for each EIP record in cluster
+```
+
+**Example output:**
+- "Food Quality | T-NEGATIVE" = 12 reviews
+- "Service Quality | T-POSITIVE" = 31 reviews
+- "Ambiance | T-AMBIGUOUS" = 8 reviews
+
+---
+
+### Percentage (% of Total Reviews)
+
+**Computation:** (Cluster count / Total EIP records) × 100
+
+```javascript
+const totalRecords = eipRecords.length;
+const percentage = Math.round((clusters[key].count / totalRecords) * 100);
+```
+
+**Example output:**
+- Total reviews in date range: 67
+- "Food Quality | T-NEGATIVE": 12 reviews
+- Percentage: (12 / 67) × 100 = 18%
+
+**Dashboard display:** "18% of reviews flagged Food Quality concerns"
+
+---
+
+### Enriched Pain Points JSON (Frequency-Sorted Array)
+
+**Computation:** Count occurrences of each pain point in cluster, sort by frequency
+
+```javascript
+const painPointCounts = {};
+
+for (let i = 0; i < clusters[key].painPoints.length; i++) {
+  const pp = clusters[key].painPoints[i];
+  painPointCounts[pp] = (painPointCounts[pp] || 0) + 1;
+}
+
+const painPointArray = Object.keys(painPointCounts).map(pp => ({
+  pain_point: pp,
+  count: painPointCounts[pp]
+}));
+
+painPointArray.sort((a, b) => b.count - a.count); // Descending frequency
+
+clusters[key].enrichedPainPointsJSON = JSON.stringify(painPointArray);
+```
+
+**Example JSON output:**
+```json
+[
+  {"pain_point": "Underseasoned protein", "count": 5},
+  {"pain_point": "Overcooked vegetables", "count": 4},
+  {"pain_point": "Cold entree", "count": 3}
+]
+```
+
+**Dashboard usage:** Display top 3 pain points per domain with frequency counts
+
+---
+
+### Enriched Emotions JSON (Frequency-Sorted Array)
+
+**Computation:** Same logic as pain points, applied to emotions
+
+```javascript
+const emotionCounts = {};
+
+for (let i = 0; i < clusters[key].emotions.length; i++) {
+  const emotion = clusters[key].emotions[i];
+  emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+}
+
+const emotionArray = Object.keys(emotionCounts).map(emotion => ({
+  emotion: emotion,
+  count: emotionCounts[emotion]
+}));
+
+emotionArray.sort((a, b) => b.count - a.count);
+
+clusters[key].enrichedEmotionsJSON = JSON.stringify(emotionArray);
+```
+
+**Example JSON output:**
+```json
+[
+  {"emotion": "Disappointment", "count": 7},
+  {"emotion": "Frustration", "count": 5},
+  {"emotion": "Resignation", "count": 3}
+]
+```
+
+**Dashboard usage:** Display top emotions per signal tier
+
+---
+
+### Trend Direction (vs Prior Period)
+
+**Computation:** Compare current count to prior period count (same cluster, previous date range)
+
+```javascript
+// Query SIA table for prior period
+const priorRecords = await nocodb.query({
+  table: 'SIA',
+  filter: `client_id = '${clientId}' AND date_range_end = '${priorEndDate}'`
+});
+
+// Find matching prior cluster
+const priorCluster = priorRecords.find(r => 
+  r.domain === clusters[key].domain && r.signalTier === clusters[key].tier
+);
+
+if (!priorCluster) {
+  clusters[key].trendDirection = 'NEW'; // First appearance
+} else {
+  const currentCount = clusters[key].count;
+  const priorCount = priorCluster.count;
+  const change = ((currentCount - priorCount) / priorCount) * 100;
+  
+  if (change > 10) {
+    clusters[key].trendDirection = 'UP'; // Increased >10%
+  } else if (change < -10) {
+    clusters[key].trendDirection = 'DOWN'; // Decreased >10%
+  } else {
+    clusters[key].trendDirection = 'STABLE'; // Within ±10%
+  }
+}
+```
+
+**Possible values:**
+- **UP:** Current count >10% higher than prior period
+- **DOWN:** Current count >10% lower than prior period
+- **STABLE:** Within ±10% of prior count
+- **NEW:** No prior period data (first occurrence)
+
+**Dashboard usage:** Show trending signals (e.g., "↑ Service Quality issues up 15%")
+
+---
+
+## Token Budget
+
+**Zero tokens per run.**
+
+**No AI API calls:**
+- No OpenAI calls
+- No Anthropic calls
+- No dictionary queries
+
+**Operations:**
+- Read EIP NocoDB table (infrastructure cost only)
+- JavaScript aggregation (CPU time, negligible)
+- Write SIA NocoDB table (infrastructure cost only)
+
+**Scalability:** Cost remains constant regardless of review volume (1 review or 10,000 reviews = same zero AI cost)
+
+---
+
+## Data Read from EIP Table
+
+**SIA queries EIP NocoDB table for:**
+- Client ID (filter parameter)
+- Date Posted (filter parameter for date range)
+- **Domain** (aggregation cluster key)
+- **Signal Type** (aggregation cluster key: T-NEG/T-AMB/T-POS)
+- **Enriched Pain Point** (for frequency counting)
+- **Enriched Pain Point Breakdown JSON** (optional, for detailed analysis)
+- **Enriched Emotion Tag** (for frequency counting)
+- **Enriched Emotion Breakdown JSON** (optional, for detailed analysis)
+
+**SIA does NOT query:**
+- Emotion Dictionary table ✗
+- Pain Point Master table ✗
+- ESS table ✗
+- HSI table ✗
+
+**Why this works:** EIP already resolved all classifications. SIA just groups and counts.
+
+---
+
+## Query Example (n8n Code Node)
+
+```javascript
+// Query EIP table for reviews in date range
+const startDate = '2026-04-10';
+const endDate = '2026-04-17';
+const clientId = 'PAK-001';
+
+const eipRecords = await $http({
+  method: 'GET',
+  url: `http://nocodb:8080/api/v2/tables/mhicpnrahaesxmy/records`,
+  headers: {
+    'xc-token': 'YOUR_TOKEN_HERE'
+  },
+  params: {
+    where: `(client_id,eq,${clientId})~and(date_posted,gte,${startDate})~and(date_posted,lte,${endDate})`
+  }
+});
+
+// eipRecords.list contains array of EIP records
+// Now aggregate in JavaScript (no AI needed)
+```
+
+---
+
+## Data Flow
+Schedule Trigger (Daily 6am UTC)
+↓
+INIT: Define client_id, date range
+↓
+Node 4: Query EIP NocoDB table
+Filter: client_id + date_posted range
+Returns: Array of EIP records
+↓
+Node 5-9: Aggregation (Pure JavaScript)
+
+Group by Domain + Signal Tier
+Count records per cluster
+Calculate percentages
+Build pain point frequency JSON
+Build emotion frequency JSON
+Compare to prior period (trend direction)
+↓
+Node 10: Write to SIA NocoDB table
+One record per cluster (Domain + Tier combination)
+↓
+Node 11: Complete
+Dashboard can now query SIA table for display
+
+
+**No webhooks.** SIA runs on schedule, reads batch, writes summary.
+
+---
+
+## Example SIA Output Records
+
+**For client PAK-001, date range April 10-17, 2026:**
+
+| Domain | Signal Tier | Count | Percentage | Trend | Top Pain Points | Top Emotions |
+|--------|-------------|-------|------------|-------|-----------------|--------------|
+| Food Quality | T-NEGATIVE | 12 | 18% | UP | Underseasoned (5), Overcooked (4) | Disappointment (7), Frustration (5) |
+| Service Quality | T-POSITIVE | 31 | 46% | STABLE | None (0) | Gratitude (18), Joy (13) |
+| Ambiance | T-AMBIGUOUS | 8 | 12% | NEW | Noise level (5), Lighting (3) | Conflicted (4), Neutral (4) |
+| Wait Time | T-NEGATIVE | 5 | 7% | DOWN | Long wait (5) | Frustration (3), Resignation (2) |
+
+**Dashboard displays:**
+- Signal Pulse: 25% negative, 12% ambiguous, 63% positive
+- Signal Distribution: Food Quality 18%, Service Quality 46%, Ambiance 12%, Wait Time 7%
+- Trend Signals: ↑ Food Quality +15%, ↓ Wait Time -8%, → Service Quality stable
+
+---
+
+## Related Documents
+
+- **HOW Document:** [SCX_SIA_HOW_v3.md](SCX_SIA_HOW_v3.md)
+- **Changelog:** [SCX_SIA_CHANGELOG.md](SCX_SIA_CHANGELOG.md)
+- **Design Rationale:** [SIA_Design_Rationale.md](SIA_Design_Rationale.md)
+- **Upstream Agent:** [../EIP/SCX_EIP_HOW_v4.md](../EIP/SCX_EIP_HOW_v4.md)
+- **Dashboard Spec:** [../../commercial/Dashboard_Freelancer_Brief.md](../../commercial/Dashboard_Freelancer_Brief.md)
+
+---
+
+**End of SIA Schema**
