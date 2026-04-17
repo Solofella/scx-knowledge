@@ -329,6 +329,14 @@ Platform adapters → Normalize to Google Sheet (7 cols: Date/Platform/Star Rati
 - **Major rewrites:** Replace HOW document (rare, quarterly)
 
 **Usage in Chats:**
+Fetch from GitHub scx-knowledge:
+
+agents/RDA/SCX_RDA_HOW_v3.1.md
+agents/RDA/SCX_RDA_CHANGELOG.md
+MCD_v7.4.md
+
+
+---
 
 ## Communication Rule (Permanent)
 
