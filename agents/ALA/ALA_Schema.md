@@ -68,3 +68,42 @@ Failed records logged to Error Log field. Pipeline continues processing remainin
 ---
 
 ## Data Flow
+CSV Upload / API Pull
+↓
+ALA Webhook (JSON payload)
+↓
+Parse & Validate Client ID
+↓
+Duplicate Check (NocoDB query)
+↓
+GPT Normalization
+↓
+Write to ALA Table
+↓
+Pass to EIP Webhook (ALA Record ID + Normalized Text)
+
+---
+
+## Key Design Decisions
+
+### Pass-Through Architecture
+ALA writes to NocoDB but also immediately passes data to EIP via webhook. This creates both:
+- **Persistent record** (NocoDB table for audit trail)
+- **Live processing** (webhook to EIP for real-time pipeline flow)
+
+### BCA Integration Point (Future)
+When BCA is built, it will:
+1. Read from ALA NocoDB table (not CSV upload)
+2. Drip records to EIP at controlled rate (10 per batch)
+3. Prevent API rate limit losses at high volume
+
+Currently: Direct ALA → EIP pass-through (no batch control)
+
+---
+
+## Related Documents
+
+- **HOW Document:** [SCX_ALA_HOW_v4.md](SCX_ALA_HOW_v4.md)
+- **Changelog:** [SCX_ALA_CHANGELOG.md](SCX_ALA_CHANGELOG.md)
+- **Schema Registry:** [../../schemas/Schema_Registry_v2.md](../../schemas/Schema_Registry_v2.md)
+- **Downstream Agent:** [../EIP/SCX_EIP_HOW_v4.md](../EIP/SCX_EIP_HOW_v4.md)
