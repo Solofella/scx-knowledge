@@ -1,9 +1,12 @@
-SubtextCX Client Signal Intelligence Dashboard
-Freelancer Implementation Brief — UPDATED v1.1
-Effective: Chat #79 · April 19, 2026
-Project Owner: Miguel Arellano, Solofella LLC
-Status: Ready for freelancer handoff
-Audience: Frontend developer (intermediate to advanced, Node.js + Express + vanilla JS)
+# **SubtextCX Client Signal Intelligence Dashboard**
+## **Freelancer Implementation Brief — UPDATED v1.1**
+
+**Effective:** Chat #79 · April 19, 2026  
+**Project Owner:** Miguel Arellano, Solofella LLC  
+**Status:** Ready for freelancer handoff  
+**Audience:** Frontend developer (intermediate to advanced, Node.js + Express + vanilla JS)
+
+---
 
 ## 1. Purpose & Context
 
