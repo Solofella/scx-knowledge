@@ -1,389 +1,336 @@
-# MRA Schema
+# MRA_Schema.md v1.1
 
 **NocoDB Table ID:** `mybieof2em75t6e`  
-**Base ID:** `pq249fix22t3ofv`
+**Base ID:** `pq249fix22t3ofv`  
+**Updated:** Chat #78 · April 11, 2026
 
 ---
 
-## Table Fields
+## Table Fields (14 Total)
 
 | Field Name | Field ID | Type | Source | Purpose |
 |------------|----------|------|--------|---------|
-| MRA Run ID | `czljrhljau7a8iv` | Auto-increment | System | Primary key |
-| Report Type | `cyqw1ki969a0vq0` | SingleSelect | MRA computation | 48hr-Summary / Weekly-Brief / Monthly-Report |
-| Client ID | `chp1m03x1v1t3mv` | SingleLineText | Query parameter | PAK-001, EDO-001, etc. |
-| Total Records | `cr3fr2dpxdncllz` | Number | MRA aggregation | Count of reviews processed in period |
-| Avg Star Rating | `cohbxugfjq590n1` | Number | MRA aggregation | Average rating across period (1-5 scale) |
-| SLA Rate | `cauxg0fskprxy70` | Number | MRA computation | % drafts approved within 48hr |
-| T-NEGATIVE | `c7qu39qw9puutdq` | Number | SIA aggregation | Count of negative-tier reviews |
-| T-AMBIGUOUS | `corkoggtozkumne` | Number | SIA aggregation | Count of ambiguous-tier reviews |
-| T-POSITIVE | `cg0u8la22vt06lc` | Number | SIA aggregation | Count of positive-tier reviews |
-| Delivery Status | `ci6hytuki6u9i2j` | SingleSelect | Email API response | Sent / Failed / Pending |
-| Magic Link Token | `can5u62qbnmin1x` | SingleLineText | MRA generation | Secure token for dashboard access (32-byte hex) |
-| Error Log | `c5b2bybjo0equeb` | LongText | Error capture | Email delivery failures, query errors, aggregation issues |
-| Platform Counts JSON | `cixk8vliloo1rao` | JSON | ALA aggregation | Review counts by platform (Google, Yelp, OpenTable, etc.) |
-| Created At | (auto) | DateTime | System | Report generation timestamp |
+| Id | (auto) | AutoNumber | System | Primary key (NocoDB auto-generated) |
+| MRA Run ID | `czljrhljau7a8iv` | SingleLineText | MRA computation | Format: `MRA-YYYYMMDD-[Type]` e.g. `MRA-20260410-Monthly` |
+| Report Type | `cyqw1ki969a0vq0` | SingleSelect | Trigger type | Daily-48hr / Weekly / Monthly |
+| Client ID | `chp1m03x1v1t3mv` | SingleLineText | MRA hardcoded (Phase 1) | PAK-001 / EDO-001 / AJI-001 |
+| Total Records | `cr3fr2dpxdncllz` | Number | RDA published count | Count of published RDA records in period |
+| Avg Star Rating | `cohbxugfjq590n1` | Number | RDA aggregation | Average star rating (2 decimal places) from RDA records |
+| SLA Rate | `cauxg0fskprxy70` | Number | MRA computation | % approved within 48hr of **RDA Timestamp** (not ALA Timestamp) |
+| T Neg | `c7qu39qw9puutdq` | Number | RDA tier count | COUNT where Confirmed Response Tier = T3 (Tier naming: T1/T2/T3 not T-POS/T-AMB/T-NEG) |
+| T Amb | `corkoggtozkumne` | Number | RDA tier count | COUNT where Confirmed Response Tier = T2 |
+| T Pos | `cg0u8la22vt06lc` | Number | RDA tier count | COUNT where Confirmed Response Tier = T1 |
+| Delivery Status | `ci6hytuki6u9i2j` | SingleSelect | Brevo API response | Delivered / Failed |
+| Magic Link Token | `can5u62qbnmin1x` | SingleLineText | MRA generation | 64-char hex token (future dashboard auth) |
+| Error Log | `c5b2bybjo0equeb` | LongText | Error capture | Workflow failures, query errors |
+| Platform Counts JSON | `cixk8vliloo1rao` | LongText | MRA aggregation | JSON object `{"Google":13,"OpenTable":8,"Yelp":1}` |
+| CreatedAt | (auto) | DateTime | NocoDB system | Report generation timestamp |
 
 ---
 
-## Relationships
+## Key Corrections from v1.0
 
-**Upstream (Read-Only Queries):**
-- **SIA table:** Signal distribution metrics, trend direction
-- **RDA table:** Response draft counts, approval status, velocity
-- **ALA table:** Review counts, star ratings, platform distribution
-- **Client Config table:** Client display name, email address
+**1. Tier field naming corrected:**
+- v1.0 incorrectly labeled: T-NEGATIVE / T-AMBIGUOUS / T-POSITIVE
+- v1.1 correct: T Neg / T Amb / T Pos (NocoDB field names)
+- **Source:** RDA `Confirmed Response Tier` field values are T1/T2/T3 not T-NEG/T-AMB/T-POS
+- **Mapping:** T1=Positive → T Pos field, T2=Ambiguous → T Amb field, T3=Negative → T Neg field
 
-**Downstream:** None (MRA is end-of-pipeline reporting)
+**2. Platform Counts JSON field added:**
+- Field ID `cixk8vliloo1rao` confirmed working Chat #77
+- Stores JSON string not native JSON type (LongText field)
+- Example: `{"Google":13,"OpenTable":8,"Yelp":1}`
 
-**Side Effect:** Email delivery via Brevo API (external service)
+**3. SLA Rate formula corrected:**
+- v1.0: measured from **ALA date_posted** to RDA approved_at
+- v1.1: measures from **RDA Timestamp** to **Published Timestamp**
+- Both timestamps exist in RDA table — no ALA join needed
+- Logic: hours = (Published Timestamp - RDA Timestamp) / 3600000, pass if ≤ 48
+
+**4. Total Records source corrected:**
+- v1.0: counted from ALA table
+- v1.1: counts **published RDA records** in period filtered by Client ID + Published Timestamp range
+- Uses `pageInfo.totalRows` not `list.length`
+
+**5. Avg Star Rating source corrected:**
+- v1.0: queried ALA table directly
+- v1.1: reads Star Rating field from **RDA published records** (Star Rating inherited from ALA via pipeline)
+- Simpler — single query to RDA table, no ALA join needed
 
 ---
 
-## Field Computation Details
+## Data Flow (Corrected)
 
-### Report Type (Trigger-Determined)
-
-**Set by cron trigger:**
-
-| Trigger Schedule | Report Type | Period Covered |
-|------------------|-------------|----------------|
-| Daily 6am UTC | `48hr-Summary` | Last 48 hours |
-| Monday 7am UTC | `Weekly-Brief` | Last 7 days |
-| 1st of month 7am UTC | `Monthly-Report` | Last 30 days |
-
-**No AI computation** - directly mapped from trigger type
-
----
-
-### Total Records (Count from ALA)
-
-**Query:**
-```javascript
-const alaRecords = await nocodb.query({
-  table: 'ALA',
-  filter: `client_id = '${clientId}' AND date_posted >= '${startDate}' AND date_posted <= '${endDate}'`
-});
-
-const totalRecords = alaRecords.pageInfo.totalRows; // Use pageInfo, not list.length
+```
+Schedule Trigger (daily 6am / Monday 7am / 1st of month 7am)
+↓
+Step 2: Merge Triggers
+↓
+Step 3: Determine Report Type + Date Range
+↓
+Step 4: HTTP GET RDA table
+  Filter: (Client ID,eq,PAK-001)~and(Published Timestamp,gte,[start])~and(Published Timestamp,lte,[end])
+  Returns: all published RDA records in period
+↓
+Step 5: Check Record Count
+  If pageInfo.totalRows === 0 → return [] and stop
+↓
+Step 6: Compute Tier Counts (Code Node)
+  Count T1/T2/T3 from Confirmed Response Tier field
+↓
+Step 7: Compute Avg Star Rating (Code Node)
+  Average of Star Rating field from RDA records
+↓
+Step 8: Compute Platform Counts (Code Node)
+  Build JSON object from Platform field (inherited from ALA)
+  Output: {"Google":N,"OpenTable":M,"Yelp":K}
+↓
+Step 9: Compute Response Draft Status (Code Node)
+  - Avg approval hours: (Published Timestamp - RDA Timestamp) / 3600000
+  - SLA rate: % where hours ≤ 48
+  - Count by Approval Status
+↓
+Step 10: Compute Trend Signals (Code Node)
+  Placeholder - returns [] in Phase 1
+↓
+Step 11: Compute SEO Signal (Code Node)
+  - seo_keyword_hits: COUNT of drafts containing ≥1 keyword (not total appearances)
+  - seo_top_keyword, seo_coverage_rate, seo_response_rate, seo_avg_velocity
+↓
+Step 12: Write to NocoDB MRA table (HTTP POST)
+  All 14 fields including Platform Counts JSON
+↓
+Step 13: Build Email Body (Code Node)
+  Plain text format, governance footer, Platform Inputs section
+↓
+Step 14: Send via Brevo API (HTTP POST)
+  Sender: marellano@solofella.com
+  Recipient: marellano@solofella.com
+↓
+Steps 15-17: Error handler if any step fails
 ```
 
-**Purpose:** Display total review volume in report
+**Key difference from v1.0:** Single RDA query replaces separate SIA/RDA/ALA queries. All needed data exists in published RDA records.
 
 ---
 
-### Avg Star Rating (Calculation from ALA)
+## Field Computation Details (Corrected)
 
-**Query:**
+### SLA Rate (48-Hour Compliance)
+
+**Definition:** % of response drafts approved within 48 hours of **draft creation** (RDA Timestamp)
+
+**Code:**
 ```javascript
-const alaRecords = await nocodb.query({
-  table: 'ALA',
-  filter: `client_id = '${clientId}' AND date_posted >= '${startDate}' AND date_posted <= '${endDate}'`
-});
-
-let totalStars = 0;
-for (let i = 0; i < alaRecords.list.length; i++) {
-  totalStars += alaRecords.list[i].star_rating;
+let within_48hr = 0;
+for (let i = 0; i < rda_records.length; i++) {
+  let rda_ts = new Date(rda_records[i]['RDA Timestamp']).getTime();
+  let pub_ts = new Date(rda_records[i]['Published Timestamp']).getTime();
+  let hours = (pub_ts - rda_ts) / (1000 * 60 * 60);
+  if (hours <= 48) {
+    within_48hr = within_48hr + 1;
+  }
 }
-
-const avgStarRating = (totalStars / alaRecords.list.length).toFixed(1); // e.g., 4.2
+let sla_rate = Math.round((within_48hr / rda_records.length) * 100);
 ```
 
-**Format:** One decimal place (e.g., 4.2, 3.8)
-
-**Purpose:** Quick sentiment indicator in report
+**Target:** 90% compliance  
+**Current performance:** Verified working April 10 2026 monthly report
 
 ---
 
-### SLA Rate (Time-to-Approval Calculation)
+### Tier Counts (T1/T2/T3 from RDA)
 
-**Definition:** % of response drafts approved within 48 hours of review posting
-
-**Query:**
+**Code:**
 ```javascript
-const rdaRecords = await nocodb.query({
-  table: 'RDA',
-  filter: `client_id = '${clientId}' AND created_at >= '${startDate}' AND approval_status = 'Approved'`
-});
+let t1_count = 0;
+let t2_count = 0;
+let t3_count = 0;
 
-let within48hr = 0;
-
-for (let i = 0; i < rdaRecords.list.length; i++) {
-  const draft = rdaRecords.list[i];
-  
-  // Get review posted date from ALA
-  const alaRecord = await nocodb.query({
-    table: 'ALA',
-    filter: `id = ${draft.ala_record_id}`
-  });
-  
-  const reviewPosted = new Date(alaRecord.list[0].date_posted);
-  const draftApproved = new Date(draft.approved_at);
-  
-  const hoursToApproval = (draftApproved - reviewPosted) / (1000 * 60 * 60);
-  
-  if (hoursToApproval <= 48) {
-    within48hr++;
+for (let i = 0; i < rda_records.length; i++) {
+  let tier = rda_records[i]['Confirmed Response Tier'] || '';
+  if (tier === 'T1') {
+    t1_count = t1_count + 1;
+  } else if (tier === 'T2') {
+    t2_count = t2_count + 1;
+  } else if (tier === 'T3') {
+    t3_count = t3_count + 1;
   }
 }
 
-const slaRate = Math.round((within48hr / rdaRecords.list.length) * 100); // Integer percentage
+// Store as:
+// T Pos = t1_count
+// T Amb = t2_count  
+// T Neg = t3_count
 ```
 
-**Target:** 90% compliance
-
-**Dashboard color coding:**
-- Green: ≥90%
-- Yellow: 80-89%
-- Red: <80%
+**Note:** RDA uses T1/T2/T3 tier labels. MRA NocoDB fields named T Pos/T Amb/T Neg for dashboard readability.
 
 ---
 
-### T-NEGATIVE / T-AMBIGUOUS / T-POSITIVE (From SIA)
+### Platform Counts JSON
 
-**Query:**
+**Code:**
 ```javascript
-const siaRecords = await nocodb.query({
-  table: 'SIA',
-  filter: `client_id = '${clientId}' AND date_range_start >= '${startDate}' AND date_range_end <= '${endDate}'`
-});
-
-let tNegative = 0;
-let tAmbiguous = 0;
-let tPositive = 0;
-
-for (let i = 0; i < siaRecords.list.length; i++) {
-  const record = siaRecords.list[i];
-  
-  if (record.signal_tier === 'T-NEGATIVE') {
-    tNegative += record.count;
-  } else if (record.signal_tier === 'T-AMBIGUOUS') {
-    tAmbiguous += record.count;
-  } else if (record.signal_tier === 'T-POSITIVE') {
-    tPositive += record.count;
+let platform_map = {};
+for (let i = 0; i < rda_records.length; i++) {
+  let p = rda_records[i]['Platform'] || 'Unknown';
+  if (platform_map[p]) {
+    platform_map[p] = platform_map[p] + 1;
+  } else {
+    platform_map[p] = 1;
   }
 }
+let platform_counts_json = JSON.stringify(platform_map);
 ```
+
+**Example output:** `{"Google":13,"OpenTable":8,"Yelp":1}`
 
 **Email display:**
-Signal Distribution:
+```
+Platform Inputs:
+- Google: 13 reviews
+- OpenTable: 8 reviews
+- Yelp: 1 review
+```
 
-Negative: 12 (18%)
-Ambiguous: 23 (34%)
-Positive: 32 (48%)
+---
 
+### Average Approval Hours (RDA Timestamp → Published Timestamp)
 
-**Percentage calculation:**
+**Code:**
 ```javascript
-const total = tNegative + tAmbiguous + tPositive;
-const negPct = Math.round((tNegative / total) * 100);
-const ambPct = Math.round((tAmbiguous / total) * 100);
-const posPct = Math.round((tPositive / total) * 100);
+let total_hours = 0;
+let approved_count = 0;
+
+for (let i = 0; i < rda_records.length; i++) {
+  let status = rda_records[i]['Approval Status'] || '';
+  if (status === 'Approved' || status === 'Edited-Approved') {
+    let rda_ts = new Date(rda_records[i]['RDA Timestamp']).getTime();
+    let pub_ts = new Date(rda_records[i]['Published Timestamp']).getTime();
+    let hours = (pub_ts - rda_ts) / (1000 * 60 * 60);
+    total_hours = total_hours + hours;
+    approved_count = approved_count + 1;
+  }
+}
+
+let avg_approval_hours = approved_count > 0 
+  ? Math.round(total_hours / approved_count) 
+  : 0;
 ```
+
+**Used in:** Weekly and Monthly reports  
+**Not used in:** Daily 48hr summary
 
 ---
 
-### Platform Counts JSON (From ALA)
+### SEO Keyword Hits (Drafts Containing Keywords)
 
-**Query:**
+**Definition:** COUNT of published drafts containing ≥1 keyword from Client Config — **not** total keyword appearances
+
+**Code:**
 ```javascript
-const alaRecords = await nocodb.query({
-  table: 'ALA',
-  filter: `client_id = '${clientId}' AND date_posted >= '${startDate}'`
-});
+let seo_keywords = client_config['SEO Keywords'] || '';
+let keywords_arr = seo_keywords.split(',');
+let drafts_with_keyword = 0;
 
-const platformCounts = {};
-
-for (let i = 0; i < alaRecords.list.length; i++) {
-  const platform = alaRecords.list[i].platform;
-  platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+for (let i = 0; i < rda_records.length; i++) {
+  let draft = (rda_records[i]['Public Response Draft'] || '').toLowerCase();
+  let has_keyword = false;
+  for (let j = 0; j < keywords_arr.length; j++) {
+    let kw = keywords_arr[j].trim().toLowerCase();
+    if (kw !== '' && draft.includes(kw)) {
+      has_keyword = true;
+    }
+  }
+  if (has_keyword) {
+    drafts_with_keyword = drafts_with_keyword + 1;
+  }
 }
-
-const platformCountsJSON = JSON.stringify(platformCounts);
+let seo_keyword_hits = drafts_with_keyword;
 ```
 
-**Example JSON:**
-```json
-{
-  "Google": 45,
-  "Yelp": 18,
-  "OpenTable": 4
-}
-```
-
-**Email display:**
-Platform Breakdown:
-
-Google: 45
-Yelp: 18
-OpenTable: 4
-
+**Example:** 22 published drafts, 18 contain ≥1 keyword → `seo_keyword_hits = 18` (not the total count of all keyword appearances across all drafts)
 
 ---
 
-### Magic Link Token (Security)
+## Email Template Structure (Corrected)
 
-**Generation:**
-```javascript
-const crypto = require('crypto');
-const token = crypto.randomBytes(32).toString('hex'); // 64-character hex string
+**Governance footer (exact text):**
+```
+SubtextCX detects and interprets signals only.
+Operational decisions remain with your team.
 ```
 
-**Example token:**
-a7f3c8e9d2b1f4a6c5e8d9f2b3a7c4e6d8f9a2b5c7e4f6a9d3b8c5e7f2a4b6c8
+**Sender:** `marellano@solofella.com` (verified in Brevo)  
+**Recipient:** `marellano@solofella.com` (Phase 1 — from Client Config in Phase 2)
 
-**Dashboard URL:**
-https://subtextcx.venuiq.com/PAK-001?token=a7f3c8e9d2b1f4a6c5e8d9f2b3a7c4e6d8f9a2b5c7e4f6a9d3b8c5e7f2a4b6c8
-
-**Expiration:** 7 days from creation (enforced in dashboard validation logic)
-
-**Single-use option (future):** Add `used` boolean field, mark true after first access
-
----
-
-### Delivery Status (Brevo API Response)
-
-**Set based on Brevo API response:**
-
-**Success response:**
-```json
-{
-  "messageId": "abc123-def456",
-  "status": "sent"
-}
-```
-→ MRA sets: `Delivery Status = 'Sent'`
-
-**Failure response:**
-```json
-{
-  "error": "Invalid recipient email",
-  "code": 400
-}
-```
-→ MRA sets: `Delivery Status = 'Failed'`, logs error to Error Log field
-
-**Pending (rare):**
-- Email queued in Brevo but not yet sent
-- MRA sets: `Delivery Status = 'Pending'`
-
----
-
-### Error Log (Failure Capture)
-
-**Populated when:**
-- Brevo API call fails (invalid email, rate limit, network timeout)
-- NocoDB query fails (table not found, invalid filter)
-- Aggregation error (division by zero, missing data)
-
-**Error does NOT block processing:**
-- Error logged to this field
-- Email not sent (Delivery Status = 'Failed')
-- Workflow continues (next client or next report type)
-
-**Example error log entries:**
-2026-04-17T06:02:15Z - Brevo API error: Invalid recipient email 'invalid@example'
-
-2026-04-17T06:05:32Z - SIA query error: No records found for date range 2026-04-10 to 2026-04-17
-
-2026-04-17T06:08:47Z - Aggregation error: Division by zero (no RDA records for SLA calculation)
+**All non-ASCII characters replaced:**
+- Old: `·` and `—`
+- New: `-`
 
 ---
 
 ## Token Budget
 
-**Zero tokens per report.**
+**Zero tokens.**
 
-**MRA operations:**
-- NocoDB queries (read-only, no AI)
-- JavaScript aggregation (`for` loops, arithmetic)
-- String concatenation (email body formatting)
-- Brevo API call (external HTTP request, no AI)
+**No AI calls anywhere:**
+- No OpenAI
+- No Anthropic Claude
+- No LLM of any kind
 
-**No OpenAI. No Anthropic. No LLM.**
+**Operations:**
+- HTTP GET NocoDB (read-only)
+- JavaScript loops and arithmetic
+- String concatenation
+- HTTP POST Brevo API
 
-**Cost:** Infrastructure only (NocoDB queries, Brevo free tier)
-
----
-
-## Data Flow
-Cron Trigger (Daily 6am / Monday 7am / Monthly 1st 7am)
-↓
-INIT-2: Determine report type (48hr / Weekly / Monthly)
-↓
-INIT-3: Set date range based on report type
-↓
-Node 4: Query SIA table
-Aggregate: T-NEG, T-AMB, T-POS counts
-↓
-Node 5: Query RDA table
-Calculate: SLA rate, approval status distribution
-↓
-Node 6: Query ALA table
-Aggregate: Total reviews, avg star rating, platform counts
-↓
-Node 7: Compose email body (plain text formatting)
-Generate: Magic link token (crypto.randomBytes)
-↓
-Node 8: Brevo API call
-Send email to client contact
-Capture delivery status
-↓
-Write to MRA NocoDB table (report metadata + delivery status)
-
-**No AI anywhere in flow.**
+**Cost:** Infrastructure only (NocoDB free, Brevo 300 emails/day free tier)
 
 ---
 
-## Email Template Structure
+## n8n 2.4.6 Constraints Applied
 
-**Subject line:**
-SubtextCX [Report Type] - [Client Name] - [Date]
+**All MRA Code Nodes comply:**
 
-**Body format:**
-SubtextCX [Report Type]
-[Client Display Name]
-[Date]
-[Metrics Section - 5-7 bullet points]
-View full dashboard: [Magic Link URL]
+1. Loop variables use `let` never `const`
+2. No arrow functions with `const` inside
+3. No unused variable declarations
+4. Use `pageInfo.totalRows` for counts
+5. No spread operator — key-by-key only
+6. No `for...of` loops
+7. Non-ASCII characters replaced with `-`
 
-Powered by SubtextCX
+**Verified compliant:** Chat #77 April 10 2026
 
-**Example 48hr Summary:**
-SubtextCX 48-Hour Summary
-Park Avenue Kitchen by David Burke
-April 17, 2026
-Reviews Processed: 8
+---
 
-Google: 5
-Yelp: 2
-OpenTable: 1
+## Verified Test Results
 
-Response Drafts Generated: 8
+**First Monthly Report — April 10 2026:**
+- 22 published RDA records (13 Google + 8 OpenTable + 1 Yelp)
+- Avg star 4.23
+- Platform Counts JSON: `{"Google":13,"OpenTable":8,"Yelp":1}`
+- All sections populated ✅
+- Email delivered ✅
 
-T1 (Positive): 6
-T2 (Ambiguous): 1
-T3 (Negative): 1
-
-Approval Status:
-
-Approved: 5
-Pending Review: 3
-
-Average Response Velocity: 14 hours
-View dashboard: https://subtextcx.venuiq.com/PAK-001?token=[64-char-token]
-
-Powered by SubtextCX
+**Second Monthly Report — April 10 2026 (after all fixes):**
+- Same 22 records
+- All formulas corrected ✅
+- Platform Inputs section added to email ✅
+- All n8n 2.4.6 constraints applied ✅
 
 ---
 
 ## Related Documents
 
-- **HOW Document:** [SCX_MRA_HOW_v1.0.md](SCX_MRA_HOW_v1.0.md)
-- **Changelog:** [SCX_MRA_CHANGELOG.md](SCX_MRA_CHANGELOG.md)
-- **SIA (similar zero-cost model):** [../SIA/SCX_SIA_HOW_v3.md](../SIA/SCX_SIA_HOW_v3.md)
-- **Dashboard Spec:** [../../commercial/Dashboard_Freelancer_Brief.md](../../commercial/Dashboard_Freelancer_Brief.md)
+- **HOW Document:** [SCX_MRA_HOW_v1.1.md](SCX_MRA_HOW_v1.1.md)
+- **Master Continuity Document:** [MCD_v7.4.md](../../docs/MCD_v7.4.md)
+- **Schema Registry:** [Schema_Registry_v2.md](../../docs/Schema_Registry_v2.md)
+- **Dashboard Freelancer Brief:** [Dashboard_Freelancer_Brief.pdf](../../commercial/Dashboard_Freelancer_Brief.pdf)
 
 ---
 
-**End of MRA Schema**
+**End of MRA_Schema.md v1.1**  
+**Updated:** Chat #78 · April 11, 2026
