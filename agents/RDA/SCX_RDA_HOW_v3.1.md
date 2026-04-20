@@ -637,15 +637,21 @@ SingleSelect pre-population: Confirmed Response Tier (T1/T2/T3) · Approval Stat
 ### Open Items
 
 | Item | Status | Notes |
-|---|---|---|
-| First-name extraction from reviewer_handle | Open | Full surnames appearing. Requires filter in Step 7a user prompt. |
-| MRA build | On hold | Pending first pilot data. |
-| BCA (Batch Controller Agent) | On hold | Option B design post-pilot. |
+|------|--------|-------|
+| First-name extraction from reviewer_handle | Open | Full surnames appearing in drafts. Requires filter in Step 7a user prompt. |
+| MRA build | On hold | Pending first pilot data. Table created. 5 pre-build items remain. |
+| BCA (Batch Controller Agent) | On hold | Option B design (reads from ALA NocoDB). Post-pilot. |
 | subtextcx.com landing page | Not started | Required before outbound prospect contact. |
 | Google Sheet approval interface | Phase 2 | Apps Script onEdit → n8n webhook → PATCH RDA NocoDB. |
 | OpenTable partner application | Pending | Submit at partners.opentable.com. |
+| TripAdvisor developer program | Pending | Apply when ready. |
 | EDO-001 Client Config | Not created | Q2 2026 pilot. |
-| Phase 1b auto-ingestion | Planned | Google Business Profile API + Yelp Fusion API. |
+| Phase 1b auto-ingestion | Planned | Google Business Profile API + Yelp Fusion API builds. |
+| **SCX-Sheet-Sync OAuth credential failure** | **In Progress (Chat #77)** | **n8n 2.4.6 task runner cannot use OAuth refresh tokens in scheduled workflows. Error: "refreshToken is required" at 7am UTC scheduled run (Apr 20, 2026). Solution: Replace with Google Service Account (non-expiring JSON key). Impacts autonomous operation of approval workflow sheet population. Service Account setup: (1) Create in solofella-cmh-project, (2) Generate JSON key, (3) Share PAK-001 sheet with service account email, (4) Update SCX-Sheet-Sync Step 8 HTTP Request credential, (5) Test next scheduled run.** |
+
+**Spanish commercial scan:** both EN and ES prohibited terms applied regardless of record lang — bilingual safety net. Additional Spanish terms specific to a client's brand or legal context may be needed — review with first Spanish-language pilot client.
+
+**48-hour SLA:** Locked Chat #42. Track Time to Approval (RDA KPI) from RDA Timestamp to Approval Status change. If consistently missed, investigate approval workflow with client.
 
 ---
 
