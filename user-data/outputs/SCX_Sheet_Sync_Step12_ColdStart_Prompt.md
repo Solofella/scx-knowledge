@@ -26,21 +26,7 @@ The email summarizes:
 
 ## CURRENT SCX-SHEET-SYNC STATE
 
-You already have these nodes built (Steps 1-11):
-
-1. Schedule Trigger (7am UTC daily)
-2. NocoDB GET (Fetch Pending RDA Records — PAK-001)
-3. IF Node (Records exist?)
-4. SplitInBatches (Process one record per loop)
-5. NocoDB GET (Fetch ALA Record — enrichment)
-6. Code Node (Join RDA + ALA fields)
-7. Google Sheets GET (Fetch existing RDA-IDs — idempotency)
-8. Code Node (Build idempotency check + filter logic)
-9. IF Node (Record already in sheet?)
-10. Code Node (Format 8-column row values)
-11. Google Sheets POST (Append row to sheet)
-
-**Step 11 is the last node. After Step 11, the loop continues or exits.**
+You already have build 11 steps (14 nodes) in that SCX-Sheet-Sync workflow
 
 ---
 
