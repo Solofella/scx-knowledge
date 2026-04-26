@@ -1,0 +1,486 @@
+Chat #77 · April 21, 2026
+
+Here is the complete **Cold Start Prompt for SCX-MRA Chat** to build the Daily Report Email workflow:
+
+---
+
+# Cold Start Prompt — SCX-MRA Chat
+## Build SCX-MRA-Daily-Report: Daily Approval Metrics Email (8:00am)
+
+---
+
+**Date:** April 21, 2026  
+**Chat:** SCX-MRA (Metrics & Reporting Agent chat)  
+**Task:** Build NEW workflow SCX-MRA-Daily-Report  
+**Context:** SubtextCX / Solofella LLC / PAK-001 pilot  
+
+---
+
+## WHAT YOU NEED TO DO
+
+Build a NEW n8n workflow called **SCX-MRA-Daily-Report** that runs every day at 8:00am UTC and sends Christine a daily email report showing:
+
+1. **Yesterday's performance** — How many records were approved, edited, still pending, not accepted
+2. **SLA compliance** — How many approvals were on-time (within 48hrs) vs. overdue
+3. **Signal distribution** — Breakdown of T-NEGATIVE, T-AMBIGUOUS, T-POSITIVE from yesterday's published records
+4. **Platform inputs** — How many published records came from Google, OpenTable, Yelp
+5. **Today's workload** — How many new records were added this morning + still pending from before
+
+This workflow is SEPARATE from the existing MRA workflows. This is a new standalone workflow focused only on the daily email report.
+
+---
+
+## WORKFLOW ARCHITECTURE
+
+**Workflow Name:** SCX-MRA-Daily-Report  
+**Trigger:** Schedule — 8:00 AM UTC daily  
+**Total Nodes:** 5 nodes (1 trigger + 4 processing)  
+**Email Recipient (testing):** marellano@solofella.com  
+**Email Recipient (production):** Will pull from PAK-001 Client Config approval_contact_email  
+
+---
+
+## NODE-BY-NODE BUILD SPECIFICATION
+
+### NODE 1 — Schedule Trigger
+
+**Node Title:** `Node 1 - Schedule Trigger`  
+**Node Type:** Schedule Trigger  
+**Wire TO:** Node 2 (Query Yesterday's Published)
+
+**Configuration:**
+```
+Trigger type: Every day
+Time: 08:00 (UTC)
+Timezone: UTC
+Execute: Every execution
+```
+
+**Purpose:** Fires the workflow every day at 8:00 AM UTC.
+
+---
+
+### NODE 2 — NocoDB GET (Query Yesterday's Published Records)
+
+**Node Title:** `Node 2 - Query Yesterday Published Records`  
+**Node Type:** HTTP Request  
+**Wire FROM:** Node 1 (Schedule Trigger)  
+**Wire TO:** Node 4 (Calculate Metrics)
+
+**Configuration:**
+
+```
+Method: GET
+URL: http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns
+
+Query Parameters:
+  where: (Published Timestamp,gte,{{new Date(Date.now() - 86400000).toISOString().split('T')[0]}}T00:00:00Z)~and(Published Timestamp,lt,{{new Date().toISOString().split('T')[0]}}T00:00:00Z)~and(Client ID,eq,PAK-001)
+  limit: 100
+  sort: -Published Timestamp
+
+Authentication: None
+
+Headers:
+  Name: xc-token
+  Value: [Your NocoDB xc-token credential value]
+
+Response Format: JSON
+```
+
+**Purpose:** Queries RDA table for all records that were published YESTERDAY (Published Timestamp between yesterday 00:00:00 and today 00:00:00 UTC). This gives us yesterday's approved/edited records for performance metrics.
+
+**Output fields needed:**
+- Approval Status (Approved / Edited-Approved / Not Accepted)
+- RDA Timestamp (for SLA calculation)
+- Published Timestamp (for SLA calculation)
+- Confirmed Response Tier (T1/T2/T3 — proxy for signal type)
+- Platform (Google / OpenTable / Yelp)
+
+---
+
+### NODE 3 — NocoDB GET (Query Today's New Pending Records)
+
+**Node Title:** `Node 3 - Query Today New Pending Records`  
+**Node Type:** HTTP Request  
+**Wire FROM:** Node 1 (Schedule Trigger) — **PARALLEL to Node 2**  
+**Wire TO:** Node 4 (Calculate Metrics)
+
+**Configuration:**
+
+```
+Method: GET
+URL: http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns
+
+Query Parameters:
+  where: (RDA Timestamp,gte,{{new Date().toISOString().split('T')[0]}}T00:00:00Z)~and(Approval Status,in,Pending,Pending-Elevated)~and(Client ID,eq,PAK-001)~and(Published Timestamp,is,null)
+  limit: 100
+  sort: -RDA Timestamp
+
+Authentication: None
+
+Headers:
+  Name: xc-token
+  Value: [Your NocoDB xc-token credential value]
+
+Response Format: JSON
+```
+
+**Purpose:** Queries RDA table for records created TODAY (RDA Timestamp >= today 00:00:00) that are still pending (not yet published). This gives us "today's workload" count.
+
+---
+
+### NODE 4 — Code Node (Calculate All Metrics)
+
+**Node Title:** `Node 4 - Calculate All Metrics`  
+**Node Type:** Code Node  
+**Wire FROM:** Node 2 AND Node 3 (receives input from BOTH)  
+**Wire TO:** Node 5 (Send Email)
+
+**Code:**
+
+```javascript
+const yesterday = $("Node 2 - Query Yesterday Published Records").first().json.list || [];
+const todayPending = $("Node 3 - Query Today New Pending Records").first().json.list || [];
+
+// PERFORMANCE METRICS (Yesterday's published only)
+let approved = 0;
+let editedApproved = 0;
+let stillPending = 0;
+let notAccepted = 0;
+
+for (let i = 0; i < yesterday.length; i++) {
+  const status = yesterday[i]['Approval Status'];
+  if (status === 'Approved') {
+    approved++;
+  } else if (status === 'Edited-Approved') {
+    editedApproved++;
+  } else if (status === 'Pending' || status === 'Pending-Elevated') {
+    stillPending++;
+  } else if (status === 'Not Accepted') {
+    notAccepted++;
+  }
+}
+
+// SLA COMPLIANCE (Yesterday's approved records only)
+const totalApproved = approved + editedApproved;
+let ontimeCount = 0;
+let overdueCount = 0;
+
+for (let i = 0; i < yesterday.length; i++) {
+  const status = yesterday[i]['Approval Status'];
+  if (status === 'Approved' || status === 'Edited-Approved') {
+    const rdaTime = new Date(yesterday[i]['RDA Timestamp']).getTime();
+    const pubTime = new Date(yesterday[i]['Published Timestamp']).getTime();
+    const elapsedMs = pubTime - rdaTime;
+    const slaMs = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+    
+    if (elapsedMs <= slaMs) {
+      ontimeCount++;
+    } else {
+      overdueCount++;
+    }
+  }
+}
+
+// SIGNAL DISTRIBUTION (Yesterday's published)
+let tNegative = 0;
+let tAmbiguous = 0;
+let tPositive = 0;
+
+for (let i = 0; i < yesterday.length; i++) {
+  const tier = yesterday[i]['Confirmed Response Tier'];
+  if (tier === 'T3') {
+    tNegative++;
+  } else if (tier === 'T2') {
+    tAmbiguous++;
+  } else if (tier === 'T1') {
+    tPositive++;
+  }
+}
+
+// PLATFORM BREAKDOWN (Yesterday's published)
+let googlePublished = 0;
+let openTablePublished = 0;
+let yelpPublished = 0;
+
+for (let i = 0; i < yesterday.length; i++) {
+  const platform = yesterday[i]['Platform'];
+  if (platform === 'Google') {
+    googlePublished++;
+  } else if (platform === 'OpenTable') {
+    openTablePublished++;
+  } else if (platform === 'Yelp') {
+    yelpPublished++;
+  }
+}
+
+// TODAY'S WORKLOAD
+const newToday = todayPending.length;
+const stillPendingTotal = todayPending.length;
+const totalPendingToday = newToday + stillPendingTotal;
+
+// DATES
+const now = new Date();
+const priorDate = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
+
+return [{ json: {
+  prior_date: priorDate,
+  approved_count: approved,
+  edited_approved_count: editedApproved,
+  still_pending_count: stillPending,
+  not_accepted_count: notAccepted,
+  ontime_count: ontimeCount,
+  total_approved_count: totalApproved,
+  overdue_count: overdueCount,
+  t_negative_count: tNegative,
+  t_ambiguous_count: tAmbiguous,
+  t_positive_count: tPositive,
+  google_published_count: googlePublished,
+  openTable_published_count: openTablePublished,
+  yelp_published_count: yelpPublished,
+  new_today_count: newToday,
+  still_pending_total: stillPendingTotal,
+  total_pending_today: totalPendingToday,
+  approval_contact_email: 'marellano@solofella.com',
+  client_name: 'Park Avenue Kitchen by David Burke',
+  client_id: 'PAK-001',
+  sheet_url: 'https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w/edit#gid=0'
+} }];
+```
+
+**Purpose:** Calculates all metrics from yesterday's published records and today's pending records. Outputs a complete object with all 17 variables needed for the email template.
+
+---
+
+### NODE 5 — Email Node (Send Daily Report Email)
+
+**Node Title:** `Node 5 - Send Daily Report Email`  
+**Node Type:** Email (Send Email)  
+**Wire FROM:** Node 4 (Calculate All Metrics)  
+**Wire TO:** (End — workflow completes)
+
+**Configuration:**
+
+```
+Credential: Subtext-CX-Email (or your configured email credential)
+
+From Email: noreply@solofella.com
+To Email: {{$json.approval_contact_email}}
+
+Subject: 
+SubtextCX - Yesterday's Approval Metrics — {{$json.prior_date}}
+
+Email Type: HTML
+
+Email Body: [paste the HTML below]
+```
+
+**Email Body HTML Template:**
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .section { background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .metric { margin: 8px 0; }
+    .button { display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0; }
+    .footer { color: #6b7280; font-size: 12px; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+  </style>
+</head>
+<body>
+
+<p>Hi Christine,</p>
+
+<p>Here's your approval activity from yesterday.</p>
+
+<div class="section">
+  <h3>📊 Performance (Prior 24 hours):</h3>
+  <div class="metric">- Approved: {{$json.approved_count}}</div>
+  <div class="metric">- Edited & Approved: {{$json.edited_approved_count}}</div>
+  <div class="metric">- Still Pending: {{$json.still_pending_count}}</div>
+  <div class="metric">- Not Accepted: {{$json.not_accepted_count}}</div>
+</div>
+
+<div class="section">
+  <h3>⏱️ SLA Compliance:</h3>
+  <div class="metric">- On-time (within 48hrs): {{$json.ontime_count}}/{{$json.total_approved_count}} approved</div>
+  <div class="metric">- Overdue: {{$json.overdue_count}}</div>
+</div>
+
+<div class="section">
+  <h3>Signal Distribution (Yesterday's published records):</h3>
+  <div class="metric">- T-NEGATIVE: {{$json.t_negative_count}}</div>
+  <div class="metric">- T-AMBIGUOUS: {{$json.t_ambiguous_count}}</div>
+  <div class="metric">- T-POSITIVE: {{$json.t_positive_count}}</div>
+</div>
+
+<div class="section">
+  <h3>Platform Inputs (Yesterday's published):</h3>
+  <div class="metric">- Google: {{$json.google_published_count}}</div>
+  <div class="metric">- OpenTable: {{$json.openTable_published_count}}</div>
+  <div class="metric">- Yelp: {{$json.yelp_published_count}}</div>
+</div>
+
+<div class="section">
+  <h3>📋 Today's Workload:</h3>
+  <div class="metric">- {{$json.new_today_count}} new responses added this morning</div>
+  <div class="metric">- {{$json.still_pending_total}} still pending from before</div>
+  <div class="metric" style="font-weight: bold;">- Total awaiting action: {{$json.total_pending_today}}</div>
+</div>
+
+<a href="{{$json.sheet_url}}" class="button">👉 Continue Here</a>
+
+<p>SubtextCX detects and interprets signals only. Operational decisions remain with your team.</p>
+
+<p style="color: #6b7280;">Next report tomorrow at 8am.</p>
+
+<div class="footer">
+  <p>SubtextCX by Solofella LLC</p>
+  <p>{{$json.client_name}} ({{$json.client_id}})</p>
+</div>
+
+</body>
+</html>
+```
+
+**Purpose:** Sends the daily report email with all performance metrics, SLA compliance, signal distribution, platform breakdown, and today's workload.
+
+---
+
+## WIRING DIAGRAM
+
+```
+Node 1 (Schedule Trigger — 8:00 AM UTC)
+         ↓
+         ├──────────────┬──────────────┐
+         ↓              ↓              
+      Node 2         Node 3            
+   HTTP Request    HTTP Request        
+   Query           Query Today         
+   Yesterday       Pending             
+   Published                           
+         ↓              ↓              
+         └──────┬───────┘              
+                ↓                      
+            Node 4                     
+         Code Node                     
+      Calculate Metrics                
+                ↓                      
+            Node 5                     
+         Email Node                    
+      Send Daily Report                
+                ↓                      
+              [END]                    
+```
+
+**Key wiring notes:**
+- Node 1 connects to BOTH Node 2 and Node 3 (parallel queries)
+- Node 2 and Node 3 BOTH connect to Node 4 (merge point for calculation)
+- Node 4 connects to Node 5 (final email send)
+- Node 5 is the end of the workflow
+
+---
+
+## TESTING AFTER BUILD
+
+After building all 5 nodes:
+
+1. **Manual Execute:** Click "Execute Workflow" in n8n
+2. **Verify Node 2 output:** Should show yesterday's published records (if any exist)
+3. **Verify Node 3 output:** Should show today's pending records (if any exist)
+4. **Verify Node 4 output:** Check all 17 calculated variables
+5. **Check email inbox:** marellano@solofella.com should receive test email
+6. **Verify email content:**
+   - Subject line: "SubtextCX - Yesterday's Approval Metrics — [DATE]"
+   - Performance section shows counts
+   - SLA shows ontime/overdue breakdown
+   - Signal distribution shows T-NEG/T-AMB/T-POS
+   - Platform inputs show Google/OpenTable/Yelp
+   - Today's workload shows new + pending
+   - Sheet link works
+   - Governance note present
+
+---
+
+## VARIABLES REFERENCE (Email Template)
+
+| Variable | Source | Type | Example |
+|----------|--------|------|---------|
+| prior_date | Node 4 | ISO 8601 | 2026-04-20 |
+| approved_count | Node 4 | Integer | 8 |
+| edited_approved_count | Node 4 | Integer | 2 |
+| still_pending_count | Node 4 | Integer | 0 |
+| not_accepted_count | Node 4 | Integer | 0 |
+| ontime_count | Node 4 | Integer | 9 |
+| total_approved_count | Node 4 | Integer | 10 |
+| overdue_count | Node 4 | Integer | 0 |
+| t_negative_count | Node 4 | Integer | 2 |
+| t_ambiguous_count | Node 4 | Integer | 3 |
+| t_positive_count | Node 4 | Integer | 5 |
+| google_published_count | Node 4 | Integer | 6 |
+| openTable_published_count | Node 4 | Integer | 3 |
+| yelp_published_count | Node 4 | Integer | 1 |
+| new_today_count | Node 4 | Integer | 8 |
+| still_pending_total | Node 4 | Integer | 10 |
+| total_pending_today | Node 4 | Integer | 18 |
+
+---
+
+## EXPECTED BEHAVIOR
+
+**Every day at 8:00 AM UTC:**
+1. Node 1 fires (schedule trigger)
+2. Node 2 queries yesterday's published records from RDA
+3. Node 3 queries today's new pending records from RDA (parallel)
+4. Node 4 calculates all 17 metrics
+5. Node 5 sends email to marellano@solofella.com
+
+**Email content shows:**
+- Yesterday's performance (approved, edited, pending, rejected)
+- SLA compliance (on-time vs. overdue)
+- Signal distribution from yesterday's published records
+- Platform breakdown (Google, OpenTable, Yelp)
+- Today's workload (new + still pending)
+
+---
+
+## IMPORTANT NOTES
+
+- **Test recipient:** marellano@solofella.com (for testing)
+- **Production recipient:** Will pull from PAK-001 Client Config approval_contact_email (future enhancement)
+- **Email fires every day at 8:00 AM** even if 0 records published yesterday (shows "0 approved")
+- **Yesterday's published = records with Published Timestamp in prior 24hr window**
+- **Today's pending = records with RDA Timestamp in current 24hr window, not yet published**
+- **SLA calculation:** (Published Timestamp - RDA Timestamp) ≤ 48 hours = on-time
+- **Governance note:** "SubtextCX detects and interprets signals only" is LOCKED in every email
+
+---
+
+## CRITICAL DEPENDENCIES
+
+This workflow assumes:
+- RDA NocoDB table has Published Timestamp field populated (by Apps Script approval webhook)
+- Published Timestamp is set when Christine approves records in the Google Sheet
+- If Published Timestamp = null, record has not been approved/published yet
+
+If no records have Published Timestamp set yet (because Christine hasn't approved anything), the email will show:
+- Approved: 0
+- Edited: 0
+- SLA: 0/0 on-time
+- All other metrics: 0
+
+This is CORRECT behavior for the first few days before approvals exist.
+
+---
+
+## READY TO BUILD?
+
+You now have everything needed to build SCX-MRA-Daily-Report workflow. Build nodes 1-5 in order, wire them as shown, test the workflow, and verify the email arrives at marellano@solofella.com.
+
+After successful test, publish the workflow and wait for tomorrow's 8:00 AM UTC scheduled run.
+
+---
+
+**End of Cold Start Prompt**
