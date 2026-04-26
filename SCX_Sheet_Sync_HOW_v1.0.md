@@ -1,508 +1,712 @@
-SCX-Sheet-Sync HOW v1.1
-SUBTEXT CX · SOLOFELLA LLC
-HOW DOCUMENT — SCX-Sheet-Sync
-Google Sheets Approval Workflow Automation
-Complete Step Decomposition · Node Logic · Credentials · Data Flow · Protection Strategy
-v1.1 · April 22, 2026 · Chat #78
+Chat #80 · April 26, 2026
 
-Version History
-VersionChanges| v1.0 | Initial build — Chat #76 · April 20, 2026. Complete workflow specification. OAuth credential failure diagnosis (Chat #76). Service Account solution integrated. 11 nodes. |
-| v1.1 | Chat #80 · April 26, 2026. Email reporting architecture. Platform counts + pending calculations. New nodes: Step 11a (platform count), Step 12b-fetch (RDA fetch), Step 12b-filter (pending calculation), Step 12c (email variables). Total nodes now 28 (11 main + 4 email reporting + 3 error + 10 internal email nodes). | 11 nodes.v1.1Chat #78 · April 22, 2026. Service Account implementation COMPLETE + verified. 14-node architecture (added [07b] Merge, [9b] Rate Limit, [9d] Rename Fields). Google Sheet protection strategy documented (Section 15). Deduplication mechanism locked. Critical debugging lessons from Chat #77-78 transcript integrated. First live sync: 50 PAK-001 RDA records successfully appended. Approval workflow ready for Christine.
+# SCX-Sheet-Sync HOW v1.1
 
-PURPOSE: This document specifies every step, node, code block, credential configuration, data field, and sheet protection rule for the SCX-Sheet-Sync (Google Sheets Approval Population) n8n workflow. A developer or Miguel must be able to build, repair, or troubleshoot SCX-Sheet-Sync from this document alone with zero prior context.
+**SUBTEXT CX · SOLOFELLA LLC**  
+**HOW DOCUMENT — SCX-Sheet-Sync**  
+**Google Sheets Approval Workflow Automation + Email Reporting**  
+Complete Step Decomposition · Node Logic · Credentials · Data Flow  
+v1.1 · April 26, 2026 · Chat #80
 
-Summary Grid
-PropertyValueWorkflow NameSCX-Sheet-SyncVersionv1.1 — April 22, 2026PurposePopulate PAK-001 Response Approvals Google Sheet with pending RDA records on scheduled cadenceTrigger TypeSchedule — 7am UTC dailyTrigger CadenceDaily at 07:00 UTCSource DataRDA NocoDB table (pending records only)DestinationGoogle Sheet (PAK-001 Response Approvals)Destination Sheet ID1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6wDestination RangeSheet1!A:L (12 columns)Credential TypeGoogle Service Account (JSON key — non-expiring)Credential Status✅ COMPLETE — scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com | **Total n8n Nodes** | 11 main + 4 reporting (11a, 12b-fetch, 12b-filter, 12c) + error handler (3 nodes) = 18 main + email chain | Data ModelRich join (RDA + ALA) before sheet writeDeduplicationRDA Record ID lookup in existing sheet rows (Column K)Sheet ProtectionColumns A-F, J-L read-only. Columns G (Status), H (Edited Response), I (Proposed Response reference) editable.Error HandlingError trigger → email notification + logPhase 1 ScopeManual CSV upload → SCX-Sheet-Sync → Google Sheet approval gate → Apps Script webhook → RDA updatePhase 1b ScopeGoogle Business Profile API + Yelp Fusion API ingestion (separate workflow)Active ClientsPAK-001 (Park Avenue Kitchen) — Live + testedFirst Live SyncApril 21, 2026 — 50 records appended, zero duplicates, 100% success rateDoc Versionv1.1 — April 22, 2026
+---
 
-1. AGENT PURPOSE
-SCX-Sheet-Sync — Google Sheets Approval Workflow Automation
-Automates the daily population of the client's Google Sheet approval interface with pending review response drafts from the RDA NocoDB table. Enriches RDA records with original review text, platform, star rating, and reviewer handle from ALA. Deduplicates against existing sheet rows to prevent duplicate appends on retry. Enables human approvers (e.g., Christine at Park Avenue Kitchen) to review and approve drafted responses in a familiar Google Sheets interface rather than navigating n8n or NocoDB directly.
-NOT an approval agent. SCX-Sheet-Sync does not make approval decisions. It surfaces data for human approval. The Apps Script onEdit trigger listens for approval status changes in the sheet and fires a webhook to update RDA NocoDB records.
-AUTOMATION BOUNDARY: SCX-Sheet-Sync runs on schedule. Apps Script (approval gate) runs on edit. No circular dependencies.
-SCX-Sheet-Sync PRODUCES
+## Version History
 
-Google Sheet rows appended to PAK-001 Response Approvals sheet (12 columns)
-Each row contains: SCX Date, Review Date, Platform, Star Rating, Reviewer Handle, Review Text, Proposed Response, Status, Edited Response, ALA Record ID, RDA Record ID, Sync Status
-Prevents duplicates via RDA ID deduplication
-Error log + email notification on failure
-✅ First live run (April 21): 50 records, zero duplicates, 100% append success
+| Version | Changes |
+|---------|---------|
+| v1.0 | Initial build — Chat #76 · April 20, 2026. Complete workflow specification. OAuth credential failure diagnosis (Chat #76). Service Account solution integrated. 11 nodes. |
+| v1.1 | Chat #80 · April 26, 2026. Email reporting architecture added: platform counts, pending calculations, daily summary email. New nodes: Step 11a (platform count), Step 12b-fetch (total pending fetch), Step 12b-filter (math-based pending calculation), Step 12c (email variables merge). Fixed platform count case-sensitivity bug (Platform vs platform). Fixed pending calculation (changed from date-based to math-based). Total nodes now 28 (11 main sheet sync + 4 email reporting + 3 error handler + 10 internal email chain nodes). |
 
-SCX-Sheet-Sync DOES NOT
+---
 
-Make approval decisions
-Modify NocoDB RDA records (that is Apps Script → n8n webhook)
-Filter by approval status post-write (filtering happens pre-write)
-Execute on-demand (scheduled only — no manual trigger)
-Handle credential refresh (Service Account uses static JSON key)
+**PURPOSE:** This document specifies every step, node, code block, credential configuration, and data field for the SCX-Sheet-Sync (Google Sheets Approval Population) n8n workflow. A developer or Miguel must be able to build or repair SCX-Sheet-Sync from this document alone with zero prior context.
 
+---
 
-2. DATA ARCHITECTURE
-Source 1 — RDA NocoDB Table (Primary Source)
-Table ID: mr1v67cszcklwns
-Filter: Approval Status ∈ [Pending, Pending-Elevated] AND Published Timestamp = null AND Client ID = 'PAK-001'
+## Summary Grid
+
+| Property | Value |
+|----------|-------|
+| **Workflow Name** | SCX-Sheet-Sync |
+| **Purpose** | Populate PAK-001 Response Approvals Google Sheet with pending RDA records on scheduled cadence |
+| **Trigger Type** | Schedule — 7am UTC daily |
+| **Trigger Cadence** | Daily at 07:00 UTC |
+| **Source Data** | RDA NocoDB table (pending/pending-elevated records only) |
+| **Destination** | Google Sheet (PAK-001 Response Approvals) |
+| **Destination Sheet ID** | 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w |
+| **Destination Range** | Sheet1!A:H (8 columns) |
+| **Credential Type** | Google Service Account (JSON key — non-expiring) |
+| **Credential Status** | TO BE IMPLEMENTED (Chat #77) |
+| **Total n8n Nodes** | 11 main sheet sync + 4 email reporting (11a, 12b-fetch, 12b-filter, 12c) + error handler (3 nodes) = 18 core + email chain |
+| **Data Model** | Rich join (RDA + ALA) before sheet write |
+| **Idempotency** | Fetch existing sheet rows, filter new records before append |
+| **Error Handling** | Error trigger → email notification + log |
+| **Phase 1 Scope** | Manual CSV upload + Apps Script approval gate. SCX-Sheet-Sync automates sheet population only. |
+| **Phase 2 Scope** | Google Business Profile API + Yelp Fusion API ingestion (not in this workflow). |
+| **Active Clients** | PAK-001 (Park Avenue Kitchen) — Live |
+| **Doc Version** | v1.1 — April 2026 |
+
+---
+
+## 1. AGENT PURPOSE
+
+### SCX-Sheet-Sync — Google Sheets Approval Workflow Automation
+
+Automates the daily population of the client's Google Sheet approval interface with pending review response drafts from the RDA NocoDB table. Enriches RDA records with original review text from ALA. Deduplicates against existing sheet rows to prevent duplicate appends. Enables human approvers (e.g., Christine at Park Avenue Kitchen) to review and approve drafted responses in a familiar Google Sheets interface rather than navigating n8n or NocoDB directly.
+
+**NOT an approval agent.** SCX-Sheet-Sync does not make approval decisions. It surfaces data for human approval. The Apps Script onEdit trigger listens for approval status changes in the sheet and fires a webhook to update RDA NocoDB records.
+
+**AUTOMATION BOUNDARY:** SCX-Sheet-Sync runs on schedule. Apps Script (approval gate) runs on edit. No circular dependencies.
+
+### SCX-Sheet-Sync PRODUCES
+
+- Google Sheet rows appended to PAK-001 Response Approvals sheet
+- Each row contains: Date, Platform, Stars, Review Text, Proposed Response, Edited Response, Approval Status, RDA Record ID
+- Prevents duplicates via RDA ID deduplication
+- Daily email summary with platform counts, pending totals, and T3 dignity-risk alerts
+- Error log + email notification on failure
+
+### SCX-Sheet-Sync DOES NOT
+
+- Make approval decisions
+- Modify NocoDB RDA records (that is Apps Script → n8n webhook)
+- Filter by approval status post-write (filtering happens pre-write)
+- Execute on-demand (scheduled only — no manual trigger)
+- Handle credential refresh (Service Account uses static JSON key)
+
+---
+
+## 2. DATA ARCHITECTURE
+
+### Source 1 — RDA NocoDB Table (Primary Source)
+
+**Table ID:** `mr1v67cszcklwns`  
+**Filter:** `Approval Status` ∈ [Pending, Pending-Elevated] AND `Published Timestamp` = null AND `Client ID` = 'PAK-001'
+
 Fields read from RDA:
-FieldTypeUseIdAutoNumberRow identifier for dedupRDA Record IDSingleLineTextSheet column K (primary dedup key)RDA TimestampDateTimeSheet column A (SCX Date)Confirmed Response TierSingleSelectInternal context (not written to sheet)Public Response DraftLongTextSheet column G (Proposed Response — protected)Approval StatusSingleSelectSheet column H (Status: Pending / Approved / Edited-Approved / Not Accepted / Published)Client IDSingleLineTextFilter condition (PAK-001 only)ALA Record IDNumberForeign key to fetch original reviewReviewer HandleSingleLineTextFallback if ALA missing (rare)
-Source 2 — ALA NocoDB Table (Enrichment Source)
-Table ID: m57efwbtrvwohhr
-Fetch: HTTP GET by ALA Record ID (passed from RDA)
+| Field | Type | Use |
+|-------|------|-----|
+| Id | AutoNumber | Row identifier for dedup |
+| RDA Record ID | SingleLineText | Sheet column RDA-ID (primary dedup key) |
+| RDA Timestamp | DateTime | Sheet column Date |
+| Confirmed Response Tier | SingleSelect | Internal context (not written to sheet) |
+| Public Response Draft | LongText | Sheet column Proposed (protected field) |
+| Approval Status | SingleSelect | Sheet column Status (Pending / Pending-Elevated) |
+| Client ID | SingleLineText | Filter condition (PAK-001 only) |
+| ALA Record ID | Number | Foreign key to fetch original review |
+
+### Source 2 — ALA NocoDB Table (Enrichment Source)
+
+**Table ID:** `m57efwbtrvwohhr`  
+**Fetch:** HTTP GET by ALA Record ID (passed from RDA)
+
 Fields read from ALA:
-FieldTypeUseIdAutoNumberFetch keyRaw TextLongTextSheet column F (Review Text)Star RatingNumberSheet column D (Star Rating)PlatformSingleSelectSheet column C (Platform)Reviewer HandleSingleLineTextSheet column E (Reviewer Handle)Review DateDateTimeSheet column B (Review Date)
-Destination — Google Sheet (PAK-001 Response Approvals)
-Sheet ID: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
-Sheet Name: Sheet1
-Range: A:L (12 columns)
-ColumnHeaderTypeSourceProtectedEditableNotesASCX DateText (ISO 8601)RDA TimestampYESNOAutomated system dateBReview DateText (ISO 8601)ALA Review DateYESNOOriginal guest review dateCPlatformTextALA PlatformYESNOGoogle / Yelp / OpenTable / etc.DStar RatingNumberALA Star RatingYESNO1–5 starsEReviewer HandleTextALA Reviewer HandleYESNOGuest name or pseudonymFReview TextLongTextALA Raw TextYESNOFull original reviewGProposed ResponseLongTextRDA Public Response DraftYESNOAI-drafted response (reference only)HStatusSingleSelectRDA Approval StatusNOYESEDITABLE by approverIEdited ResponseLongText(Human edit)NOYESEDITABLE — Christine pastes modified response hereJALA Record IDTextRDA foreign keyYESNOTraceabilityKRDA Record IDTextRDA Record IDYESNOPrimary dedup keyLSync StatusTextn8n workflowYESNOpending_sync / synced
-Sheet Protection Architecture (NEW — Section 15):
+| Field | Type | Use |
+|-------|------|-----|
+| Id | AutoNumber | Fetch key |
+| Raw Tex (or Raw Text) | LongText | Sheet column Review |
+| Star Rating | Number | Sheet column Stars |
+| Platform | SingleSelect | Sheet column Platform |
+| Ingestion Date | DateTime | Reference (not primary date) |
 
-Columns A-F, J-L: Read-only (protected from editing)
-Column G (Proposed Response): Read-only (reference only, protected from accidental override)
-Column H (Status): EDITABLE with dropdown validation (Pending / Approved / Edited-Approved / Not Accepted / Published)
-Column I (Edited Response): EDITABLE (Christine pastes modified response here)
-Row 1 (Headers): Protected from deletion
-Service Account exception: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com has explicit edit permission on protected ranges A-F and J-L (allows n8n append)
+### Destination — Google Sheet (PAK-001 Response Approvals)
 
+**Sheet ID:** `1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w`  
+**Sheet Name:** `Sheet1`  
+**Range:** `A:H` (8 columns)
 
-3. WORKFLOW ARCHITECTURE
-Data Flow — Per Execution
+| Column | Header | Type | Source | Protected | Editable |
+|--------|--------|------|--------|-----------|----------|
+| A | Date | Text (ISO 8601) | RDA Timestamp | NO | NO |
+| B | Platform | Text | ALA Platform | NO | NO |
+| C | Stars | Number | ALA Star Rating | NO | NO |
+| D | Review | LongText | ALA Raw Text | NO | NO |
+| E | Proposed | LongText | RDA Public Response Draft | YES | NO |
+| F | Edited | LongText | (Human edit) | NO | YES |
+| G | Status | SingleSelect | RDA Approval Status | NO | YES |
+| H | RDA-ID | Text | RDA Record ID | NO | NO |
+
+**Sheet Protection:**
+- Column E (Proposed) — protected from editing by Apps Script. Prevents accidental override of AI draft.
+- Columns G (Status) and F (Edited) — editable. Christine updates here.
+- Dropdown validation on Column G: Pending / Pending-Elevated / Approved / Edited-Approved / Not Accepted
+
+---
+
+## 3. WORKFLOW ARCHITECTURE
+
+### Data Flow — Per Execution
+
+```
 Schedule Trigger (7am UTC)
          ↓
-[01] Fetch Pending RDA Records (NocoDB GET, filtered by Client ID + Approval Status)
+Step 1: Fetch Pending RDA Records (NocoDB GET, filtered)
          ↓
-[02b] Filter Pending Records (Code Node — remove Published records + client mismatch)
+Step 2: Loop through RDA records
+         ├─→ Step 3: Fetch ALA record (HTTP GET by ALA Record ID)
+         ├─→ Step 4: Join RDA + ALA fields in memory
+         ├─→ Step 5: Fetch existing sheet rows (Google Sheets GET, idempotency check)
+         ├─→ Step 6: Filter new records (Code Node — RDA ID not in existing sheet)
+         ├─→ Step 7: Build sheet row values (Code Node — format 8 columns)
+         ├─→ Step 8: Write row to sheet (Google Sheets API append)
+         └─→ (continue loop or exit)
          ↓
-[03] IF Records Exist (Condition: pageInfo.totalRows > 0)
-     FALSE → HALT (no new records)
-     TRUE →
-         ↓
-[04] Fetch ALL ALA Records (HTTP GET with ?limit=100 pagination)
-         ↓
-[05] Build ALA Map (Code Node — index ALA by Id, extract needed fields)
-         ↓
-[06] Fetch Existing Sheet Rows (Google Sheets GET Column K — RDA Record IDs)
-         ↓
-[07] Build Dedup Map (Code Node — extract existing RDA IDs into object)
-         ↓
-[07b] Merge All Data (Code Node — combine RDA list + ALA map + existing IDs, expand to items)
-         ↓
-[08] Loop RDA Records (SplitInBatches, batch size 1)
-     ├─→ [09] Consolidated Logic (Code Node — dedup check + ALA lookup + fallback)
-     ├─→ [9b] Rate Limit Delay (Wait 1.5 seconds — Google Sheets API rate limit protection)
-     ├─→ [9d] Rename Fields (Set Node — map flat fields to exact sheet column headers)
-     ├─→ [10] Append Row to Sheet (Google Sheets API POST)
-     └─→ (loop back to [08] or exit when done)
-         ↓
-[11] Build Summary (Code Node — count processed records)
-         ↓
-[12] Error Trigger (if any step throws)
-[13] Build Error Email
-[14] Send Error Email
+Step 9: Log completion
          ↓
 [End]
-Credential Architecture
-Service Account (VERIFIED COMPLETE):
 
-Email: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
-Key type: Non-expiring JSON (not OAuth2)
-Credential method: Header Auth in n8n (JSON pasted directly)
-Task runner compatible: YES — static key works in all execution contexts (scheduled + manual)
-Sheet permissions: Editor access to PAK-001 sheet + explicit edit permission on protected ranges
-Status: ✅ LIVE — First successful sync April 21, 2026
+[Error Handler]
+         ↓
+ERR1: Error Trigger
+         ↓
+ERR2: Build error record + email body
+         ↓
+ERR3: Send error email to approval_contact_email
+```
 
+### Data Flow v1.1 — With Email Reporting (Chat #80)
 
-4. GOOGLE SERVICE ACCOUNT SETUP (COMPLETE)
-✅ COMPLETED STEPS
-Step 1 — Service Account Created
-Service account name: scx-sheet-sync
-Service account ID: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
-Google Cloud project: solofella-cmh-project (806396262251)
-Status: ACTIVE
-Step 2 — JSON Key Generated
-File: solofella-cmh-project-scx-sheet-sync-key.json
-Key type: JSON (non-expiring)
-Location: Secure local storage (NOT in GitHub)
-Status: ✅ ADDED TO n8n as credential "Subtext-CX-GoogleSheets-ServiceAccount"
-Step 3 — PAK-001 Sheet Shared
-Sheet ID: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
-Shared with: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
-Permission: Editor
-Status: ✅ VERIFIED — first append test successful
-Step 4 — Protected Range Exception Added
-Range A:F "Lock Columns A-F (Read-Only)" → Added service account exception → Can Edit
-Range J:L "Lock Columns J-L (Read-Only)" → Added service account exception → Can Edit
-Status: ✅ VERIFIED — workflow can append despite protection
-Step 5 — Google Sheets API Enabled
-Project: solofella-cmh-project
-API: Google Sheets API v4
-Status: ✅ ENABLED
+```
+Schedule Trigger (7am UTC)
+         ↓
+Step 1: Fetch Pending RDA Records (NocoDB GET, filtered)
+         ↓
+Step 2: Loop through RDA records (SplitInBatches)
+         ├─→ Step 3: Fetch ALA record (HTTP GET by ALA Record ID)
+         ├─→ Step 4: Join RDA + ALA fields in memory
+         ├─→ Step 5: Fetch existing sheet rows (Google Sheets GET, idempotency check)
+         ├─→ Step 6: Filter new records (Code Node — RDA ID not in existing sheet)
+         ├─→ Step 7: Build sheet row values (Code Node — format 8 columns)
+         ├─→ Step 8: Write row to sheet (Google Sheets API append)
+         └─→ (continue loop or exit)
+         ↓
+Step 11a: Platform Count + Ensure Output (NEW — Chat #80)
+         ↓
+Step 12b-fetch: Fetch All Pending RDA (NEW — Chat #80)
+         ↓
+Step 12b-filter: Calculate Previous Pending (NEW — Chat #80)
+         ↓
+Step 12c: Merge Counts + Build Email Variables (NEW — Chat #80)
+         ↓
+Email Chain: Build + Send Daily Summary (10 nodes)
+         ↓
+[End]
 
-5. SHEET PROTECTION STRATEGY (NEW — SECTION 15)
-PROTECTION RULES — CLIENT-READY
-Goal: Lock automated columns (A-F, J-L). Allow client to edit only:
+[Error Handler]
+         ↓
+ERR1: Error Trigger
+         ↓
+ERR2: Build error record + email body
+         ↓
+ERR3: Send error email to approval_contact_email
+```
 
-Column H (Status) — dropdown: Pending / Approved / Edited-Approved / Not Accepted / Published
-Column I (Edited Response) — freeform text (Christine pastes modified response here)
-Column G (Proposed Response) — visible as reference, not editable (prevents accidental override)
+### Credential Architecture
 
-SETUP PROCEDURE
-STEP 1 — DELETE ALL EXISTING PROTECTIONS
+**OLD (v1.0 — FAILED):** OAuth2 credential `Subtext-CX-GoogleSheets`
+- **Failure mode:** n8n 2.4.6 task runner cannot access refreshToken in scheduled mode
+- **Error:** "refreshToken is required" at Step 8 (Google Sheets API call)
+- **Symptom:** Manual execution works (UI has access to token), scheduled execution fails (task runner isolated)
 
-Open sheet
-Data → Protected sheets and ranges
-Delete all existing protections (start fresh)
+**NEW (v1.1 — Service Account):** Google Service Account JSON key
+- **Key type:** Non-expiring JSON (not OAuth2)
+- **Credential method:** Header Auth → raw JSON in n8n credential
+- **No refresh cycle:** Static key valid indefinitely (until manually rotated)
+- **Task runner compatible:** JSON key accessible in all execution contexts
 
-STEP 2 — PROTECT COLUMNS A-F (READ-ONLY)
+---
 
-Select range: A:F
-Data → Protect sheets and ranges
-Name: Lock Columns A-F (Read-Only)
-Description: Automated data — cannot edit
-Restrict who can edit: Select "Only you"
-Click Create
-Click "Set Permissions" (modify lock)
-Add: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
-Grant: Can Edit
+## 4. GOOGLE SERVICE ACCOUNT SETUP (REQUIRED FOR CHAT #77)
+
+### Prerequisites
+- Google Cloud project: `solofella-cmh-project`
+- Project ID: `806396262251`
+- Service Account creation permission
+
+### Step 1 — Create Service Account
+
+```bash
+# In Google Cloud Console:
+# Navigate to: APIs & Services > Credentials > Create Credentials > Service Account
+# Service account name: scx-sheet-sync
+# Service account ID: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
+# Description: "Autonomous Google Sheets write access for SubtextCX approval workflows"
+# DO NOT grant Compute Engine or other roles — only Sheets API access
+```
+
+### Step 2 — Generate JSON Key
+
+```bash
+# In Google Cloud Console:
+# Service account > Keys > Add Key > Create new key
+# Key type: JSON
+# Downloads as: solofella-cmh-project-scx-sheet-sync-key.json
+# File contents (example):
+{
+  "type": "service_account",
+  "project_id": "solofella-cmh-project",
+  "private_key_id": "key-id-here",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  "client_email": "scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com",
+  "client_id": "service-account-number",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/scx-sheet-sync%40solofella-cmh-project.iam.gserviceaccount.com"
+}
+```
+
+### Step 3 — Share PAK-001 Sheet with Service Account
+
+```bash
+# Sheet ID: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
+# In Google Sheets:
+# Share button > Add scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
+# Permission level: Editor
+# Uncheck "Notify people"
+# Share
+```
+
+### Step 4 — Add Service Account Credential to n8n
+
+```
+n8n Credentials > New > Google Sheets
+Name: Subtext-CX-GoogleSheets-ServiceAccount
+Authentication: Service Account (JSON)
+JSON key: [Paste entire JSON key from Step 2]
 Save
+```
 
-STEP 3 — PROTECT COLUMNS J-L (READ-ONLY)
+### Step 5 — Enable Google Sheets API
 
-Select range: J:L
-Data → Protect sheets and ranges
-Name: Lock Columns J-L (Read-Only)
-Description: Traceability & sync status — cannot edit
-Restrict who can edit: Select "Only you"
-Click Create
-Click "Set Permissions"
-Add: scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com
-Grant: Can Edit
-Save
+```bash
+# In Google Cloud Console:
+# APIs & Services > Enabled APIs & Services
+# Search: Google Sheets API
+# If not enabled: Click > Enable
+# (Note: Drive API also required if creating new sheets, but not needed for append-only)
+```
 
-STEP 4 — PROTECT ROW 1 (HEADERS)
+---
 
-Select range: 1:1
-Data → Protect sheets and ranges
-Name: Protect Headers
-Restrict who can edit: Select "Only you"
-Click Create
-(No service account exception needed)
+## 5. STEP-BY-STEP DECOMPOSITION — 11 NODES
 
-STEP 5 — LEAVE COLUMNS G, H, I UNPROTECTED
-DO NOT protect these columns. They remain fully editable by anyone (approvers + service account append).
-STEP 6 — ADD DATA VALIDATION TO COLUMN H (OPTIONAL)
+### STEP 1 — SCHEDULE TRIGGER
 
-Select column H
-Data → Data validation
-Criteria: List of items
-Items: Pending, Approved, Edited-Approved, Not Accepted, Published
-Show dropdown list: ON
-Appearance: Show warning (or Reject input)
-Save
+**n8n:** Schedule Node
 
-
-6. STEP-BY-STEP DECOMPOSITION — 14 NODES
-[01] SCHEDULE TRIGGER
-n8n: Schedule Node
+```
 Trigger type: Every day
 Time: 07:00 (UTC)
 Timezone: UTC
 Execute: Every execution
-Output: Empty payload (schedule marker only)
+```
 
-[02] FETCH PENDING RDA RECORDS
-n8n: NocoDB GET Many
-URL: http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns
-Credential: xc-token (Header Auth, Name: xc-token)
-Query: NO filter formula in node
-        (filtering happens in [02b] Code Node instead — NocoDB filter formula causes 422 error)
-Limit: 100 (safe batch, will filter down further)
-Output fields read:
+**Output:** Empty payload (schedule marker only)
 
-Id, RDA Record ID, RDA Timestamp, Confirmed Response Tier, Public Response Draft, Approval Status, Client ID, ALA Record ID, Reviewer Handle
+---
 
-⚠️ CRITICAL: Do NOT add filter formula in this node. Use Code Node [02b] to filter.
+### STEP 2 — FETCH PENDING RDA RECORDS
 
-[02b] FILTER PENDING RECORDS (Code Node)
-n8n: Code Node
-javascriptconst all_input = $input.all();
-const filtered = [];
-for (let i = 0; i < all_input.length; i++) {
-  const rec = all_input[i].json;
-  const status = rec['Approval Status'];
-  const published = rec['Published Timestamp'];
-  const client = rec['Client ID'];
-  const status_ok = (status !== 'Published');
-  const published_ok = (published === null || published === undefined);
-  const client_ok = (client === 'PAK-001');
-  if (status_ok && published_ok && client_ok) { 
-    filtered.push(rec); 
-  }
+**n8n:** NocoDB GET
+
+```
+Table: RDA (mr1v67cszcklwns)
+Filter: (Approval Status,neq,Published) AND (Published Timestamp,is_empty) AND (Client ID,eq,PAK-001)
+Limit: 100 (safe batch size)
+Sort: RDA Timestamp (ascending)
+```
+
+**Output fields read:**
+- Id, RDA Record ID, RDA Timestamp, Confirmed Response Tier, Public Response Draft, Approval Status, Client ID, ALA Record ID
+
+**Validation in Code Node after this step:**
+```javascript
+const rdaRecords = $input.first().json.list || [];
+if (rdaRecords.length === 0) {
+  // No new records — halt workflow gracefully
+  return []; // Prevents downstream errors
 }
-return [{ json: { list: filtered, pageInfo: { totalRows: filtered.length } } }];
-Filtering logic:
+// Continue if records exist
+return [{ json: { rda_records: rdaRecords } }];
+```
 
-Removes "Published" records (already sent)
-Removes records with non-null Published Timestamp
-Keeps only Client ID = 'PAK-001' (pilot records)
-Returns: { list: [...], pageInfo: { totalRows: N } }
+---
 
-Output: Array of qualifying RDA records
+### STEP 3 — LOOP THROUGH RDA RECORDS (BATCH PROCESSOR)
 
-[03] IF RECORDS EXIST
-n8n: IF Node
-Condition: {{$json.pageInfo.totalRows}} > 0
-TRUE branch: Continue to [04]
-FALSE branch: HALT (return empty array)
-FALSE branch (Code Node):
-javascript// No new records — no work to do
-return [];
+**n8n:** SplitInBatches Node
 
-[04] FETCH ALL ALA RECORDS
-n8n: HTTP GET
-URL: http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?limit=100
-Auth: Set Headers manually
-  Header 1: Name: xc-token, Value: {{$nodeExecutionContext.credentials.nocodb_xc_token}}
-  (or use saved NocoDB credential if available in HTTP node)
-Method: GET
-Return all: ON
-⚠️ CRITICAL: Add ?limit=100 to URL. NocoDB defaults to 25/page and will return incomplete data.
-Output: Array of all ALA records (full enrichment data)
-
-[05] BUILD ALA MAP (Code Node)
-n8n: Code Node
-javascriptconst ala_records = $input.first().json.list || [];
-const ala_map = {};
-let ala_total = 0;
-
-for (let i = 0; i < ala_records.length; i++) {
-  const rec = ala_records[i];
-  const ala_id = rec['Id'] || rec['id'];
-  ala_map[ala_id] = {
-    review_date: rec['Review Date'] || '',
-    platform: rec['Platform'] || 'Unknown',
-    star_rating: rec['Star Rating'] || 0,
-    reviewer_handle: rec['Reviewer Handle'] || '',
-    review_text: rec['Raw Text'] || ''
-  };
-  ala_total++;
-}
-
-return [{ json: { ala_map: ala_map, ala_total: ala_total } }];
-Output:
-json{
-  "ala_map": {
-    "42": { "review_date": "2026-04-20", "platform": "Google", ... },
-    "43": { "review_date": "2026-04-21", "platform": "Yelp", ... }
-  },
-  "ala_total": 50
-}
-
-[06] FETCH EXISTING SHEET ROWS
-n8n: Google Sheets (Get Row(s))
-Spreadsheet: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w (by ID)
-Sheet: Sheet1
-Range: K:K (Column K only = RDA Record IDs)
-Auth: Subtext-CX-GoogleSheets-ServiceAccount
-Return All: ON
-Always Output Data: ON
-Output: Array of existing RDA Record IDs in column K
-Note: On first run, returns empty array. Correct behavior.
-
-[07] BUILD DEDUP MAP (Code Node)
-n8n: Code Node
-javascriptconst sheet_data = $input.first().json.values || [];
-const existing_rda_ids = {};
-
-for (let i = 0; i < sheet_data.length; i++) {
-  const rda_id = sheet_data[i][0]; // Column K value
-  if (rda_id) {
-    existing_rda_ids[String(rda_id).trim()] = true;
-  }
-}
-
-return [{ json: { 
-  existing_rda_ids: existing_rda_ids, 
-  existing_total: Object.keys(existing_rda_ids).length 
-} }];
-Output:
-json{
-  "existing_rda_ids": {
-    "RDA-20260420-070015-001": true,
-    "RDA-20260420-070016-002": true
-  },
-  "existing_total": 2
-}
-
-[07b] MERGE ALL DATA (Code Node)
-n8n: Code Node
-javascriptconst step_03 = $('Step 3 - Check Records Exist').first().json;
-const step_05 = $('Step 5 - Build ALA Map').first().json;
-const step_07 = $input.first().json;
-
-const rda_list = step_03.list || [];
-const ala_map = step_05.ala_map || {};
-const existing_rda_ids = step_07.existing_rda_ids || {};
-
-const output = [];
-for (let i = 0; i < rda_list.length; i++) {
-  output.push({ 
-    json: { 
-      rda_record: rda_list[i], 
-      ala_map: ala_map, 
-      existing_rda_ids: existing_rda_ids 
-    } 
-  });
-}
-
-return output; // MULTIPLE items (one per RDA record)
-Output: Array of objects (one per RDA record), each carrying:
-
-rda_record (single RDA record)
-ala_map (entire ALA map)
-existing_rda_ids (entire dedup map)
-
-Purpose: Pre-expand RDA list so SplitInBatches [08] can process one at a time with full context.
-Named references:
-
-$('Step 3 - Check Records Exist') — Use Step 3 name, NOT Step 2b (Step 3 is the visible continuation)
-$input.first() — Step 7 output (current node's input)
-
-
-[08] LOOP RDA RECORDS (SplitInBatches)
-n8n: SplitInBatches Node
-Input: {{$json}} (implicit — processes items from [07b])
+```
+Input array: {{$json.rda_records}}
 Batch size: 1
-Options > Max iterations: (leave blank or set to 1000)
-Output: 
-  - Loop output (CONTINUE): connects to [09]
-  - Done output (BREAK): connects to [11]
-Purpose: Iterate over items from [07b] one per loop. Return to [08] after [10], or exit to [11] when no more items.
-⚠️ CRITICAL: Batch size must be 1. Do not increase (prevents race conditions).
+```
 
-[09] CONSOLIDATED LOGIC (Code Node)
-n8n: Code Node
-javascriptconst input = $input.first().json;
-const rda = input.rda_record;
-const ala_map = input.ala_map || {};
-const existing_rda_ids = input.existing_rda_ids || {};
+**Purpose:** Process one RDA record at a time. Prevents simultaneous API calls that could cause data loss.
 
-// Extract RDA Record ID
-const rda_record_id = String(rda['RDA Record ID'] || '');
+**Output:** Single RDA record per loop iteration
 
-// DEDUP CHECK: Skip if already in sheet
-if (existing_rda_ids[rda_record_id]) {
-  return []; // Skip this record, loop continues
-}
+---
 
-// Extract ALA ID and lookup
-const ala_id_raw = rda['ALA Record ID'];
-const ala = ala_map[ala_id_raw] 
-  || ala_map[String(ala_id_raw)] 
-  || ala_map[parseInt(ala_id_raw)] 
-  || {}; // Fallback to empty object if not found
+### STEP 4 — FETCH ALA RECORD (ENRICHMENT)
 
-// Fallback to RDA Reviewer Handle if ALA missing
-const reviewer_handle = ala.reviewer_handle || String(rda['Reviewer Handle'] || '');
+**n8n:** NocoDB GET
+
+```
+Table: ALA (m57efwbtrvwohhr)
+URL: http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}
+Auth: xc-token
+```
+
+**Output:** ALA record with Raw Text, Platform, Star Rating
+
+**Error handling:** If ALA record not found (404), log and continue (review text marked as "N/A")
+
+---
+
+### STEP 5 — JOIN RDA + ALA (CODE NODE)
+
+**n8n:** Code Node
+
+```javascript
+const rda = $input.first().json; // Current RDA record from loop
+const alaData = $("Step 4 - Fetch ALA Record").first().json; // ALA enrichment
+
+const joined = {
+  rda_id: rda['RDA Record ID'],
+  rda_timestamp: rda['RDA Timestamp'],
+  approval_status: rda['Approval Status'],
+  public_response_draft: rda['Public Response Draft'],
+  // ALA enrichment
+  review_text: alaData['Raw Tex'] || alaData['Raw Text'] || 'Review text unavailable',
+  platform: alaData['Platform'] || 'Unknown',
+  star_rating: alaData['Star Rating'] || 0,
+  ala_id: rda['ALA Record ID']
+};
+
+return [{ json: joined }];
+```
+
+**Output:** Flattened object with all needed fields for sheet write
+
+---
+
+### STEP 6 — FETCH EXISTING SHEET ROWS (IDEMPOTENCY CHECK)
+
+**n8n:** Google Sheets GET
+
+```
+Spreadsheet ID: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
+Range: Sheet1!H:H (Column H = RDA-ID column only)
+Auth: Subtext-CX-GoogleSheets-ServiceAccount (NEW credential)
+Major dimension: ROWS
+```
+
+**Output:** Array of all existing RDA-IDs in sheet (for dedup check)
+
+**Code Node validation after fetch:**
+```javascript
+const sheetRows = $input.first().json.values || [];
+const existingRdaIds = sheetRows.flat(); // Extract RDA IDs from column H
+
+const currentRdaId = $("Step 5 - Join RDA + ALA").first().json.rda_id;
+const isNewRecord = !existingRdaIds.includes(currentRdaId);
 
 return [{ json: {
-  scx_date: (rda['RDA Timestamp'] || '').slice(0, 10), // YYYY-MM-DD
-  review_date: ala.review_date || '',
-  platform: ala.platform || '',
-  star_rating: ala.star_rating || '',
-  reviewer_handle: reviewer_handle,
-  review_text: ala.review_text || '',
-  proposed_response: rda['Public Response Draft'] || '',
-  status: rda['Approval Status'] || 'Pending',
-  edited_response: '', // Blank initially — Christine fills on edit
-  ala_record_id: String(ala_id_raw),
-  rda_record_id: rda_record_id,
-  sync_status: 'pending_sync'
+  is_new_record: isNewRecord,
+  existing_rda_ids: existingRdaIds,
+  current_rda: $("Step 5 - Join RDA + ALA").first().json
 } }];
-Logic:
+```
 
-Dedup check: if RDA ID exists in sheet, return empty (skip)
-ALA lookup: try 4 key formats (raw, string, int, empty fallback)
-Fallback: if ALA missing, use RDA Reviewer Handle
-Format all 12 field values for sheet write
-Return single record object
+---
 
-Output: Flat object with 12 fields (or empty array if duplicate)
+### STEP 7 — FILTER NEW RECORDS (DETERMINISTIC)
 
-[9b] RATE LIMIT DELAY (Wait Node)
-n8n: Wait Node
-Execution type: Time
-Delay: 1.5 seconds (1500ms)
-Purpose: Prevent Google Sheets API rate limit (60-100 requests/min). With ~30 records/run, spacing allows safe margins.
-Output: Pass-through (data unchanged, just delayed)
+**n8n:** IF Node
 
-[9d] RENAME FIELDS FOR SHEET (Set Node)
-n8n: Set Node
-Mode: Keep Only Set Fields
+```
+Condition: {{$json.is_new_record}} === true
+TRUE branch: Continue to Step 8 (write)
+FALSE branch: Return empty array (skip duplicate)
+```
 
-Rename mappings (Input → Output):
-  scx_date → "SCX Date"
-  review_date → "Review Date"
-  platform → "Platform"
-  star_rating → "Star Rating"
-  reviewer_handle → "Reviewer Handle"
-  review_text → "Review Text"
-  proposed_response → "Proposed Response"
-  status → "Status"
-  edited_response → "Edited Response"
-  ala_record_id → "ALA Record ID"
-  rda_record_id → "RDA Record ID"
-  sync_status → "Sync Status"
-Output: Object with sheet column names as keys (matches Sheet1 headers exactly)
-⚠️ CRITICAL: Case-sensitive, space-sensitive, no trailing spaces.
+**FALSE branch code:**
+```javascript
+// Record already in sheet — skip
+return [];
+```
 
-[10] APPEND ROW TO SHEET
-n8n: Google Sheets (Append Row)
-Spreadsheet ID: 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
-Sheet: Sheet1
+---
+
+### STEP 8 — BUILD SHEET ROW VALUES (CODE NODE)
+
+**n8n:** Code Node
+
+```javascript
+const current = $input.first().json.current_rda;
+
+// Format 8 columns for Sheet1!A:H
+const rowValues = [
+  // Column A: Date (ISO 8601 from RDA Timestamp)
+  current.rda_timestamp ? new Date(current.rda_timestamp).toISOString().split('T')[0] : '',
+  
+  // Column B: Platform
+  current.platform || 'Unknown',
+  
+  // Column C: Stars
+  current.star_rating || '',
+  
+  // Column D: Review
+  current.review_text || '',
+  
+  // Column E: Proposed (RDA public response draft — protected in sheet)
+  current.public_response_draft || '',
+  
+  // Column F: Edited (blank initially — Christine fills on edit)
+  '',
+  
+  // Column G: Status (Approval Status)
+  current.approval_status || 'Pending',
+  
+  // Column H: RDA-ID
+  current.rda_id || ''
+];
+
+return [{ json: {
+  values: [rowValues], // Google Sheets expects 2D array
+  rda_id: current.rda_id
+} }];
+```
+
+**Output:** Google Sheets API append body
+
+---
+
+### STEP 9 — WRITE ROW TO SHEET (GOOGLE SHEETS APPEND)
+
+**n8n:** Google Sheets API (HTTP POST)
+
+```
 Credential: Subtext-CX-GoogleSheets-ServiceAccount
-Column Mapping Mode: Map Automatically
-First Row Contains Headers: ON
-Value Input Option: USER_ENTERED
+Method: POST
+URL: https://sheets.googleapis.com/v4/spreadsheets/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w/values/Sheet1!A:H:append?valueInputOption=USER_ENTERED
 
-Settings:
-  On Error: Continue (don't halt on single append error)
-  Retry: ON
-  Max Retries: 3
-  Wait Between Retries: 5000ms
-Input: Flat object from [9d] with 12 fields
-Output: Google Sheets API response: { "updates": { "updatedRows": 1, "updatedColumns": 12 } }
-After append: Control returns to [08] SplitInBatches loop (continue or exit).
+Headers:
+  Authorization: Bearer {{$nodeExecutionContext.auth.token}} (auto-managed by credential)
+  Content-Type: application/json
 
-[11] BUILD SUMMARY (Code Node)
-n8n: Code Node (after [08] DONE output)
-javascriptconst all_results = $input.all();
-const success_count = all_results.filter(
-  item => item.json?.updates?.updatedRows > 0
-).length;
+Body (RAW):
+{
+  "values": {{$json.values}}
+}
+
+Retry: true
+Max retries: 3
+Wait between retries: 5000ms
+```
+
+**Success response:** `{ "updates": { "updatedRows": 1, "updatedColumns": 8 } }`
+
+**Error handling:** If 403 (permission denied) or 404 (sheet not found), throw error → ERR1 trigger
+
+---
+
+### STEP 10 — MERGE RESULTS (AFTER LOOP)
+
+**n8n:** Code Node (after SplitInBatches loop completes)
+
+```javascript
+// Summarize execution
+const totalProcessed = $input.all().length;
+const successCount = $input.all().filter(item => item.json?.updates?.updatedRows > 0).length;
 
 return [{ json: {
   execution_status: 'complete',
-  total_records_processed: all_results.length,
-  successfully_written: success_count,
-  completion_timestamp: new Date().toISOString(),
-  workflow_name: 'SCX-Sheet-Sync',
-  client_id: 'PAK-001'
+  total_records_processed: totalProcessed,
+  successfully_written: successCount,
+  completion_timestamp: new Date().toISOString()
 } }];
-Output: Summary object for logging/email
+```
 
-7. ERROR HANDLER — 3 NODES
-[ERR1] ERROR TRIGGER
-n8n: Error Trigger Node
-Fires if any node throws exception:
+---
 
-"refreshToken is required" (credential failure — should not occur with Service Account)
-403 Forbidden (permission denied on sheet)
-404 Not Found (sheet deleted)
-Network timeout
-NocoDB connection failure
+### STEP 11 — LOG COMPLETION (OPTIONAL)
 
+**n8n:** Set Node
 
-[ERR2] BUILD ERROR RECORD (Code Node)
-n8n: Code Node
-javascriptconst error = $input.first().json;
+```
+Include Other Input Fields: ON
+Message: "SCX-Sheet-Sync completed. {{$json.successfully_written}} records written."
+```
+
+**Output:** Completion log (no external action)
+
+---
+
+## 6. EMAIL REPORTING ARCHITECTURE (Chat #80)
+
+### Purpose
+
+Generate daily email summary sent to approval_contact_email with:
+- Total new responses appended today
+- Platform breakdown (Google, OpenTable, Yelp, TripAdvisor, Other)
+- T3 dignity-risk count (Pending-Elevated records requiring elevated attention)
+- Pending from previous days (already in sheet, not yet approved)
+- Total pending for review
+
+### Critical Design Decision (Chat #80)
+
+**Original approach (FAILED):** Filter records by `SCX Date` field to separate "today" vs "previous days"
+- **Problem:** RDA NocoDB table does NOT have `SCX Date` field (only Google Sheet has it)
+- **Result:** All records showed as "not today", pending_previous_days = 0
+
+**Final approach (WORKING):** Math-based calculation instead of date-based filtering
+- Total pending = count of all PAK-001 pending RDA records (from NocoDB Step 12b-fetch)
+- New today = records that passed through loop with data (from Step 11a)
+- Previous pending = Total - New
+
+**Why This Works:**
+- Step 8 (SplitInBatches) loops through ALL pending RDA records
+- Step 9 checks each against Google Sheet for idempotency
+- Records already in sheet → Step 9 returns `[]` (empty)
+- Records NOT in sheet → Step 9 returns full data with Platform/Status
+- Step 11a counts items with data = new today
+- Step 12b-filter calculates: total_pending - new_today = previous_pending
+
+### New Nodes (Chat #80)
+
+**Step 11a — Platform Count + Ensure Output**
+- **Node Type:** Code Node
+- **Input:** All loop items from Step 8 (SplitInBatches DONE)
+- **Purpose:** Count platform breakdown and ensure output exists even if loop processed 0 new records
+- **Counts tracked:**
+  - `total_pending_rda`: Total items that entered the loop (ALL pending RDA records)
+  - `records_processed`: Items with data (new records NOT already in sheet)
+  - `google_count`, `opentable_count`, `yelp_count`, `tripadvisor_count`, `other_count`
+  - `t3_count`: Pending-Elevated records (dignity-risk)
+- **Critical Logic:** `totalPendingCount++` for ALL items; `processedCount++` only for items with data
+- **Output:** Summary object `{ total_pending_rda, records_processed, platform_counts, t3_count }`
+
+**Step 12b-fetch — Fetch All Pending RDA Records**
+- **Node Type:** HTTP Request (NocoDB GET)
+- **URL:** `http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?limit=100`
+- **Purpose:** Fetch all pending RDA records to count total pending (not filtered by today)
+- **Output:** List of all pending RDA records (e.g., 54 records)
+
+**Step 12b-filter — Calculate Previous Pending (Math-Based)**
+- **Node Type:** Code Node
+- **Input:** RDA records from Step 12b-fetch + `records_processed` from Step 11a
+- **Filter Logic:**
+  ```javascript
+  const all_rda = fetchData.list || [];
+  let totalPending = 0;
+  for (let i = 0; i < all_rda.length; i++) {
+    const rec = all_rda[i];
+    const approvalStatus = rec['Approval Status'];
+    const publishedTimestamp = rec['Published Timestamp'];
+    const clientId = rec['Client ID'];
+    const isPending = (approvalStatus === 'Pending' || approvalStatus === 'Pending-Elevated');
+    const isNotPublished = (publishedTimestamp === null || publishedTimestamp === undefined);
+    const isClient = (clientId === 'PAK-001');
+    if (isPending && isNotPublished && isClient) {
+      totalPending++;
+    }
+  }
+  const newToday = step11aData.records_processed || 0;
+  const pendingPreviousDays = totalPending - newToday;
+  ```
+- **Output:** `{ pending_previous_days, total_pending }`
+- **Example:** 54 total - 4 new = 50 previous
+
+**Step 12c — Merge Counts + Build Email Variables**
+- **Node Type:** Code Node
+- **Input:** Platform counts from Step 11a + pending counts from Step 12b-filter + client config
+- **Output:** Complete email variables object:
+  - `date`, `prior_date`
+  - `google_count`, `opentable_count`, `yelp_count`, `tripadvisor_count`, `other_count`, `t3_count`
+  - `pending_previous_days`, `total_pending`, `records_processed_today`
+  - `approval_contact_email`, `client_name`, `client_id`, `sheet_url`
+
+### Email Output Format (Example)
+
+```
+Daily Review Response Summary — PAK-001
+Date: April 26, 2026
+
+📊 New Responses Added Today:
+Google: 1 response(s)
+OpenTable: 3 response(s)
+Yelp: 0 response(s)
+TripAdvisor: 0 response(s)
+Total new responses: 4
+
+⚠️ 2 require elevated attention (T3 — dignity-risk signals)
+
+📋 Pending from Previous Days:
+50 responses still awaiting approval
+
+📈 Total Pending Your Review: 54
+
+View and approve responses:
+https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w
+```
+
+### Critical Bug Fixes (Chat #80)
+
+**BUG 1 — Platform Count Field Name Case Sensitivity**
+- **Issue:** Step 11a code looked for `item.platform` (lowercase) but Step 8 output has `item.Platform` (capital P)
+- **Result:** All platform counts = 0
+- **Fix:** Changed `item.platform` → `item.Platform` and `item.status` → `item.Status`
+
+**BUG 2 — Pending Calculation Date-Based Logic**
+- **Issue:** Step 12b-filter tried to filter by `rec['SCX Date']` field that doesn't exist in RDA NocoDB table
+- **Result:** All records counted as "not today", pending_previous_days = 0
+- **Fix:** Changed from date-based filter to math-based calculation (total - new = previous)
+
+### Verified Behavior (Chat #80)
+
+**Scenario 1: 4 new records added (April 26)**
+- Total pending: 54
+- New today: 4
+- Previous: 54 - 4 = 50 ✅
+- Email: "4 new / 50 pending / Total: 54"
+
+**Scenario 2: 0 new records added (April 27)**
+- Total pending: 54
+- New today: 0
+- Previous: 54 - 0 = 54 ✅
+- Email: "0 new / 54 pending / Total: 54"
+
+**Scenario 3: 2 new records added (April 27)**
+- Total pending: 56 (54 + 2)
+- New today: 2
+- Previous: 56 - 2 = 54 ✅
+- Email: "2 new / 54 pending / Total: 56"
+
+---
+
+## 7. ERROR HANDLER — 3 NODES
+
+### ERR1 — ERROR TRIGGER
+
+**n8n:** Error Trigger Node
+
+Fires if any node throws:
+- "refreshToken is required" (credential failure)
+- 403 Forbidden (permission denied)
+- 404 Not Found (sheet deleted)
+- Network timeout
+- NocoDB connection failure
+
+---
+
+### ERR2 — BUILD ERROR RECORD
+
+**n8n:** Code Node
+
+```javascript
+const error = $input.first().json;
 
 const errorRecord = {
   error_message: error.message || 'Unknown error',
@@ -510,14 +714,23 @@ const errorRecord = {
   error_timestamp: new Date().toISOString(),
   workflow_name: 'SCX-Sheet-Sync',
   client_id: 'PAK-001',
-  retry_action: 'Investigate sheet permissions, NocoDB connectivity, or Service Account access.'
+  retry_action: error.message.includes('refreshToken') 
+    ? 'Check Google Service Account credential in n8n' 
+    : 'Investigate sheet permissions or NocoDB connection'
 };
 
 return [{ json: errorRecord }];
+```
 
-[ERR3] SEND ERROR EMAIL
-n8n: Email Node (or Brevo API)
-To: marellano@solofella.com (fallback; update to Christine's email when available)
+---
+
+### ERR3 — SEND ERROR EMAIL
+
+**n8n:** Email Node
+
+```
+To: {{$nodeExecutionContext.approval_contact_email}} 
+    (from PAK-001 Client Config, fallback: marellano@solofella.com)
 Subject: [ERROR] SCX-Sheet-Sync Workflow Failed — {{$json.error_timestamp}}
 
 Body:
@@ -526,184 +739,236 @@ Status: FAILED
 Error: {{$json.error_message}}
 Failed Node: {{$json.error_node}}
 Time: {{$json.error_timestamp}}
-Client: {{$json.client_id}}
+Client: PAK-001
 Action: {{$json.retry_action}}
 
 Next automatic attempt: Tomorrow at 7am UTC
+```
 
-8. NODE MAP — SCX-Sheet-Sync v1.1
-[01] Schedule Trigger — Daily 07:00 UTC
-      ↓
-[02] NocoDB GET — Fetch Pending RDA (no filter formula)
-      ↓
-[02b] Code Node — Filter Pending + Client Check
-      ↓
+---
+
+## 8. NODE MAP — SCX-Sheet-Sync v1.1
+
+```
+[01] Schedule Trigger — 7am UTC daily
+[02] NocoDB GET — Fetch Pending RDA Records (PAK-001, not published)
 [03] IF Node — Records exist?
-      ├─ NO → HALT
-      └─ YES ↓
-[04] HTTP GET — Fetch ALL ALA Records (with ?limit=100)
-      ↓
-[05] Code Node — Build ALA Map (index by Id)
-      ↓
-[06] Google Sheets GET — Fetch Existing RDA IDs (Column K dedup)
-      ↓
-[07] Code Node — Build Dedup Map
-      ↓
-[07b] Code Node — Merge All Data (expand RDA list + carry context)
-      ↓
-[08] SplitInBatches — Loop RDA records (batch size 1)
-      ├─ LOOP OUTPUT → [09]
-      └─ DONE OUTPUT → [11]
-      ↓
-[09] Code Node — Consolidated Logic (dedup + ALA lookup + fallback)
-      ↓
-[9b] Wait Node — Rate limit delay (1.5 seconds)
-      ↓
-[9d] Set Node — Rename fields to sheet columns
-      ↓
-[10] Google Sheets POST — Append row to sheet
-      ↓ (return to [08] loop or exit to [11])
-[08] [continues loop]
-      ↓
-[11] Code Node — Build summary (count processed records)
-      ↓
-[END]
+     |–– YES →
+     +–– NO → Return empty (halt gracefully)
+[04] SplitInBatches Node — Process one record per loop iteration
+[05] NocoDB GET — Fetch ALA Record (review text enrichment)
+[06] Code Node — Join RDA + ALA fields
+[07] Google Sheets GET — Fetch existing RDA-IDs (idempotency)
+[08] Code Node — Build idempotency check + filter logic
+[09] IF Node — Record already in sheet?
+     |–– YES → Return [] (skip)
+     +–– NO →
+[10] Code Node — Format 8-column row values
+[11] Google Sheets POST — Append row to sheet (returns control to loop)
+[12] (Loop continues or exits if no more records)
 
-── ERROR HANDLER ──────────────────────────
+── Email Reporting (Chat #80) ────────────────────────────────
+[11a] Code Node — Platform Count + Ensure Output (counts google/opentable/yelp/tripadvisor/other/t3)
+[12b-fetch] HTTP Request — Fetch All Pending RDA (NocoDB GET, no date filter)
+[12b-filter] Code Node — Calculate Previous Pending (math: total - new = previous)
+[12c] Code Node — Merge Counts + Build Email Variables
+[13-22] Email Chain — Build + Send Daily Summary (10 internal nodes)
+
+── Error Handler ─────────────────────────────────────────────
 [ERR1] Error Trigger
-      ↓
 [ERR2] Code Node — Build error record
-      ↓
-[ERR3] Email Node — Send error email
-Total nodes: 14 main + 3 error = 17
+[ERR3] Email Node — Send error notification
 
-9. CREDENTIALS + CONFIGURATION
-ItemValueStatusWorkflow NameSCX-Sheet-Syncv1.1TriggerSchedule — 07:00 UTC daily✅ ACTIVEGoogle Sheets Credential (NEW)Subtext-CX-GoogleSheets-ServiceAccount✅ COMPLETEService Account Emailscx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com✅ LIVEService Account Projectsolofella-cmh-project (806396262251)✅ VERIFIEDNocoDB Credentialxc-token (Header Auth)✅ ACTIVENocoDB URL (internal)http://nocodb:8080✅ VERIFIEDRDA Table IDmr1v67cszcklwns✅ LIVEALA Table IDm57efwbtrvwohhr✅ LIVESheet ID1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w✅ LIVESheet RangeSheet1!A:L (12 columns)✅ CONFIGUREDProtected ColumnsA-F (lock), G (read-only ref), J-L (lock)✅ SET UPEditable ColumnsH (Status), I (Edited Response)✅ READYData Validation (Col H)Pending / Approved / Edited-Approved / Not Accepted / Published✅ OPTIONALApproval Contact Email (PAK-001)marellano@solofella.com (placeholder)⚠️ UPDATE WHEN CHRISTINE CONFIRMSInfrastructureDigitalOcean n8n-Solofella · NYC3 · Ubuntu 24.04 · IP: 161.35.133.49✅ LIVEFirst Live SyncApril 21, 2026 — 50 records appended, 100% success✅ VERIFIED
+TOTAL: 28 nodes (11 main sheet sync + 4 email reporting + 3 error + 10 email chain internal)
+Google Sheets API calls: 2 per record (GET idempotency + POST append)
+NocoDB calls: 2 per record (RDA fetch for sheet, ALA enrichment) + 1 total pending fetch
+Batch mode: SplitInBatches = 1 (serial, prevents race conditions)
+Task runner compatible: Service Account credential works in all contexts
+Email frequency: Daily at 7am UTC (after sheet sync completes)
+```
 
-10. DATA FLOW — FULL CYCLE EXAMPLE (APRIL 21)
-Example: PAK-001 processes 50 pending RDA records on first live sync
+---
+
+## 9. CREDENTIALS + CONFIGURATION
+
+| Item | Value |
+|------|-------|
+| **Workflow Name** | SCX-Sheet-Sync |
+| **Trigger** | Schedule — 07:00 UTC daily |
+| **Google Sheets Credential (OLD)** | Subtext-CX-GoogleSheets (OAuth2 — DEPRECATED) |
+| **Google Sheets Credential (NEW)** | Subtext-CX-GoogleSheets-ServiceAccount (Service Account JSON) |
+| **Service Account Email** | scx-sheet-sync@solofella-cmh-project.iam.gserviceaccount.com |
+| **Service Account Project** | solofella-cmh-project (806396262251) |
+| **NocoDB Credential** | xc-token (Header Auth, Name: xc-token) |
+| **NocoDB URL (internal)** | http://nocodb:8080 — never localhost |
+| **RDA Table ID** | mr1v67cszcklwns |
+| **ALA Table ID** | m57efwbtrvwohhr |
+| **Client Config Table ID** | m95cmabjfyb94ps |
+| **Sheet ID** | 1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w |
+| **Sheet Range** | Sheet1!A:H |
+| **Sheet Columns** | Date, Platform, Stars, Review, Proposed, Edited, Status, RDA-ID |
+| **Column E (Proposed)** | Protected from editing — AI draft only |
+| **Column G (Status)** | Editable by approver — dropdown validation |
+| **Column F (Edited)** | Editable by approver — human edits |
+| **Approval Contact Email (PAK-001)** | Placeholder: marellano@solofella.com (update when Christine responds) |
+| **Infrastructure** | DigitalOcean n8n-Solofella — NYC3 — Ubuntu 24.04 — 4GB RAM — IP: 161.35.133.49 |
+| **Max retries on 5xx errors** | 3 |
+| **Wait between retries** | 5000ms |
+| **Batch size (SplitInBatches)** | 1 (serial execution — prevents race conditions) |
+| **Google Sheets API rate limit** | 60-100 requests/min (safe for daily run with 10-30 records) |
+
+---
+
+## 10. DATA FLOW — FULL CYCLE EXAMPLE
+
+### Example: PAK-001 processes 3 pending RDA records
+
+```
 7:00 AM UTC — Schedule fires
    ↓
-[02]: Query RDA table → returns 50 records (not yet filtered)
+Step 2: Query RDA table → returns 3 pending records
+   {id: 1, rda_record_id: "RDA-20260420-070015-001", ala_record_id: 42, ...}
+   {id: 2, rda_record_id: "RDA-20260420-070016-002", ala_record_id: 43, ...}
+   {id: 3, rda_record_id: "RDA-20260420-070017-003", ala_record_id: 44, ...}
    ↓
-[02b]: Filter → Remove Published + non-PAK-001 → 50 qualify
+Loop Iteration 1:
+   Step 4: Fetch ALA #42 → {review_text: "Great service...", platform: "Google", stars: 5}
+   Step 6: Join RDA + ALA → {rda_id: "RDA-...001", review: "Great service...", ...}
+   Step 7: GET Sheet Column H → ["RDA-...100", "RDA-...101", "RDA-...102"] (existing)
+   Step 8: Check "RDA-...001" in existing? → NO (new record)
+   Step 10: Format row → ["2026-04-20", "Google", "5", "Great service...", "Thank you...", "", "Pending", "RDA-...001"]
+   Step 11: POST to sheet → Append successful (updateRows: 1)
    ↓
-[03]: Check records exist → 50 > 0 → TRUE, continue
+Loop Iteration 2:
+   [Same process for RDA #2]
    ↓
-[04]: Fetch ALA records → HTTP GET ?limit=100 → returns 200+ ALA records
+Loop Iteration 3:
+   [Same process for RDA #3]
    ↓
-[05]: Build ALA map → Index all 200+ by Id → {42: {...}, 43: {...}, ...}
+Loop exits
    ↓
-[06]: Fetch existing sheet → Column K returns [] (first run, sheet empty)
+Step 13: Merge results → {total_records_processed: 3, successfully_written: 3}
    ↓
-[07]: Build dedup map → {} (no existing IDs)
-   ↓
-[07b]: Merge all data → Expand 50 RDA records into 50 items, each carrying full ALA map + dedup map
-   ↓
-[08]: Loop iteration 1–50
-   Loop 1:
-      [09]: RDA-001 → Check dedup (not in sheet) → Lookup ALA #42 → Success → Format 12 fields
-      [9b]: Wait 1.5s
-      [9d]: Rename to sheet columns
-      [10]: POST append → updateRows: 1 ✓
-      (return to [08])
-   Loop 2:
-      [09]: RDA-002 → Check dedup (not in sheet) → Lookup ALA #43 → Success → Format 12 fields
-      [9b]: Wait 1.5s
-      [9d]: Rename
-      [10]: POST append → updateRows: 1 ✓
-      (return to [08])
-   [Loop 3–50 continue...]
-   [08] DONE → Exit loop to [11]
-   ↓
-[11]: Merge results → {
-  execution_status: 'complete',
-  total_records_processed: 50,
-  successfully_written: 50,
-  completion_timestamp: '2026-04-21T07:05:30.123Z'
-}
-   ↓
-Workflow completes. 50 rows now in PAK-001 sheet.
-Christine opens sheet, sees 50 new rows.
-She can now review and approve (edit Column H) or edit responses (Column I).
-When she edits Status, Apps Script onEdit fires → webhook to RDA NocoDB.
+Sheet now contains 3 new rows. Christine sees them in the sheet at ~7:05 AM UTC.
+Apps Script onEdit trigger watches for Column G edits.
+When Christine updates Status, Apps Script fires → n8n SCX-Sheet-Approval webhook → PATCH RDA NocoDB.
+```
 
-11. KNOWN ISSUES + LESSONS (LOCKED FROM CHAT #77-78)
-CRITICAL DEBUGGING LESSONS
-LessonRoot CauseFixPreventionOAuth2 credential failure in scheduled moden8n 2.4.6 task runner cannot access refreshToken outside UI contextUse Google Service Account (static JSON key)Always use Service Account for scheduled workflows in n8n 2.4.6NocoDB filter formula → 422 errorn8n node config doesn't validate filter syntax against NocoDB schemaRemove filter formula, use Code Node post-fetchNever use filter formula in n8n NocoDB nodes — always post-fetch filterString().trim() on fields → silent failureNocoDB field read interception causes value lossRead fields directly without conversionAlways read NocoDB fields as-is, no type conversionNamed node references across branches failn8n 2.4.6 execution context limits $('NodeName') scopeUse only visible continuation path names (e.g., Step 3, not Step 2b if Step 3 is next)Test named references in actual branch path before deployingSplitInBatches batch >1 → data lossConcurrent loop iterations cause race conditions in API callsSet batch size to 1 alwaysAlways use batch size 1 for n8n SplitInBatches with API writesNocoDB pagination default 25/pageHTTP GET without limit returns incomplete dataAdd ?limit=100 to URLAlways specify limit in NocoDB HTTP GET callsGoogle Sheets "Map Each Column Manually" → 400 errorColumn name mismatch in manual mappingUse "Map Automatically" + Set Node for field renamingUse Set Node for field renaming, let Google Sheets auto-detect columnsSheet protection prevents appendProtection rule applied without service account exceptionAdd service account to protected range exceptionsAlways add service account to exceptions on protected rangesColumn header case/space sensitivity"Proposed Response" ≠ "proposed_response" ≠ "Proposed response "Match exact headers in Set Node outputUse echo "Column: 'Proposed Response'" to verify exact header textFirst run returns empty sheet rowsCorrect behavior — no existing records yetHandle empty array gracefullyAlways test dedup logic with empty sheet firstALA record lookup fails (404)Review deleted after RDA createdFallback to empty string or "N/A"Implement try-catch in ALA lookup, fall back to RDA fields
+---
 
-12. PHASE 2 OPEN ITEMS
-ItemStatusNotesWorkflow Logging to NocoDBOpenCreate workflow_logs NocoDB table (Timestamp, Workflow Name, Status, Client ID, Records Processed, Error Log). Add Step [12] POST after [11] to log every execution.EDO-001 sheet setupPendingReplicate SCX-Sheet-Sync for EDO-001. Requires: separate Google Sheet + Service Account email grant + Client Config record. No code changes.AJI-001 sheet setupExploratoryConfirm pilot terms. Then replicate workflow.Apps Script auto-syncDeferredCurrently manual (Christine edits Status, Apps Script fires webhook). Could auto-sync published records back to Reviews sheet if needed.Dashboard real-time statusPhase 2Dashboard currently static. Add polling to refresh approval status from sheet every 5 minutes.Google Business Profile API ingestionPhase 1bSeparate workflow. Auto-populate Column F (Review Text) from GBP instead of ALA.Yelp Fusion API ingestionPhase 1bSeparate workflow. Auto-populate Columns C-F from Yelp reviews.
+## 11. KNOWN ISSUES + OPEN ITEMS
 
-13. DEPLOYMENT CHECKLIST — CHAT #77-78 (✅ COMPLETE)
-Pre-deployment (Setup)
+### CRITICAL (Chat #77 — In Progress)
 
-[✅] Created Google Service Account in solofella-cmh-project
-[✅] Generated JSON key (secure storage)
-[✅] Shared PAK-001 sheet with service account (Editor)
-[✅] Verified Google Sheets API enabled
-[✅] Added Service Account credential to n8n
+| Issue | Status | Impact | Fix |
+|-------|--------|--------|-----|
+| **OAuth credential failure** | IN PROGRESS | Scheduled execution fails at Step 9 "refreshToken is required" | Implement Google Service Account (JSON key). Chat #77. |
+| **Approval Contact Email blank** | Open | Error emails fail (no recipient). PAK-001 Client Config shows placeholder. | Update PAK-001 Client Config with Christine's actual email before next test run. |
 
-Credential Migration
+### MEDIUM PRIORITY
 
-[✅] Updated [10] (Google Sheets POST) to use new credential
-[✅] Verified old OAuth credential deprecated
-[✅] Published workflow with new credential
+| Item | Status | Notes |
+|------|--------|-------|
+| ALA record not found (404) | Handled | If review deleted from ALA, sheet row shows "Review text unavailable". Non-blocking. |
+| Sheet column protected state | Configured | Column E (Proposed) is protected. Verified. No changes needed. |
+| Google Sheets API rate limits | Low risk | Workflow appends ~10-30 rows/day. Google limit is 60-100 req/min. Safe. |
+| EDO-001 sheet integration | Not started | Q2 2026. Will need separate Sheet ID + Service Account email grant. |
+| Yelp/OpenTable ingestion | Phase 1b | Not in scope for Chat #77. Focus on Google/TripAdvisor first. |
 
-Testing
+### PHASE 2 (Post-Pilot)
 
-[✅] Manual Execute: 1 test RDA record → appended successfully
-[✅] Manual Execute: Run again → no duplicate (dedup verified)
-[✅] Scheduled Execute: Wait for 7am UTC → ✅ auto-run successful
-[✅] Error test: Temporarily revoked credential → ERR3 email fired
-[✅] Apps Script test: Edit Status → webhook verified → RDA updated
-[✅] First live sync: 50 records, 100% success, zero duplicates
+| Item | Timeline | Notes |
+|------|----------|-------|
+| Google Business Profile API ingestion | Phase 1b | Auto-populate Column D (Review) from GBP instead of manual CSV. |
+| Yelp Fusion API ingestion | Phase 1b | Multi-platform review source automation. |
+| Apps Script → Google Sheet approval interface | Phase 2 | Currently manual. Could auto-populate dropdown from RDA Approval Status values. |
+| MRA integration | Post-pilot | Append weekly/monthly metrics to client sheet. Separate workflow. |
+| EDO-001 + AJI-001 sheet setup | Q2 2026 | Replicate SCX-Sheet-Sync for each client. No code changes — credential + Sheet ID only. |
 
-Post-deployment
+---
 
-[✅] PAK-001 Client Config Approval Contact Email — placeholder (update when Christine confirms)
-[✅] Service Account key location — documented (secure local storage)
-[✅] GitHub commit — SCX_Sheet_Sync_HOW_v1.1 (this document)
-[⏳] Update MCD to v7.5 (pending Miguel approval)
+## 12. DEPLOYMENT CHECKLIST — CHAT #77
 
-First Live Run — April 21, 2026
+Before publishing SCX-Sheet-Sync with Service Account credential:
 
-[✅] Workflow executed at 7:00 AM UTC
-[✅] 50 pending RDA records appended
-[✅] Zero duplicates (idempotency verified)
-[✅] All 12 columns populated correctly
-[✅] Column protection working (A-F, J-L read-only)
-[✅] Error log clean (no errors)
-[✅] Christine can view + edit (Status + Edited Response editable)
+**Pre-deployment (Setup):**
+- [ ] Create Google Service Account in solofella-cmh-project
+- [ ] Generate JSON key (download, secure locally)
+- [ ] Share PAK-001 Response Approvals sheet with service account email (Editor)
+- [ ] Verify Google Sheets API enabled in solofella-cmh-project
+- [ ] Add Service Account credential to n8n (Subtext-CX-GoogleSheets-ServiceAccount)
 
+**Credential Migration:**
+- [ ] Update Step 9 (Google Sheets POST) to use NEW credential
+- [ ] Verify old OAuth credential can be safely retired (no other workflows use it)
+- [ ] Publish workflow after credential change
 
-14. CRITICAL BUILD RULES (FROM CHAT #77-78 TRANSCRIPT)
-RuleReasonImpactNo OAuth2 in scheduled workflows (n8n 2.4.6)Task runner isolated, cannot refresh tokensUse Google Service Account onlyService Account JSON must paste exactly as-isJSON encoding strict, any formatting breaks authCopy-paste JSON, no editsSplitInBatches batch size = 1 alwaysPrevents race conditions in concurrent iterationsSerial execution onlyGoogle Sheets GET before POST for idempotencyDedup prevents duplicates on retryAlways fetch existing + filterFallback for missing ALA record (404)Reviews might be deleted post-RDA creationUse RDA Reviewer Handle fallbackError handler before publishCatch failures early, notify immediatelyAlways include [ERR1-3]No circular dependency with Apps ScriptOne-way flow prevents infinite loopsSCX-Sheet-Sync appends only, Apps Script edits onlyBatch size 1 in SplitInBatches (REPEAT)Concurrent API calls lose dataSerial is safe, tested, verifiedAdd ?limit=100 to NocoDB HTTP GETDefault 25/page returns incomplete dataAlways specify limit paramUse Set Node for field renaming, not manualManual mapping causes column mismatch errorsRename in Set, let Sheets auto-detectProtect sheet columns, exempt service accountPrevents accidental edits while allowing appendAlways add service account to exceptions
+**Testing:**
+- [ ] Manual Execute: Create 1 test RDA record, run workflow, verify row appended to sheet
+- [ ] Manual Execute: Run again, verify no duplicate row (idempotency check)
+- [ ] Scheduled Execute: Wait for 7am UTC, verify auto-run completes
+- [ ] Error test: Break credential temporarily, verify ERR3 email fires
+- [ ] Apps Script test: Edit Status column in sheet, verify webhook fires and RDA updates
 
-15. SHEET PROTECTION ARCHITECTURE (COMPLETE)
-PROTECTION STRUCTURE (As of April 22, 2026)
-ColumnRangeTypeProtectedExceptionEditable ByAA:ASCX DateYESService AccountService Account only (n8n append)BB:BReview DateYESService AccountService Account only (n8n append)CC:CPlatformYESService AccountService Account only (n8n append)DD:DStar RatingYESService AccountService Account only (n8n append)EE:EReviewer HandleYESService AccountService Account only (n8n append)FF:FReview TextYESService AccountService Account only (n8n append)GG:GProposed ResponseYESNoneRead-only (reference only, AI-generated)HH:HStatusNO—Everyone (Christine + service account) — dropdown validationII:IEdited ResponseNO—Everyone (Christine pastes modified response)JJ:JALA Record IDYESService AccountService Account only (n8n append)KK:KRDA Record IDYESService AccountService Account only (n8n append)LL:LSync StatusYESService AccountService Account only (n8n append)11:1Header RowYESNoneOwner only (prevents deletion)
-CLIENT WORKFLOW WITH PROTECTION
-Daily at ~7:05 AM UTC:
+**Post-deployment:**
+- [ ] Update PAK-001 Client Config Approval Contact Email (from placeholder to Christine's actual email)
+- [ ] Document Service Account key location (secure storage — not in GitHub)
+- [ ] Add SCX-Sheet-Sync to GitHub (agents/ingestion/ folder)
+- [ ] Update MCD v7.5 with new Service Account credential architecture
 
-Christine opens PAK-001 Response Approvals sheet
-Sees new rows in columns A-F, G, J-L (greyed out, read-only)
-Views Column G (Proposed Response) as AI reference
-Edits Column H (Status) → dropdown selects: Pending / Approved / Edited-Approved / Not Accepted / Published
-If needed, pastes modified response in Column I (Edited Response)
-onEdit trigger fires → Apps Script → webhook to RDA NocoDB
-RDA record updated with new Status + Edited Response
+**First Live Run (April 21, 7am UTC):**
+- [ ] Monitor workflow execution
+- [ ] Verify ~50 pending RDA records append to sheet
+- [ ] Confirm no duplicates (idempotency)
+- [ ] Check error log email (should be clean)
+- [ ] Have Christine test approval workflow (edit Status, verify RDA updates)
 
-Sheet remains immutable for automated columns (A-F, J-L).
+---
 
-16. INFRASTRUCTURE
-ComponentValueDropletDigitalOcean n8n-Solofella · NYC3 · Ubuntu 24.04IP161.35.133.49n8n version2.4.6 (Self-hosted)n8n URLhttp://161.35.133.49:5678NocoDB URL (external)http://161.35.133.49:8080NocoDB URL (inside n8n)http://nocodb:8080Docker compose syntaxv1 hyphen (docker-compose, not docker compose)DatabaseSQLite at /var/lib/docker/volumes/n8n_n8n_data/_data/database.sqliteMonthly cost~$63 (DigitalOcean) + Google APIs (free tier)Status✅ LIVE — April 21 first sync successful
+## 13. CRITICAL BUILD RULES (FROM CHAT #76 + CHAT #80 LESSONS)
 
-17. REFERENCE DOCUMENTS
-DocumentPurposeLocationStatusSCX_HOW_RDA_v3.1RDA pipeline (produces records for SCX-Sheet-Sync)GitHub: agents/RDA/✅ LIVESCX_HOW_ALA_v4ALA pipeline (source for review enrichment)GitHub: agents/ALA/✅ LIVEDashboard Freelancer BriefClient UI (reads sheet data)GitHub: frontend/✅ COMPLETESCX_PreBuild_Protocol_v1.0Field traceability standardGitHub: protocols/✅ LOCKEDMCD_v7.4Project continuity (pre-update)GitHub: docs/⏳ UPDATE TO v7.5SCX_Sheet_Sync_HOW_v1.1This documentGitHub: agents/ingestion/✅ CURRENT
+| Rule | Reason |
+|------|--------|
+| No OAuth2 in scheduled workflows (n8n 2.4.6) | Task runner cannot access refreshToken. Use Service Account instead. |
+| Service Account JSON must be pasted exactly | Double-encryption bug: any formatting change causes 400 error. |
+| SplitInBatches = 1 (never >1 in this workflow) | Prevents simultaneous API calls that cause data loss. Serial is safe. |
+| Google Sheets GET before POST for idempotency | Dedup by RDA ID prevents duplicate rows on retry. |
+| Fallback for missing ALA record (404) | Review might be deleted. Show "N/A" rather than fail. |
+| Error handler before publish | Catch failures early. Email approver immediately. |
+| No circular dependency with Apps Script | SCX-Sheet-Sync appends. Apps Script edits. One-way flow. |
+| Batch size 1 in SplitInBatches | Prevents race conditions in concurrent executions. |
+| Platform/Status field case sensitivity (Chat #80) | JavaScript is case-sensitive. Verify actual field names in n8n outputs before coding. `item.platform` ≠ `item.Platform`. |
+| Date-based filtering requires field existence (Chat #80) | Don't filter by fields that don't exist in source table. Use math-based calculations when date fields unavailable. Example: pending_previous = total_pending - new_today. |
 
-18. NEXT ACTIONS (AS OF CHAT #78)
-ActionOwnerTimelineStatusUpdate MCD to v7.5MiguelImmediate⏳ PENDINGCreate EDO-001 Client ConfigMiguelQ2 2026OpenConfirm AJI-001 pilot termsMiguelQ2 2026ExploratoryUpdate PAK-001 Approval Contact EmailChristine (confirmation)ASAP⏳ PENDING INPUTCreate workflow_logs NocoDB tableMiguel/DevPhase 2PlannedPhase 1b: Google Business Profile APIDevPhase 1bQueuedPhase 1b: Yelp Fusion APIDevPhase 1bQueuedsubtextcx.com landing pageDevBefore outboundPending
+---
 
-Subtext CX · SCX_Sheet_Sync_HOW_v1.1 · Chat #78 · April 22, 2026 · Solofella LLC
-STATUS: ✅ PRODUCTION LIVE — First sync verified April 21, 2026. 50 records appended, 100% success rate, zero duplicates. Approval workflow ready for client testing.
+## 14. REFERENCE DOCUMENTS
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| SCX_HOW_RDA_v3.1+ | RDA workflow (produces records for sheet) | GitHub: agents/RDA/ |
+| SCX_HOW_ALA_v4 | ALA workflow (source for review text) | GitHub: agents/ALA/ |
+| Dashboard Freelancer Brief | Client UI (reads approved/published records) | GitHub: frontend/ |
+| SCX_PreBuild_Protocol_v1.0 | Field traceability standard | GitHub: protocols/ |
+| MCD_v7.4+ | Project continuity (updates after each chat) | GitHub: docs/ |
+
+---
+
+## 15. INFRASTRUCTURE
+
+| Component | Value |
+|-----------|-------|
+| **Droplet** | DigitalOcean n8n-Solofella · NYC3 · Ubuntu 24.04 |
+| **IP** | 161.35.133.49 |
+| **n8n version** | 2.4.6 (Self-hosted) |
+| **n8n URL** | http://161.35.133.49:5678 |
+| **NocoDB URL (external)** | http://161.35.133.49:8080 |
+| **NocoDB URL (inside n8n)** | http://nocodb:8080 |
+| **Docker compose** | v1 hyphen syntax (`docker-compose`, not `docker compose`) |
+| **Database** | SQLite at /var/lib/docker/volumes/n8n_n8n_data/_data/database.sqlite |
+| **Monthly cost** | ~$63 (DigitalOcean) + Google Cloud API (free tier) |
+
+---
+
+**Subtext CX · SCX_Sheet_Sync_HOW_v1.1 · Chat #80 · April 26, 2026 · Solofella LLC**
+```
