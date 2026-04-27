@@ -1,0 +1,294 @@
+Chat #80 · April 26, 2026
+
+**SubtextCX / Solofella LLC**
+
+---
+
+## ANSWERS TO MRA DATE FILTERING QUESTIONS
+
+---
+
+### **Q1: How did you filter RDA records by date?**
+
+**ANSWER:** We DON'T filter by date anymore (as of Chat #80).
+
+**What failed (original approach):**
+- Tried to filter by `SCX Date` field in Step 12b-filter Code Node
+- Problem: RDA NocoDB table doesn't HAVE `SCX Date` field (only Google Sheet has it)
+- Result: All records returned empty string for date → 0 records counted
+
+**What works now (math-based):**
+- Step 12b-fetch: NocoDB GET with NO date filter in URL
+- URL: `http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?limit=100`
+- Fetches ALL pending RDA records (54 total)
+- Step 12b-filter: Count total pending, then subtract new today
+- Math: `pending_previous = total_pending - new_today`
+
+**For MRA:** If you need "records from last 7 days", filter in NocoDB URL using RDA Timestamp:
+```
+?where=(RDA Timestamp,gt,2026-04-19T00:00:00Z)&limit=100
+```
+
+---
+
+### **Q2: What exact JavaScript code for date filtering?**
+
+**ANSWER:** We abandoned date filtering. But here's the working math-based code from Step 12b-filter:
+
+```javascript
+// Step 12b-filter — Calculate Previous Pending
+const fetchData = $input.first().json;
+const all_rda = fetchData.list || [];
+
+// Filter for PAK-001 pending records only
+let totalPending = 0;
+for (let i = 0; i < all_rda.length; i++) {
+  const rec = all_rda[i];
+  const approvalStatus = rec['Approval Status'];
+  const publishedTimestamp = rec['Published Timestamp'];
+  const clientId = rec['Client ID'];
+  
+  const isPending = (approvalStatus === 'Pending' || approvalStatus === 'Pending-Elevated');
+  const isNotPublished = (publishedTimestamp === null || publishedTimestamp === undefined);
+  const isClient = (clientId === 'PAK-001');
+  
+  if (isPending && isNotPublished && isClient) {
+    totalPending++;
+  }
+}
+
+// Get new records processed today from Step 11a
+const step11aData = $('Step 11a - Ensure Output').first().json;
+const newToday = step11aData.records_processed || 0;
+
+// Calculate previous pending
+const pendingPreviousDays = totalPending - newToday;
+
+return [{ json: {
+  pending_previous_days: pendingPreviousDays,
+  total_pending: totalPending
+} }];
+```
+
+**Key:** No date parsing. Just count states (Pending + not Published).
+
+---
+
+### **Q3: Did you encounter `new Date(rdaTimestamp).getTime()` issues?**
+
+**ANSWER:** Yes. That's WHY we abandoned date filtering.
+
+**RDA Timestamp format from NocoDB:**
+```
+2026-04-19 23:48:23+00:00
+```
+
+**What failed:**
+```javascript
+const rdaDate = new Date(rec['RDA Timestamp']).getTime();
+const today = new Date().setHours(0,0,0,0);
+const isToday = (rdaDate >= today);
+```
+Result: Timezone issues, inconsistent parsing across records.
+
+**What we use instead:** Math-based calculation (see Q2).
+
+**If you MUST parse dates for MRA:**
+```javascript
+// Force ISO 8601 parsing
+const timestamp = rec['RDA Timestamp'];
+const isoTimestamp = timestamp.replace(' ', 'T'); // "2026-04-19T23:48:23+00:00"
+const dateObj = new Date(isoTimestamp);
+
+// Get UTC date string for comparison
+const dateStr = dateObj.toISOString().split('T')[0]; // "2026-04-19"
+
+// Compare strings, not timestamps
+const todayStr = new Date().toISOString().split('T')[0];
+const isToday = (dateStr === todayStr);
+```
+
+**Better:** Filter in NocoDB URL, not JavaScript.
+
+---
+
+### **Q4: How did you build `platform_counts` from RDA/ALA?**
+
+**ANSWER:** Step 11a aggregates platform breakdown from loop output.
+
+**Critical discovery (Chat #80):** Field name is case-sensitive.
+- ❌ `item.platform` (lowercase) → all zeros
+- ✅ `item.Platform` (capital P) → correct counts
+
+**Step 11a reads from SplitInBatches DONE output.**
+
+---
+
+### **Q5: Share exact Step 11a Code Node**
+
+**ANSWER:** Here's the working code (fixed Chat #80):
+
+```javascript
+// Step 11a - Platform Count + Ensure Output
+const items = $input.all();
+
+let totalPendingCount = 0;
+let processedCount = 0;
+let googleCount = 0;
+let opentableCount = 0;
+let yelpCount = 0;
+let tripadvisorCount = 0;
+let otherCount = 0;
+let t3Count = 0;
+
+for (let i = 0; i < items.length; i++) {
+  const item = items[i].json;
+  
+  // Count ALL items that entered the loop
+  totalPendingCount++;
+  
+  // Only count items with data (new records appended to sheet)
+  if (item && item.Platform) {
+    processedCount++;
+    
+    // CRITICAL: Use capital P in Platform and capital S in Status
+    const platform = (item.Platform || '').toLowerCase();
+    const status = item.Status || '';
+    
+    // Platform breakdown
+    if (platform.includes('google')) {
+      googleCount++;
+    } else if (platform.includes('opentable')) {
+      opentableCount++;
+    } else if (platform.includes('yelp')) {
+      yelpCount++;
+    } else if (platform.includes('tripadvisor')) {
+      tripadvisorCount++;
+    } else {
+      otherCount++;
+    }
+    
+    // T3 count (Pending-Elevated)
+    if (status === 'Pending-Elevated') {
+      t3Count++;
+    }
+  }
+}
+
+return [{ json: {
+  total_pending_rda: totalPendingCount,
+  records_processed: processedCount,
+  google_count: googleCount,
+  opentable_count: opentableCount,
+  yelp_count: yelpCount,
+  tripadvisor_count: tripadvisorCount,
+  other_count: otherCount,
+  t3_count: t3Count
+} }];
+```
+
+**Key points:**
+1. `$input.all()` reads ALL loop iterations
+2. `totalPendingCount++` for EVERY item (even empty ones)
+3. `processedCount++` only for items with data
+4. Field names: `item.Platform` and `item.Status` (capitalized)
+
+---
+
+### **Q6: NocoDB returned 54 but aggregation counted 0?**
+
+**ANSWER:** YES. Exact issue we had. Two bugs:
+
+**BUG 1 — Field name case sensitivity:**
+- Code looked for `item.platform` (lowercase)
+- Actual field name: `item.Platform` (capital P)
+- JavaScript: `undefined.toLowerCase()` → error or empty string
+- Result: All platform counts = 0
+
+**Fix:** Changed to `item.Platform`
+
+**BUG 2 — Reading wrong node reference:**
+- Initial code tried: `$('Step 9').all()` from outside loop
+- n8n 2.4.6 Task Runner: returns ONLY last iteration
+- Result: Only 1 record counted instead of 54
+
+**Fix:** Moved aggregation AFTER loop (Step 11a reads from Step 8 DONE output)
+
+**How we debugged:**
+1. Added `console.log(items.length)` in Step 11a → showed 54 ✅
+2. Added `console.log(item.Platform)` inside loop → showed `undefined` ❌
+3. Added `console.log(Object.keys(item))` → revealed actual field names
+4. Saw: `['Platform', 'Status', 'rda_id', ...]` (capital P)
+
+---
+
+### **Q7: Data flow from RDA fetch → platform aggregation → email?**
+
+**ANSWER:** Here's the exact flow:
+
+```
+Step 2: NocoDB GET RDA
+  ↓ (54 pending records)
+Step 8: SplitInBatches (loops through all 54)
+  ↓ (each iteration checks if record already in sheet)
+  ↓ (if NEW: returns full data with Platform/Status)
+  ↓ (if EXISTS: returns empty [])
+Step 8 DONE: All 54 iterations complete
+  ↓
+Step 11a: Code Node — Platform Count + Ensure Output
+  ↓ INPUT: $input.all() from Step 8 (54 items, some with data, some empty)
+  ↓ OUTPUT: { records_processed: 4, google_count: 1, opentable_count: 3, ... }
+  ↓
+Step 12b-fetch: HTTP GET all pending RDA (separate fresh fetch)
+  ↓ OUTPUT: { list: [54 RDA records] }
+  ↓
+Step 12b-filter: Code Node — Calculate Previous Pending
+  ↓ INPUT: RDA list from 12b-fetch + records_processed from 11a
+  ↓ OUTPUT: { pending_previous_days: 50, total_pending: 54 }
+  ↓
+Step 12c: Code Node — Merge Counts + Build Email Variables
+  ↓ INPUT: Platform counts from 11a + pending counts from 12b-filter
+  ↓ OUTPUT: Complete email_variables object
+  ↓
+Email Chain: Uses email_variables to build and send email
+```
+
+**Key nodes that pass platform_counts:**
+- Step 11a produces it
+- Step 12c reads it via: `const step11aData = $('Step 11a - Ensure Output').first().json;`
+- Email body template uses: `${step11aData.google_count}`
+
+---
+
+## YOUR MRA PROBLEM DIAGNOSIS
+
+Based on your symptoms:
+
+**Symptom:** Step 8 returns 54 records, Step 9 outputs 0
+**Likely cause:** Date filtering code fails to parse RDA Timestamp
+
+**Check these:**
+1. Does Step 9 read from Step 8 correctly? (`$input.first().json.list`)
+2. What's the EXACT code in Step 9 that filters by date?
+3. Does `rec['RDA Timestamp']` exist? (Verify field name case)
+4. Add debug: `console.log(rec['RDA Timestamp'])` — what format?
+
+**Symptom:** Platform counts all zeros
+**Likely cause:** Field name case mismatch (same bug we had)
+
+**Check these:**
+1. In your aggregation code, do you use `item.platform` or `item.Platform`?
+2. Run: `console.log(Object.keys(item))` to see ACTUAL field names
+3. n8n node outputs are case-sensitive to source field names
+
+**Recommended fix for MRA:**
+1. **Don't filter by date in JavaScript** — filter in NocoDB URL:
+   ```
+   ?where=(RDA Timestamp,gt,2026-04-19T00:00:00Z)
+   ```
+2. **Use exact field names from n8n output** (check case)
+3. **Aggregate AFTER the loop completes** (use `$input.all()`)
+
+---
+
+**Need the actual Step 11a node exported from n8n? Let me know.**
