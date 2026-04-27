@@ -1,0 +1,147 @@
+**CORRECTED PROMPT — FINAL VERSION — READY TO PASTE:**
+
+```
+This is a SubtextCX / Solofella LLC build session.
+Stack: n8n 2.4.6 + NocoDB self-hosted on DigitalOcean droplet
+n8n-Solofella, NYC3, IP: 161.35.133.49.
+NocoDB internal URL: http://nocodb:8080 (NEVER localhost).
+NocoDB Base ID: pq249fix22t3ofv
+SIA Cluster Table ID: mdn68l4lm609fve
+
+CONTEXT:
+MRA generates 3 report types: daily (2-day window), weekly (7-day 
+window), monthly (30-day window). Each report needs SIA cluster data
+matching that specific time window.
+
+CURRENT SIA PROBLEM:
+SIA only runs on a 30-day window (hardcoded). When MRA generates a 
+weekly report, it queries SIA but gets stale 30-day cluster data that
+does not match the 7-day period.
+
+MRA ARCHITECTURE REFERENCE (already built — mirror this pattern):
+MRA uses one workflow with three Schedule trigger nodes, each wiring
+to its own Set Report Type node, all three converging into a single
+Set Window Parameters node. SIA must follow the same pattern.
+
+WHAT NEEDS TO CHANGE IN SIA:
+SIA must support 3 window configurations within one workflow:
+1. Daily window: 2 days (for MRA daily reports)
+2. Weekly window: 7 days (for MRA weekly reports)
+3. Monthly window: 30 days (for MRA monthly reports)
+
+REQUIREMENTS:
+
+1. SIA WORKFLOW ARCHITECTURE — mirror MRA pattern:
+   Three Schedule trigger nodes, each wiring to its own Set node,
+   all three converging into a single shared processing chain:
+
+   [Schedule Trigger: daily — 7am every day]
+        ↓
+   [Set: window_type=daily, window_days=2]
+        ↓
+        ↓ ←── [Set: window_type=weekly, window_days=7]
+        ↓           ↑
+        ↓      [Schedule Trigger: weekly — Monday 6am]
+        ↓
+        ↓ ←── [Set: window_type=monthly, window_days=30]
+        ↓           ↑
+        ↓      [Schedule Trigger: monthly — 1st of month 6am]
+        ↓
+   [Step 1b - Set Window Parameters] ← single shared node
+        ↓
+   [rest of existing SIA pipeline unchanged]
+
+2. SIA NocoDB table needs one new field:
+   Field name: Report Window Type
+   Type: SingleSelect
+   Values: daily | weekly | monthly (NO trailing spaces)
+   Purpose: MRA filters SIA clusters by this field + Run Timestamp
+
+3. SIA Step 1b (Set Window Parameters) — CORRECT NODE NAME:
+   Currently named "Step 1b - Set Window Parameters" in as-built SIA.
+   This node must:
+   - Accept window_type from upstream Set node (daily/weekly/monthly)
+   - Accept window_days from upstream Set node (2/7/30)
+   - Calculate window_start and window_end from window_days
+   - Pass window_type and window_days through all downstream nodes
+   - Pass window_type to NocoDB write as "Report Window Type"
+
+4. SIA Step 5 (Load Prior SIA Clusters) query must change from:
+   ?where=(Window Days,eq,{{$json.window_days}})
+   to:
+   ?where=(Report Window Type,eq,{{$json.window_type}})
+   REASON: Ensures Trend Direction compares like-for-like.
+   Weekly run compares against prior weekly run.
+   Monthly run compares against prior monthly run.
+   Without this fix, a weekly run would match against monthly prior
+   clusters and produce incorrect Trend Direction values.
+
+5. SIA NocoDB POST body must include:
+   "Report Window Type": inp.window_type
+   This field must be added to Step 8 (Build Bulk POST Body) — the
+   Code Node that builds the JSON array for the bulk POST.
+
+6. MRA query pattern (for reference — already built in MRA):
+   Weekly:  ?where=(Report Window Type,eq,weekly)&sort=-Run Timestamp
+   Daily:   ?where=(Report Window Type,eq,daily)&sort=-Run Timestamp
+   Monthly: ?where=(Report Window Type,eq,monthly)&sort=-Run Timestamp
+
+NOCODB PRE-BUILD ACTION REQUIRED BEFORE NODE 1:
+□ Add field "Report Window Type" (SingleSelect) to SIA NocoDB table
+  mdn68l4lm609fve
+□ Pre-load values: daily | weekly | monthly (NO trailing spaces)
+□ Note the new field ID from Schema Registry
+
+BUILD RULES FOR THIS SESSION (n8n 2.4.6 task runner):
+- No spread operator — return objects key-by-key only
+- No console.warn/log — use throw new Error() only
+- No unused variable declarations
+- Each let/const on its own line
+- NocoDB credential: xc-token (Header Auth, Name=xc-token)
+- Webhook auth = NONE on all agent webhooks
+- NocoDB date filter — ISO 8601 rejected — filter dates in Code Node
+  using Date.getTime() comparison
+- pageInfo.totalRows for NocoDB GET counts (NOT list.length)
+- $workflow.staticData UNRELIABLE — load data fresh per run
+- Wait Between Tries MAX = 5000ms
+- PATCH = JSON body mode (NOT RAW)
+- No for...of loops — use index-based for loops in Code Nodes
+
+EXPECTED OUTCOME:
+When MRA runs a weekly report, it queries SIA clusters where
+Report Window Type=weekly and retrieves the latest weekly run
+(7-day window). Trend Direction correctly compares current weekly
+clusters against the prior weekly run — not the prior monthly run.
+The SIA workflow runs three independent schedules but shares one
+processing chain downstream from Set Window Parameters.
+
+EXISTING SIA NODE NAMES (as-built — reference before building):
+Step 1 - Schedule Trigger
+Step 1b - Set Window Parameters
+Step 2 - Set Window Bounds
+Step 3 - Fetch EIP Records
+Step 4 - Handle Empty Window
+Step 5 - Load Prior SIA Clusters
+Step 6 - Build Prior N Map
+Step 7 - Build Clusters
+Step 7b - Split Clusters
+Step 8 - Build Bulk POST Body
+Step 9 - NocoDB Bulk POST Clusters
+
+Build one change at a time. Confirm each node before proceeding.
+Full code blocks only. No partial code.
+```
+
+---
+
+**Changes from previous version:**
+
+| Item | Change |
+|---|---|
+| Issue 3 | Three separate workflows removed. Replaced with MRA mirror pattern — three triggers → three Set nodes → one shared chain |
+| Architecture diagram | Added explicit convergence flow diagram |
+| Node name | Step 3 corrected to Step 1b throughout |
+| Issue 2 | Step 5 filter fix retained and reason explained |
+| Pre-build action | NocoDB field addition added as required first step |
+| Existing node names | Full as-built node name list added for reference |
+| `for...of` loops | Added to build rules — blocked in n8n 2.4.6 Code Nodes |
