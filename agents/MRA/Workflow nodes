@@ -1,0 +1,1313 @@
+Step 1a - Trigger Daily 48hr
+Docs
+Parameters
+Settings
+This workflow will run on the schedule you define here once you publish it.For testing, you can also trigger it manually: by going back to the canvas and clicking 'execute workflow'
+Trigger Rules
+Trigger Interval
+Days
+Days Between Triggers
+1
+Must be in range 1-31
+Trigger at Hour
+8am
+Trigger at Minute
+0
+
+Step 2a - Set Report Type Daily
+Parameters
+Settings
+Mode
+Manual Mapping
+Fields to Set
+report_type
+String
+daily
+Drag input fields here
+or
+Add Field
+Include Other Input Fields
+
+Input Fields to Include
+All
+Options
+No properties
+Add option
+
+Docs
+
+Step 1b - Trigger Weekly Brief
+Parameters
+Settings
+This workflow will run on the schedule you define here once you publish it.For testing, you can also trigger it manually: by going back to the canvas and clicking 'execute workflow'
+Trigger Rules
+Trigger Interval
+Weeks
+Weeks Between Triggers
+1
+Trigger on Weekdays
+Monday
+Trigger at Hour
+9am
+Trigger at Minute
+0
+Step 2b - Set Report Type Weekly
+Parameters
+Settings
+Mode
+Manual Mapping
+Fields to Set
+report_type
+String
+weekly
+Drag input fields here
+or
+Add Field
+Include Other Input Fields
+
+Input Fields to Include
+All
+Options
+No properties
+Step 1c - Trigger Monthly Report
+Parameters
+Settings
+This workflow will run on the schedule you define here once you publish it.For testing, you can also trigger it manually: by going back to the canvas and clicking 'execute workflow'
+Trigger Rules
+Trigger Interval
+Months
+Months Between Triggers
+1
+Trigger at Day of Month
+1
+If a month doesn’t have this day, the node won’t trigger
+Trigger at Hour
+10am
+Trigger at Minute
+0
+Step 2c - Set Report Type Monthly
+Parameters
+Settings
+Mode
+Manual Mapping
+Fields to Set
+report_type
+String
+monthly
+Drag input fields here
+or
+Add Field
+Include Other Input Fields
+
+Input Fields to Include
+All
+Options
+No properties
+Add option
+Step 3 - Set Window Parameters
+const input = $input.first().json;
+const p = typeof input.body === 'string' ? JSON.parse(input.body) : input;
+const report_type = p.report_type || 'daily';
+
+const now = new Date();
+
+const pad = (n, l=2) => String(n).padStart(l, '0');
+const d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+const t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+const mra_run_id = `MRA-${d}-${t}`;
+
+let period_start;
+let period_end;
+let window_days;
+
+if (report_type === 'daily') {
+  window_days = 2;
+  period_end = now.toISOString();
+  period_start = new Date(now.getTime() - 2 * 86400000).toISOString();
+} else if (report_type === 'weekly') {
+  window_days = 7;
+  period_end = now.toISOString();
+  period_start = new Date(now.getTime() - 7 * 86400000).toISOString();
+} else {
+  window_days = 30;
+  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  period_start = firstOfLastMonth.toISOString();
+  period_end = new Date(firstOfThisMonth.getTime() - 1).toISOString();
+}
+
+const result = {};
+result.mra_run_id = mra_run_id;
+result.report_type = report_type;
+result.period_start = period_start;
+result.period_end = period_end;
+result.window_days = window_days;
+result.run_timestamp = now.toISOString();
+
+return [{ json: result }];
+
+Step 4 - Fetch Client Config
+Parameters
+Settings
+Method
+GET
+URL
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps?where=(Client%20ID,eq,PAK-001)&limit=10
+ 
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps?where=(Client%20ID,eq,PAK-001)&limit=10
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Send Body
+
+Options
+No properties
+
+Step 5 - Extract Client Config
+const input = $input.first().json;
+const s3 = $('Step 3 - Set Window Parameters').first().json;
+
+const records = input.list || [];
+
+if (records.length === 0) {
+  throw new Error('MRA: No Client Config found for PAK-001');
+}
+
+const config = records[0];
+
+const seo_raw = config['SEO Keywords'] || '';
+const seo_keywords = seo_raw
+  .split(',')
+  .map(k => k.trim().toLowerCase())
+  .filter(k => k.length > 0);
+
+const result = {};
+result.mra_run_id = s3.mra_run_id;
+result.report_type = s3.report_type;
+result.period_start = s3.period_start;
+result.period_end = s3.period_end;
+result.window_days = s3.window_days;
+result.run_timestamp = s3.run_timestamp;
+result.client_id = config['Client ID'] || 'PAK-001';
+result.client_name = config['Client Name'] || 'PAK-001';
+result.approval_email = config['Approval Contact Email'] || '';
+result.seo_keywords = seo_keywords;
+
+return [{ json: result }];
+
+Step 6 - Fetch ALA Records
+Parameters
+Settings
+Method
+GET
+URL
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,PAK-001)&limit=1000&sort=ALA%20Timestamp
+ 
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,PAK-001)&limit=1000&sort=ALA%20Timestamp
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Send Body
+
+Options
+No properties
+Add option
+
+Step 7 - Filter ALA by Window
+const input = $input.first().json;
+const s5 = $('Step 5 - Extract Client Config').first().json;
+
+const allRecords = input.list || [];
+const periodStart = new Date(s5.period_start).getTime();
+const periodEnd = new Date(s5.period_end).getTime();
+
+const records = [];
+for (let i = 0; i < allRecords.length; i++) {
+  let rec = allRecords[i];
+  let raw = rec['Date'] || '';
+  let ts = 0;
+  if (raw.length > 0) {
+    let parts = raw.split('/');
+    if (parts.length === 3) {
+      let month = parseInt(parts[0]);
+      let day = parseInt(parts[1]);
+      let year = 2000 + parseInt(parts[2]);
+      ts = new Date(year, month - 1, day).getTime();
+    }
+  }
+  if (ts >= periodStart && ts <= periodEnd) {
+    records.push(rec);
+  }
+}
+
+const total_records = records.length;
+
+let avg_star_rating = 0;
+if (total_records > 0) {
+  let sum = 0;
+  for (let i = 0; i < records.length; i++) {
+    sum += parseFloat(records[i]['Star Rating'] || 0);
+  }
+  avg_star_rating = Math.round((sum / total_records) * 100) / 100;
+}
+
+const platform_counts = {};
+for (let i = 0; i < records.length; i++) {
+  let plat = records[i]['Platform'] || 'Unknown';
+  platform_counts[plat] = (platform_counts[plat] || 0) + 1;
+}
+
+return [{ json: {
+  mra_run_id: s5.mra_run_id,
+  report_type: s5.report_type,
+  period_start: s5.period_start,
+  period_end: s5.period_end,
+  window_days: s5.window_days,
+  run_timestamp: s5.run_timestamp,
+  client_id: s5.client_id,
+  client_name: s5.client_name,
+  approval_email: s5.approval_email,
+  seo_keywords: s5.seo_keywords,
+  total_records: total_records,
+  avg_star_rating: avg_star_rating,
+  platform_counts: platform_counts,
+  ala_records: records
+} }];
+
+Step 7b - Build RDA Query URL
+const s7 = $input.first().json;
+
+const url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,PAK-001)&limit=1000&sort=RDA%20Timestamp';
+
+return [{ json: {
+  mra_run_id: s7.mra_run_id,
+  report_type: s7.report_type,
+  period_start: s7.period_start,
+  period_end: s7.period_end,
+  window_days: s7.window_days,
+  run_timestamp: s7.run_timestamp,
+  client_id: s7.client_id,
+  client_name: s7.client_name,
+  approval_email: s7.approval_email,
+  seo_keywords: s7.seo_keywords,
+  total_records: s7.total_records,
+  avg_star_rating: s7.avg_star_rating,
+  platform_counts: s7.platform_counts,
+  ala_records: s7.ala_records,
+  rda_query_url: url
+} }];
+
+Step 8 - Fetch RDA Records
+Parameters
+Settings
+Method
+GET
+URL
+{{ $json.rda_query_url }}
+ 
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Send Body
+
+Options
+No properties
+
+Step 9 - Process RDA Records
+const input = $input.first().json;
+const s7 = $('Step 7b - Build RDA Query URL').first().json;
+
+const allRda = input.list || [];
+const alaRecords = s7.ala_records || [];
+
+const pStart = new Date(s7.period_start);
+pStart.setHours(0, 0, 0, 0);
+const periodStartTs = pStart.getTime();
+
+const pEnd = new Date(s7.period_end);
+pEnd.setHours(0, 0, 0, 0);
+const periodEndTs = pEnd.getTime();
+
+const filteredRda = [];
+const platform_counts = {};
+let star_sum = 0;
+
+for (let i = 0; i < allRda.length; i++) {
+  let rec = allRda[i];
+  let rdaTimestamp = rec['RDA Timestamp'] || '';
+  let rdaTs = 0;
+  
+  if (rdaTimestamp.length > 0) {
+    let datePart = rdaTimestamp.split(' ')[0];
+    let d = new Date(datePart);
+    d.setHours(0, 0, 0, 0);
+    rdaTs = d.getTime();
+  }
+  
+  if (rdaTs >= periodStartTs && rdaTs < periodEndTs) {
+    filteredRda.push(rec);
+    
+    let alaId = String(rec['ALA Record ID'] || '');
+    let matchedAla = null;
+    
+    for (let j = 0; j < alaRecords.length; j++) {
+      if (String(alaRecords[j]['Id']) === alaId) {
+        matchedAla = alaRecords[j];
+        break;
+      }
+    }
+    
+    if (matchedAla) {
+      let plat = matchedAla['Platform'] || 'Unknown';
+      platform_counts[plat] = (platform_counts[plat] || 0) + 1;
+      star_sum += parseFloat(matchedAla['Star Rating'] || 0);
+    }
+  }
+}
+
+const total_rda = filteredRda.length;
+const avg_star_rating = total_rda > 0 ? Math.round((star_sum / total_rda) * 100) / 100 : 0;
+
+let approved_count = 0;
+let published_count = 0;
+let sla_compliant = 0;
+let velocity_sum = 0;
+let velocity_count = 0;
+
+const tier_map = {};
+tier_map['T1'] = {};
+tier_map['T1'].total = 0;
+tier_map['T1'].approved = 0;
+tier_map['T1'].pending = 0;
+tier_map['T1'].velocity_sum = 0;
+tier_map['T1'].velocity_count = 0;
+tier_map['T2'] = {};
+tier_map['T2'].total = 0;
+tier_map['T2'].approved = 0;
+tier_map['T2'].pending = 0;
+tier_map['T2'].velocity_sum = 0;
+tier_map['T2'].velocity_count = 0;
+tier_map['T3'] = {};
+tier_map['T3'].total = 0;
+tier_map['T3'].approved = 0;
+tier_map['T3'].pending = 0;
+tier_map['T3'].velocity_sum = 0;
+tier_map['T3'].velocity_count = 0;
+
+const published_drafts = [];
+
+for (let i = 0; i < filteredRda.length; i++) {
+  let rec = filteredRda[i];
+  let status = (rec['Approval Status'] || '').trim();
+  let tier_raw = (rec['Confirmed Response Tier'] || '').trim();
+  let tier = null;
+  if (tier_raw.indexOf('T1') === 0) tier = 'T1';
+  else if (tier_raw.indexOf('T2') === 0) tier = 'T2';
+  else if (tier_raw.indexOf('T3') === 0) tier = 'T3';
+  
+  if (tier && tier_map[tier]) {
+    tier_map[tier].total++;
+  }
+  
+  let is_approved = status === 'Approved' || status === 'Edited-Approved';
+  let is_pending = status === 'Pending' || status === 'Pending-Elevated';
+  let is_published = status === 'Published';
+  
+  if (is_approved || is_published) {
+    approved_count++;
+    if (tier && tier_map[tier]) {
+      tier_map[tier].approved++;
+    }
+  }
+  
+  if (is_pending) {
+    if (tier && tier_map[tier]) {
+      tier_map[tier].pending++;
+    }
+  }
+  
+  if (is_published) {
+    published_count++;
+    let pub_ts = rec['Published Timestamp'] ? new Date(rec['Published Timestamp']).getTime() : 0;
+    let rda_ts = rec['RDA Timestamp'] ? new Date(rec['RDA Timestamp']).getTime() : 0;
+    
+    if (pub_ts > 0 && rda_ts > 0) {
+      let hrs = (pub_ts - rda_ts) / 3600000;
+      velocity_sum += hrs;
+      velocity_count++;
+      if (tier && tier_map[tier]) {
+        tier_map[tier].velocity_sum += hrs;
+        tier_map[tier].velocity_count++;
+      }
+      if (hrs <= 48) {
+        sla_compliant++;
+      }
+    }
+    
+    let draft_text = (rec['Public Response Draft'] || '').toLowerCase();
+    let pd = {};
+    pd.draft_text = draft_text;
+    pd.tier = tier;
+    published_drafts.push(pd);
+  }
+}
+
+const sla_compliance_rate = published_count > 0 ? Math.round((sla_compliant / published_count) * 10000) / 100 : 0;
+const seo_avg_velocity_hrs = velocity_count > 0 ? Math.round((velocity_sum / velocity_count) * 100) / 100 : 0;
+const seo_response_rate = total_rda > 0 ? Math.round((published_count / total_rda) * 10000) / 100 : 0;
+
+const tier_labels = {};
+tier_labels['T1'] = 'T1 Standard';
+tier_labels['T2'] = 'T2 Calibrated';
+tier_labels['T3'] = 'T3 Dignity-restoration';
+
+const tier_breakdown = [];
+const tier_keys = ['T1', 'T2', 'T3'];
+for (let i = 0; i < tier_keys.length; i++) {
+  let tk = tier_keys[i];
+  let tm = tier_map[tk];
+  let avg_hrs = tm.velocity_count > 0 ? Math.round((tm.velocity_sum / tm.velocity_count) * 10) / 10 : 0;
+  let tb = {};
+  tb.tier = tier_labels[tk];
+  tb.total = tm.total;
+  tb.approved = tm.approved;
+  tb.pending = tm.pending;
+  tb.avg_approval_hrs = avg_hrs;
+  tier_breakdown.push(tb);
+}
+
+return [{ json: {
+  mra_run_id: s7.mra_run_id,
+  report_type: s7.report_type,
+  period_start: s7.period_start,
+  period_end: s7.period_end,
+  window_days: s7.window_days,
+  run_timestamp: s7.run_timestamp,
+  client_id: s7.client_id,
+  client_name: s7.client_name,
+  approval_email: s7.approval_email,
+  seo_keywords: s7.seo_keywords,
+  total_records: total_rda,
+  avg_star_rating: avg_star_rating,
+  platform_counts: platform_counts,
+  sla_compliance_rate: sla_compliance_rate,
+  seo_avg_velocity_hrs: seo_avg_velocity_hrs,
+  seo_response_rate: seo_response_rate,
+  tier_breakdown: tier_breakdown,
+  published_drafts: published_drafts,
+  total_rda: total_rda,
+  published_count: published_count
+} }];
+
+Step 10 - Fetch SIA Clusters
+Parameters
+Settings
+Method
+GET
+URL
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mdn68l4lm609fve?where=(Window%20Days,eq,30)&limit=1000&sort=-Run%20Timestamp
+ 
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mdn68l4lm609fve?where=(Window%20Days,eq,30)&limit=1000&sort=-Run%20Timestamp
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Send Body
+
+Options
+No properties
+
+Step 11 - Process SIA and SEO
+const input = $input.first().json;
+const s9 = $('Step 9 - Process RDA Records').first().json;
+
+const allClusters = input.list || [];
+
+const latestRunTs = allClusters.length > 0 ? allClusters[0]['Run Timestamp'] : null;
+
+const clusters = [];
+for (let i = 0; i < allClusters.length; i++) {
+  if (allClusters[i]['Run Timestamp'] === latestRunTs) {
+    clusters.push(allClusters[i]);
+  }
+}
+
+let t_negative_count = 0;
+let t_ambiguous_count = 0;
+let t_positive_count = 0;
+
+const domain_map = {};
+
+for (let i = 0; i < clusters.length; i++) {
+  let cl = clusters[i];
+  let tier = (cl['Signal Tier'] || '').trim();
+  let domain = (cl['Domain'] || 'Unknown').trim();
+  let n = parseInt(cl['N'] || 0);
+
+  if (tier === 'T-NEGATIVE') t_negative_count++;
+  else if (tier === 'T-AMBIGUOUS') t_ambiguous_count++;
+  else if (tier === 'T-POSITIVE') t_positive_count++;
+
+  if (!domain_map[domain]) {
+    domain_map[domain] = {};
+    domain_map[domain].domain = domain;
+    domain_map[domain].neg = 0;
+    domain_map[domain].amb = 0;
+    domain_map[domain].pos = 0;
+    domain_map[domain].total = 0;
+  }
+
+  if (tier === 'T-NEGATIVE') domain_map[domain].neg += n;
+  else if (tier === 'T-AMBIGUOUS') domain_map[domain].amb += n;
+  else if (tier === 'T-POSITIVE') domain_map[domain].pos += n;
+
+  domain_map[domain].total += n;
+}
+
+const domain_keys = Object.keys(domain_map);
+const top_domains = [];
+for (let i = 0; i < domain_keys.length; i++) {
+  top_domains.push(domain_map[domain_keys[i]]);
+}
+
+let swap_tmp;
+for (let i = 0; i < top_domains.length - 1; i++) {
+  for (let j = i + 1; j < top_domains.length; j++) {
+    if (top_domains[j].total > top_domains[i].total) {
+      swap_tmp = top_domains[i];
+      top_domains[i] = top_domains[j];
+      top_domains[j] = swap_tmp;
+    }
+  }
+}
+
+const trend_signals = [];
+for (let i = 0; i < clusters.length; i++) {
+  let cl = clusters[i];
+  let is_singleton = cl['Is Singleton'] === true || cl['Is Singleton'] === 1;
+  if (!is_singleton) {
+    let ts = {};
+    ts.domain = (cl['Domain'] || '').trim();
+    ts.tier = (cl['Signal Tier'] || '').trim();
+    ts.n = parseInt(cl['N'] || 0);
+    let prior_n_val = null;
+    if (cl['Prior N'] !== null && cl['Prior N'] !== undefined) {
+      prior_n_val = parseInt(cl['Prior N']);
+    }
+    ts.prior_n = prior_n_val;
+    ts.trend_direction = (cl['Trend Direction'] || '').trim();
+    ts.percentage = parseFloat(cl['Percentage'] || 0);
+    trend_signals.push(ts);
+  }
+}
+
+const tierOrder = {};
+tierOrder['T-NEGATIVE'] = 0;
+tierOrder['T-AMBIGUOUS'] = 1;
+tierOrder['T-POSITIVE'] = 2;
+
+let sort_tmp;
+for (let i = 0; i < trend_signals.length - 1; i++) {
+  for (let j = i + 1; j < trend_signals.length; j++) {
+    let ta = tierOrder[trend_signals[i].tier] !== undefined ? tierOrder[trend_signals[i].tier] : 3;
+    let tb = tierOrder[trend_signals[j].tier] !== undefined ? tierOrder[trend_signals[j].tier] : 3;
+    let do_swap = false;
+    if (tb < ta) do_swap = true;
+    else if (tb === ta && trend_signals[j].n > trend_signals[i].n) do_swap = true;
+    if (do_swap) {
+      sort_tmp = trend_signals[i];
+      trend_signals[i] = trend_signals[j];
+      trend_signals[j] = sort_tmp;
+    }
+  }
+}
+
+const trend_signals_top5 = [];
+for (let i = 0; i < trend_signals.length && i < 5; i++) {
+  trend_signals_top5.push(trend_signals[i]);
+}
+
+const seo_keywords = s9.seo_keywords || [];
+const published_drafts = s9.published_drafts || [];
+
+const keyword_hits = {};
+for (let i = 0; i < seo_keywords.length; i++) {
+  keyword_hits[seo_keywords[i]] = 0;
+}
+
+for (let i = 0; i < published_drafts.length; i++) {
+  let text = published_drafts[i].draft_text || '';
+  for (let j = 0; j < seo_keywords.length; j++) {
+    if (text.includes(seo_keywords[j])) {
+      keyword_hits[seo_keywords[j]]++;
+    }
+  }
+}
+
+let seo_top_keyword = '';
+let seo_top_count = 0;
+
+const kw_keys = Object.keys(keyword_hits);
+for (let i = 0; i < kw_keys.length; i++) {
+  let kw = kw_keys[i];
+  let count = keyword_hits[kw];
+  if (count > seo_top_count) {
+    seo_top_count = count;
+    seo_top_keyword = kw;
+  }
+}
+
+const total_published = s9.published_count || 0;
+let drafts_with_keyword = 0;
+for (let i = 0; i < published_drafts.length; i++) {
+  let text = published_drafts[i].draft_text || '';
+  let found = false;
+  for (let j = 0; j < seo_keywords.length; j++) {
+    if (text.includes(seo_keywords[j])) {
+      found = true;
+    }
+  }
+  if (found) {
+    drafts_with_keyword++;
+  }
+}
+
+const seo_coverage_rate = total_published > 0 ? Math.round((drafts_with_keyword / total_published) * 10000) / 100 : 0;
+
+return [{ json: {
+  mra_run_id: s9.mra_run_id,
+  report_type: s9.report_type,
+  period_start: s9.period_start,
+  period_end: s9.period_end,
+  window_days: s9.window_days,
+  run_timestamp: s9.run_timestamp,
+  client_id: s9.client_id,
+  client_name: s9.client_name,
+  approval_email: s9.approval_email,
+  seo_keywords: s9.seo_keywords,
+  total_records: s9.total_records,
+  avg_star_rating: s9.avg_star_rating,
+  platform_counts: s9.platform_counts,
+  sla_compliance_rate: s9.sla_compliance_rate,
+  seo_avg_velocity_hrs: s9.seo_avg_velocity_hrs,
+  seo_response_rate: s9.seo_response_rate,
+  tier_breakdown: s9.tier_breakdown,
+  published_count: s9.published_count,
+  t_negative_count: t_negative_count,
+  t_ambiguous_count: t_ambiguous_count,
+  t_positive_count: t_positive_count,
+  top_domains: top_domains,
+  trend_signals: trend_signals_top5,
+  seo_keyword_hits: drafts_with_keyword,
+  seo_top_keyword: seo_top_keyword,
+  seo_coverage_rate: seo_coverage_rate
+} }];
+
+Step 12 - Build MRA Record
+const s11 = $('Step 11 - Process SIA and SEO').first().json;
+
+const now = new Date();
+const expires = new Date(now.getTime() + 72 * 3600000);
+
+const ey = expires.getFullYear();
+const em = expires.getMonth() + 1;
+const ed = expires.getDate();
+const eh = expires.getHours();
+const emin = expires.getMinutes();
+const esec = expires.getSeconds();
+const exp_str = ey + '-' + (em < 10 ? '0' + em : '' + em) + '-' + (ed < 10 ? '0' + ed : '' + ed) + 'T' + (eh < 10 ? '0' + eh : '' + eh) + ':' + (emin < 10 ? '0' + emin : '' + emin) + ':' + (esec < 10 ? '0' + esec : '' + esec) + '.000Z';
+
+const hex_chars = '0123456789abcdef';
+let tok_a = '';
+let tok_b = '';
+let tok_c = '';
+let tok_d = '';
+let tok_e = '';
+for (let i = 0; i < 8; i++) { tok_a += hex_chars[Math.floor(Math.random() * 16)]; }
+for (let i = 0; i < 4; i++) { tok_b += hex_chars[Math.floor(Math.random() * 16)]; }
+for (let i = 0; i < 3; i++) { tok_c += hex_chars[Math.floor(Math.random() * 16)]; }
+for (let i = 0; i < 3; i++) { tok_d += hex_chars[Math.floor(Math.random() * 16)]; }
+for (let i = 0; i < 12; i++) { tok_e += hex_chars[Math.floor(Math.random() * 16)]; }
+const magic_token = tok_a + '-' + tok_b + '-4' + tok_c + '-a' + tok_d + '-' + tok_e;
+
+const top_domains_json = JSON.stringify(s11.top_domains);
+const tier_breakdown_json = JSON.stringify(s11.tier_breakdown);
+const trend_signals_json = JSON.stringify(s11.trend_signals);
+const platform_counts_json = JSON.stringify(s11.platform_counts);
+
+const record = {};
+record['MRA Run ID'] = s11.mra_run_id;
+record['Report Type'] = s11.report_type;
+record['Client ID'] = s11.client_id;
+record['Period Start'] = s11.period_start;
+record['Period End'] = s11.period_end;
+record['Total Records'] = s11.total_records;
+record['Avg Star Rating'] = s11.avg_star_rating;
+record['SLA Compliance Rate'] = s11.sla_compliance_rate;
+record['T Negative Count'] = s11.t_negative_count;
+record['T Ambiguous Count'] = s11.t_ambiguous_count;
+record['T Positive Count'] = s11.t_positive_count;
+record['Top Domains JSON'] = top_domains_json;
+record['Tier Breakdown JSON'] = tier_breakdown_json;
+record['Trend Signals JSON'] = trend_signals_json;
+record['SEO Keyword Hits'] = s11.seo_keyword_hits;
+record['SEO Top Keyword'] = s11.seo_top_keyword;
+record['SEO Coverage Rate'] = s11.seo_coverage_rate;
+record['SEO Response Rate'] = s11.seo_response_rate;
+record['SEO Avg Velocity Hrs'] = s11.seo_avg_velocity_hrs;
+record['Platform Counts JSON'] = platform_counts_json;
+record['Magic Link Token'] = magic_token;
+record['Token Expires At'] = exp_str;
+record['Error Log'] = '';
+
+return [{ json: {
+  mra_run_id: s11.mra_run_id,
+  report_type: s11.report_type,
+  client_id: s11.client_id,
+  client_name: s11.client_name,
+  approval_email: s11.approval_email,
+  period_start: s11.period_start,
+  period_end: s11.period_end,
+  run_timestamp: s11.run_timestamp,
+  magic_token: magic_token,
+  token_expires_at: exp_str,
+  total_records: s11.total_records,
+  avg_star_rating: s11.avg_star_rating,
+  platform_counts: s11.platform_counts,
+  sla_compliance_rate: s11.sla_compliance_rate,
+  t_negative_count: s11.t_negative_count,
+  t_ambiguous_count: s11.t_ambiguous_count,
+  t_positive_count: s11.t_positive_count,
+  top_domains: s11.top_domains,
+  tier_breakdown: s11.tier_breakdown,
+  trend_signals: s11.trend_signals,
+  seo_keyword_hits: s11.seo_keyword_hits,
+  seo_top_keyword: s11.seo_top_keyword,
+  seo_coverage_rate: s11.seo_coverage_rate,
+  seo_response_rate: s11.seo_response_rate,
+  seo_avg_velocity_hrs: s11.seo_avg_velocity_hrs,
+  nocodb_body: JSON.stringify(record)
+} }];
+Step 13 - Check Report Type
+const s12 = $('Step 12 - Build MRA Record').first().json;
+
+const result = {};
+result.mra_run_id = s12.mra_run_id;
+result.report_type = s12.report_type;
+result.client_id = s12.client_id;
+result.client_name = s12.client_name;
+result.approval_email = s12.approval_email;
+result.period_start = s12.period_start;
+result.period_end = s12.period_end;
+result.run_timestamp = s12.run_timestamp;
+result.magic_token = s12.magic_token;
+result.token_expires_at = s12.token_expires_at;
+result.total_records = s12.total_records;
+result.avg_star_rating = s12.avg_star_rating;
+result.platform_counts = s12.platform_counts;
+result.sla_compliance_rate = s12.sla_compliance_rate;
+result.t_negative_count = s12.t_negative_count;
+result.t_ambiguous_count = s12.t_ambiguous_count;
+result.t_positive_count = s12.t_positive_count;
+result.top_domains = s12.top_domains;
+result.tier_breakdown = s12.tier_breakdown;
+result.trend_signals = s12.trend_signals;
+result.seo_keyword_hits = s12.seo_keyword_hits;
+result.seo_top_keyword = s12.seo_top_keyword;
+result.seo_coverage_rate = s12.seo_coverage_rate;
+result.seo_response_rate = s12.seo_response_rate;
+result.seo_avg_velocity_hrs = s12.seo_avg_velocity_hrs;
+result.nocodb_body = s12.nocodb_body;
+result.skip_nocodb = s12.report_type === 'daily' ? true : false;
+
+return [{ json: result }];
+
+Step 14 - Route Report Type
+const s13 = $('Step 13 - Check Report Type').first().json;
+
+const result = {};
+result.mra_run_id = s13.mra_run_id;
+result.report_type = s13.report_type;
+result.client_id = s13.client_id;
+result.client_name = s13.client_name;
+result.approval_email = s13.approval_email;
+result.period_start = s13.period_start;
+result.period_end = s13.period_end;
+result.run_timestamp = s13.run_timestamp;
+result.magic_token = s13.magic_token;
+result.token_expires_at = s13.token_expires_at;
+result.total_records = s13.total_records;
+result.avg_star_rating = s13.avg_star_rating;
+result.platform_counts = s13.platform_counts;
+result.sla_compliance_rate = s13.sla_compliance_rate;
+result.t_negative_count = s13.t_negative_count;
+result.t_ambiguous_count = s13.t_ambiguous_count;
+result.t_positive_count = s13.t_positive_count;
+result.top_domains = s13.top_domains;
+result.tier_breakdown = s13.tier_breakdown;
+result.trend_signals = s13.trend_signals;
+result.seo_keyword_hits = s13.seo_keyword_hits;
+result.seo_top_keyword = s13.seo_top_keyword;
+result.seo_coverage_rate = s13.seo_coverage_rate;
+result.seo_response_rate = s13.seo_response_rate;
+result.seo_avg_velocity_hrs = s13.seo_avg_velocity_hrs;
+result.nocodb_body = s13.nocodb_body;
+
+if (s13.report_type === 'daily') {
+  return [];
+}
+
+return [{ json: result }];
+
+Step 15 - NocoDB POST MRA Record
+Parameters
+Settings
+Method
+POST
+URL
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mybieof2em75t6e
+ 
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mybieof2em75t6e
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Specify Headers
+Using Fields Below
+Headers
+Name
+Content-Type
+Value
+application/json
+Send Body
+
+Body Content Type
+Raw
+Content Type
+application/json
+Body
+{{$json.nocodb_body}}
+ 
+Options
+No properties
+
+Step 16 - Extract Record ID
+const input = $input.first().json;
+const s13 = $('Step 13 - Check Report Type').first().json;
+
+const nocodb_record_id = input.Id || input.id || null;
+
+if (!nocodb_record_id) {
+  throw new Error('MRA: NocoDB POST succeeded but no record ID returned. Response: ' + JSON.stringify(input));
+}
+
+const result = {};
+result.mra_run_id = s13.mra_run_id;
+result.report_type = s13.report_type;
+result.client_id = s13.client_id;
+result.client_name = s13.client_name;
+result.approval_email = s13.approval_email;
+result.period_start = s13.period_start;
+result.period_end = s13.period_end;
+result.run_timestamp = s13.run_timestamp;
+result.magic_token = s13.magic_token;
+result.token_expires_at = s13.token_expires_at;
+result.total_records = s13.total_records;
+result.avg_star_rating = s13.avg_star_rating;
+result.platform_counts = s13.platform_counts;
+result.sla_compliance_rate = s13.sla_compliance_rate;
+result.t_negative_count = s13.t_negative_count;
+result.t_ambiguous_count = s13.t_ambiguous_count;
+result.t_positive_count = s13.t_positive_count;
+result.top_domains = s13.top_domains;
+result.tier_breakdown = s13.tier_breakdown;
+result.trend_signals = s13.trend_signals;
+result.seo_keyword_hits = s13.seo_keyword_hits;
+result.seo_top_keyword = s13.seo_top_keyword;
+result.seo_coverage_rate = s13.seo_coverage_rate;
+result.seo_response_rate = s13.seo_response_rate;
+result.seo_avg_velocity_hrs = s13.seo_avg_velocity_hrs;
+result.nocodb_record_id = nocodb_record_id;
+
+return [{ json: result }];
+
+Step 17 - Build Email Body
+const s16 = $input.first().json;
+const p = typeof s16.body === 'string' ? JSON.parse(s16.body) : s16;
+
+const report_type = p.report_type || 'daily';
+const client_name = p.client_name || p.client_id || 'Client';
+const period_start = p.period_start ? p.period_start.slice(0, 10) : '';
+const period_end = p.period_end ? p.period_end.slice(0, 10) : '';
+const magic_token = p.magic_token || '';
+const client_id_str = p.client_id || '';
+const dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;
+
+const tier_breakdown = p.tier_breakdown || [];
+const trend_signals = p.trend_signals || [];
+const platform_counts = p.platform_counts || {};
+const top_domains = p.top_domains || [];
+
+let pending_total = 0;
+for (let i = 0; i < tier_breakdown.length; i++) {
+  pending_total += tier_breakdown[i].pending || 0;
+}
+
+let t3_total = 0;
+for (let i = 0; i < tier_breakdown.length; i++) {
+  if (tier_breakdown[i].tier === 'T3 Dignity-restoration') {
+    t3_total = tier_breakdown[i].total || 0;
+  }
+}
+
+let platform_lines = '';
+const platform_order = ['Google', 'OpenTable', 'Yelp', 'TripAdvisor'];
+for (let i = 0; i < platform_order.length; i++) {
+  let plat = platform_order[i];
+  let count = platform_counts[plat] || 0;
+  platform_lines += '  ' + plat + ': ' + count + ' review(s)\n';
+}
+
+let tier_draft_lines = '';
+for (let i = 0; i < tier_breakdown.length; i++) {
+  let tb = tier_breakdown[i];
+  let short_label = tb.tier.replace(' Standard', '').replace(' Calibrated', '').replace(' Dignity-restoration', '');
+  tier_draft_lines += '  ' + short_label + ': ' + tb.total + ' draft(s)\n';
+}
+
+let tier_status_lines = '';
+for (let i = 0; i < tier_breakdown.length; i++) {
+  let tb = tier_breakdown[i];
+  tier_status_lines += '  ' + tb.tier + ': ' + tb.total + ' total | ' + tb.approved + ' approved | ' + tb.pending + ' pending\n';
+}
+
+let domain_lines = '';
+let domain_limit = top_domains.length > 5 ? 5 : top_domains.length;
+for (let i = 0; i < domain_limit; i++) {
+  let dom = top_domains[i];
+  domain_lines += '  ' + dom.domain + ': ' + dom.total + ' signal(s)\n';
+}
+
+let trend_lines = '';
+for (let i = 0; i < trend_signals.length; i++) {
+  let ts = trend_signals[i];
+  let arrow = '→';
+  if (ts.trend_direction === 'UP') arrow = '↑';
+  else if (ts.trend_direction === 'DOWN') arrow = '↓';
+  
+  let prior_str = '(new cluster)';
+  if (ts.prior_n !== null && ts.prior_n !== undefined) {
+    prior_str = '(' + arrow + ' from ' + ts.prior_n + ')';
+  }
+  
+  trend_lines += '  • ' + ts.domain + ' — ' + ts.n + ' signal(s) ' + prior_str + '\n';
+}
+
+const gov_footer = '\n---\nSubtextCX detects and interprets signals only.\nOperational decisions remain with your team.';
+
+let email_subject = '';
+let email_body = '';
+
+if (report_type === 'daily') {
+  email_subject = '48-Hour Draft Summary — ' + client_id_str + ' — ' + period_end;
+  
+  email_body = '48-Hour Response Draft Summary — ' + client_id_str + '\n';
+  email_body += 'Date: ' + period_end + ' | SLA: 48 hours\n\n';
+  
+  email_body += '📊 New Drafts Generated:\n';
+  email_body += tier_draft_lines;
+  email_body += '  Total new drafts: ' + (p.total_records || 0) + '\n\n';
+  
+  if (t3_total > 0) {
+    email_body += '⚠️ ' + t3_total + ' require elevated attention (T3 — dignity-risk signals)\n\n';
+  }
+  
+  email_body += '📋 Pending Approval:\n';
+  email_body += '  Awaiting review: ' + pending_total + ' draft(s)\n\n';
+  
+  email_body += '📈 Total Pending Your Review: ' + pending_total + '\n\n';
+  
+  email_body += 'View and approve drafts:\n';
+  email_body += 'https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w\n';
+  
+  email_body += gov_footer;
+}
+
+if (report_type === 'weekly') {
+  email_subject = 'Weekly Intelligence Brief — ' + client_id_str + ' — Week of ' + period_start;
+  
+  email_body = 'Weekly Review Intelligence Brief — ' + client_id_str + '\n';
+  email_body += 'Week of: ' + period_start + ' – ' + period_end + '\n\n';
+  
+  email_body += '📊 Signal Distribution (Past 7 Days):\n';
+  email_body += '  T-NEGATIVE: ' + (p.t_negative_count || 0) + ' signal(s)\n';
+  email_body += '  T-AMBIGUOUS: ' + (p.t_ambiguous_count || 0) + ' signal(s)\n';
+  email_body += '  T-POSITIVE: ' + (p.t_positive_count || 0) + ' signal(s)\n';
+  email_body += '  Total signals: ' + ((p.t_negative_count || 0) + (p.t_ambiguous_count || 0) + (p.t_positive_count || 0)) + '\n\n';
+  
+  if (domain_lines.length > 0) {
+    email_body += '🔍 Top Pain Point Domains:\n';
+    email_body += domain_lines + '\n';
+  }
+  
+  if (t3_total > 0) {
+    email_body += '⚠️ Dignity-Risk Events This Week: ' + t3_total + '\n';
+    email_body += '  Elevated reviews requiring special attention\n\n';
+  }
+  
+  email_body += '📈 Platform Breakdown:\n';
+  email_body += platform_lines + '\n';
+  
+  email_body += '📊 Performance Metrics:\n';
+  email_body += '  Average Star Rating: ' + (p.avg_star_rating || 0) + ' stars\n';
+  email_body += '  SLA Compliance Rate: ' + (p.sla_compliance_rate || 0) + '%\n\n';
+  
+  if (trend_lines.length > 0) {
+    email_body += '🔍 Trend Signals Requiring Attention:\n';
+    email_body += trend_lines + '\n';
+  }
+  
+  email_body += '📊 SEO Performance:\n';
+  email_body += '  Drafts with keyword placed: ' + (p.seo_keyword_hits || 0) + '\n';
+  email_body += '  Top keyword: ' + (p.seo_top_keyword || 'none') + '\n';
+  email_body += '  Coverage rate: ' + (p.seo_coverage_rate || 0) + '%\n';
+  email_body += '  Response velocity: ' + (p.seo_avg_velocity_hrs || 0) + ' hrs avg\n\n';
+  
+  email_body += 'View dashboard:\n';
+  email_body += dashboard_url + '\n';
+  
+  email_body += gov_footer;
+}
+
+if (report_type === 'monthly') {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const startDate = new Date(period_start);
+  const monthName = monthNames[startDate.getMonth()];
+  const yearName = startDate.getFullYear();
+  
+  const total_signals = (p.t_negative_count || 0) + (p.t_ambiguous_count || 0) + (p.t_positive_count || 0);
+  const neg_pct = total_signals > 0 ? Math.round(((p.t_negative_count || 0) / total_signals) * 100) : 0;
+  const amb_pct = total_signals > 0 ? Math.round(((p.t_ambiguous_count || 0) / total_signals) * 100) : 0;
+  const pos_pct = total_signals > 0 ? Math.round(((p.t_positive_count || 0) / total_signals) * 100) : 0;
+  
+  email_subject = 'Monthly Pattern Report — ' + client_id_str + ' — ' + monthName + ' ' + yearName;
+  
+  email_body = 'Monthly Review Pattern Report — ' + client_id_str + '\n';
+  email_body += 'Month: ' + monthName + ' ' + yearName + '\n\n';
+  
+  email_body += '📊 30-Day Signal Summary:\n';
+  email_body += '  Total reviews processed: ' + (p.total_records || 0) + '\n';
+  email_body += '  Average star rating: ' + (p.avg_star_rating || 0) + ' stars\n';
+  email_body += '  T-NEGATIVE: ' + (p.t_negative_count || 0) + ' signal(s) (' + neg_pct + '%)\n';
+  email_body += '  T-AMBIGUOUS: ' + (p.t_ambiguous_count || 0) + ' signal(s) (' + amb_pct + '%)\n';
+  email_body += '  T-POSITIVE: ' + (p.t_positive_count || 0) + ' signal(s) (' + pos_pct + '%)\n\n';
+  
+  if (domain_lines.length > 0) {
+    email_body += '🔍 Top 5 Pain Point Domains:\n';
+    let domain_rank = 1;
+    for (let i = 0; i < domain_limit; i++) {
+      let dom = top_domains[i];
+      email_body += '  ' + domain_rank + '. ' + dom.domain + ': ' + dom.total + ' signal(s)\n';
+      domain_rank++;
+    }
+    email_body += '\n';
+  }
+  
+  if (t3_total > 0) {
+    email_body += '⚠️ Dignity-Risk Events This Month: ' + t3_total + '\n';
+    email_body += '  Elevated reviews requiring special attention\n\n';
+  }
+  
+  email_body += '📈 Platform Performance:\n';
+  email_body += platform_lines + '\n';
+  
+  email_body += '📊 Response Metrics:\n';
+  email_body += '  Total drafts generated: ' + (p.total_records || 0) + '\n';
+  email_body += '  Approved within 48hr SLA: ' + (p.sla_compliance_rate || 0) + '%\n';
+  email_body += '  Average approval time: ' + (p.seo_avg_velocity_hrs || 0) + ' hours\n\n';
+  
+  email_body += 'View dashboard:\n';
+  email_body += dashboard_url + '\n';
+  
+  email_body += gov_footer;
+}
+
+const brevo_to = {};
+brevo_to['email'] = p.approval_email || 'miguel@solofella.com';
+brevo_to['name'] = client_name;
+
+const brevo_to_arr = [];
+brevo_to_arr.push(brevo_to);
+
+const brevo_sender = {};
+brevo_sender['name'] = 'SubtextCX Reports';
+brevo_sender['email'] = 'marellano@solofella.com';
+
+const brevo_obj = {};
+brevo_obj['sender'] = brevo_sender;
+brevo_obj['to'] = brevo_to_arr;
+brevo_obj['subject'] = email_subject;
+brevo_obj['textContent'] = email_body;
+
+return [{ json: {
+  mra_run_id: p.mra_run_id,
+  report_type: report_type,
+  client_id: client_id_str,
+  approval_email: p.approval_email,
+  nocodb_record_id: p.nocodb_record_id || null,
+  email_subject: email_subject,
+  email_body: email_body,
+  magic_token: magic_token,
+  dashboard_url: dashboard_url,
+  brevo_body: JSON.stringify(brevo_obj)
+} }];
+
+Step 18 - Send Email
+Parameters
+Settings
+Method
+POST
+URL
+https://api.brevo.com/v3/smtp/email
+ 
+https://api.brevo.com/v3/smtp/email
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+api-key
+Send Query Parameters
+
+Send Headers
+
+Specify Headers
+Using Fields Below
+Headers
+Name
+Content-Type
+Value
+application/json
+Send Body
+
+Body Content Type
+Raw
+Content Type
+application/json
+Body
+{{$json.brevo_body}}
+ 
+Options
+No properties
+Add option
+You can view the raw requests this node makes in your browser's developer console
+
+Step 19 - Update Delivery Status
+const s17 = $('Step 17 - Build Email Body').first().json;
+
+const now = new Date();
+const dy = now.getFullYear();
+const dm = now.getMonth() + 1;
+const dd = now.getDate();
+const dh = now.getHours();
+const dmin = now.getMinutes();
+const dsec = now.getSeconds();
+const delivery_ts = dy + '-' + (dm < 10 ? '0' + dm : '' + dm) + '-' + (dd < 10 ? '0' + dd : '' + dd) + 'T' + (dh < 10 ? '0' + dh : '' + dh) + ':' + (dmin < 10 ? '0' + dmin : '' + dmin) + ':' + (dsec < 10 ? '0' + dsec : '' + dsec) + '.000Z';
+
+const patch_body = {};
+patch_body['Delivery Status'] = 'sent';
+patch_body['Delivery Timestamp'] = delivery_ts;
+
+const result = {};
+result.nocodb_record_id = s17.nocodb_record_id;
+result.report_type = s17.report_type;
+result.patch_body = JSON.stringify(patch_body);
+
+return [{ json: result }];
+
+Step 19b - Gate Daily PATCH
+const s19 = $input.first().json;
+const s17 = $('Step 17 - Build Email Body').first().json;
+
+if (!s17.nocodb_record_id) {
+  return [];
+}
+
+return [{ json: {
+  nocodb_record_id: s17.nocodb_record_id,
+  report_type: s19.report_type,
+  patch_body: s19.patch_body
+} }];
+
+Step 20 - NocoDB PATCH Delivery Status
+Parameters
+Settings
+Method
+PATCH
+URL
+http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mybieof2em75t6e/{{$json.nocodb_record_id}}
+ 
+Authentication
+Generic Credential Type
+Generic Auth Type
+Header Auth
+Header Auth
+xc-token
+Send Query Parameters
+
+Send Headers
+
+Specify Headers
+Using Fields Below
+Headers
+Name
+Content-Type
+Value
+application/json
+Send Body
+
+Body Content Type
+Raw
+Content Type
+application/json
+Body
+{{$json.patch_body}}
+ 
+Options
+No properties
+Add option
+You can view the raw requests this node makes in your browser's developer console
+
