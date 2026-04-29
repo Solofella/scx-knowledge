@@ -1,34 +1,3 @@
-## OUTCOME: SIA SCHEMA UPDATE
-
-**Current version fetched:** v1.0  
-**Updated to:** v2.0 (Chat #77, April 28, 2026)
-
----
-
-### MAJOR SCHEMA CHANGES
-
-**1. NEW FIELDS ADDED (v2.0)**
-- `Report Window Type` (SingleSelect: daily/weekly/monthly)
-- `Client ID` now explicitly documented with field ID
-
-**2. FIELD COUNT CHANGE**
-- v1.0: 12 fields
-- v2.0: 15 fields (added 3 new fields)
-
-**3. COMPOSITE KEY CHANGE**
-- v1.0: Domain + Signal Tier
-- v2.0: **Client ID + Domain + Signal Tier** (for multi-client trend comparison)
-
-**4. DATA SOURCE CHANGE**
-- v1.0: Read from EIP table directly (filtered by EIP Timestamp)
-- v2.0: Read from ALA table (filtered by guest review Date), then match to EIP table
-
----
-
-### COMPLETE UPDATED DOCUMENT FOLLOWS BELOW:
-
----
-
 # SIA_Schema_v2.0
 
 **NocoDB Table ID:** `mdn68l4lm609fve`  
