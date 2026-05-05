@@ -52,17 +52,6 @@ EXPRESSION MODE (How emotions communicated)
 - Conflicted: X reviews (X%)
 - Absent: X reviews (X%)
 
-EMOTION CLARITY (Signal coherence)
-- Clear: X reviews (X%)
-- Diffuse: X reviews (X%)
-- Fragmented: X reviews (X%)
-- Ambiguous: X reviews (X%)
-
-NARRATIVE ALIGNMENT (Words matching experience)
-- High: X reviews (X%)
-- Moderate: X reviews (X%)
-- Low: X reviews (X%)
-
 PAIN POINT DOMAINS (Where signals pointed)
 - [Domain Name]: X signals
 - [Domain Name]: X signals
@@ -82,8 +71,6 @@ NEXT STEP: Open sheet to approve/edit/reject drafts.
 - Calculate average star rating from ALA Average Star Rating field
 - Count Signal Direction from EIP (rename to "Signal Direction": Positive/Negative/Ambiguous)
 - Count Expression Mode from ESS (6 modes: Explicit/Implicit/Masked/Performative/Conflicted/Absent)
-- Count Emotion Clarity from ESS (4 levels: Clear/Diffuse/Fragmented/Ambiguous)
-- Count Narrative Alignment from ESS (3 levels: High/Moderate/Low)
 - Count Pain Point Domain from EIP (group by domain name)
 - Flag Negative signals + Masked signals for "Action Required" section
 - Link to Google Sheet with all RDA records for the day
@@ -137,19 +124,6 @@ EXPRESSION MODE BREAKDOWN
 | Conflicted | X | X% | ↑/↓ |
 | Absent | X | X% | ↑/↓ |
 
-EMOTION CLARITY BREAKDOWN
-| Level | This Week | Last Week | Change |
-| Clear | X (X%) | X (X%) | ↑/↓ |
-| Diffuse | X (X%) | X (X%) | ↑/↓ |
-| Fragmented | X (X%) | X (X%) | ↑/↓ |
-| Ambiguous | X (X%) | X (X%) | ↑/↓ |
-
-NARRATIVE ALIGNMENT BREAKDOWN
-| Level | This Week | Last Week | Change |
-| High | X (X%) | X (X%) | ↑/↓ |
-| Moderate | X (X%) | X (X%) | ↑/↓ |
-| Low | X (X%) | X (X%) | ↑/↓ |
-
 TOP PAIN POINT DOMAINS
 | Domain | Total Signals | Positive | Ambiguous | Negative | Trend |
 | [Domain] | X | X | X | X | ↑/↓ |
@@ -189,12 +163,12 @@ Where signals point:
 
 **Data Requirements:**
 - Filter RDA records by Client ID, report week (Mon-Sun, calendar week)
-- Count by Signal Direction, Expression Mode, Emotion Clarity, Narrative Alignment
+- Count by Signal Direction, Expression Mode
 - Group by Pain Point Domain
 - Calculate platform breakdown (Google, OpenTable, Yelp, TripAdvisor counts)
 - Calculate average star rating for week
 - Compare all metrics to prior calendar week (Monday-Sunday)
-- Identify 3 priority signals (Negative + Masked + Low Narrative Alignment weighted highest)
+- Identify 3 priority signals (Negative + Masked)
 - Calculate SLA compliance (count Approval Status = Approved/Edited-Approved where Published Timestamp - RDA Timestamp < 48 hours)
 - Count SEO keywords placed (from RDA SEO Keywords field), list top 3 by frequency
 - Count indexed pages (cumulative, from prior weeks' SEO tracking)
@@ -252,23 +226,6 @@ EXPRESSION MODE BREAKDOWN
 | Absent | X | X% | ↑/↓ |
 
 What this shows: [Observation about communication style changes]
-
-EMOTION CLARITY
-| Level | This Month | Last Month | Change |
-| Clear | X (X%) | X (X%) | ↑/↓ |
-| Diffuse | X (X%) | X (X%) | ↑/↓ |
-| Fragmented | X (X%) | X (X%) | ↑/↓ |
-| Ambiguous | X (X%) | X (X%) | ↑/↓ |
-
-What this shows: [Observation about signal coherence]
-
-NARRATIVE ALIGNMENT
-| Level | This Month | Last Month | Change |
-| High | X (X%) | X (X%) | ↑/↓ |
-| Moderate | X (X%) | X (X%) | ↑/↓ |
-| Low | X (X%) | X (X%) | ↑/↓ |
-
-What this shows: [Observation about authenticity of feedback]
 
 TOP PAIN POINT DOMAINS
 | Domain | Total Signals | Positive | Ambiguous | Negative | Trend vs. Last Month |
@@ -343,7 +300,7 @@ AREAS FOR YOUR TEAM'S ATTENTION
 - Filter RDA records by Client ID, calendar month (1st-30th)
 - Count all signal types across full month
 - Compare all metrics to prior calendar month
-- Identify dignity-risk events (Negative + Masked signals + Low Narrative Alignment)
+- Identify dignity-risk events (Negative + Masked signals)
 - Calculate domain distribution across 30 days
 - Aggregate SEO keywords placed (sum from daily reports)
 - Track indexed pages from SIA/MRA SEO tracking
@@ -375,17 +332,6 @@ AREAS FOR YOUR TEAM'S ATTENTION
 - Conflicted: Contradictory (says one thing, means another)
 - Absent: Emotion not present/expressed
 
-**Emotion Clarity (from ESS):**
-- Clear: Emotion coherent and understandable
-- Diffuse: Emotion spread across multiple conflicting feelings
-- Fragmented: Emotion expressed in disjointed way
-- Ambiguous: Emotion unclear or indeterminate
-
-**Narrative Alignment (from ESS):**
-- High: What guest said matches what they experienced
-- Moderate: Some alignment but with reservations
-- Low: Words don't match experience (sarcasm, masking)
-
 **Pain Point Domain (from EIP):**
 - 13 domains: Service Quality, Food Quality, Staff Behavior, Expectation vs. Reality, Ambience, Reservation/Booking, Hygiene, Value/Pricing, Accessibility, Technology, Loyalty, Communication, Safety
 
@@ -401,7 +347,7 @@ AREAS FOR YOUR TEAM'S ATTENTION
 **Sources:**
 - RDA table (Response Drafts, Approval Status, Platform, timestamps)
 - EIP table (Signal Direction, Pain Point Domain)
-- ESS table (Expression Mode, Emotion Clarity, Narrative Alignment)
+- ESS table (Expression Mode)
 - ALA table (Average Star Rating, Platform)
 - SIA table (SEO keywords, indexed pages)
 
@@ -411,9 +357,9 @@ AREAS FOR YOUR TEAM'S ATTENTION
 - Archivable format (stored for reference)
 
 **Timing:**
-- Daily: 7:00 AM UTC
-- Weekly: Monday 6:00 AM UTC
-- Monthly: 1st of month 6:00 AM UTC
+- Daily: 8:00 AM UTC
+- Weekly: Monday 9:00 AM UTC
+- Monthly: 1st of month 10:00 AM UTC
 
 ---
 
