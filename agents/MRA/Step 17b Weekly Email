@@ -1,0 +1,283 @@
+const s16 = $input.first().json;
+
+const client_name = s16.client_name || s16.client_id || 'Client';
+const period_start = s16.period_start ? s16.period_start.slice(0, 10) : '';
+const period_end = s16.period_end ? s16.period_end.slice(0, 10) : '';
+const magic_token = s16.magic_token || '';
+const client_id_str = s16.client_id || '';
+const dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;
+
+const tier_breakdown = s16.tier_breakdown || [];
+const trend_signals = s16.trend_signals || [];
+const platform_counts = s16.platform_counts || {};
+const top_domains = s16.top_domains || [];
+
+let t3_total = 0;
+for (let i = 0; i < tier_breakdown.length; i++) {
+  if (tier_breakdown[i].tier === 'T3 Dignity-restoration') {
+    t3_total = tier_breakdown[i].total || 0;
+  }
+}
+
+const emailStyles = `
+  body { 
+    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+    line-height: 1.6; 
+    color: #384653; 
+    background-color: #F6F6F6; 
+    margin: 0; 
+    padding: 0; 
+  }
+  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  .header { 
+    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); 
+    color: #2E304E; 
+    padding: 32px 24px; 
+    text-align: center; 
+  }
+  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }
+  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }
+  .content { padding: 24px; }
+  .section { margin-bottom: 24px; }
+  .section-title { 
+    font-size: 16px; 
+    font-weight: 600; 
+    color: #2E304E; 
+    margin: 0 0 12px 0; 
+    display: flex; 
+    align-items: center; 
+  }
+  .section-title .emoji { margin-right: 8px; font-size: 18px; }
+  .metric-card { 
+    background-color: #C7E0E7; 
+    border-left: 4px solid #64B8CE; 
+    padding: 16px; 
+    border-radius: 6px; 
+    margin-bottom: 12px; 
+  }
+  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .metric-label { font-size: 14px; color: #A8A9AD; }
+  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }
+  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .platform-item { 
+    background-color: #C7E0E7; 
+    padding: 12px; 
+    border-radius: 6px; 
+    text-align: center; 
+    border: 1px solid #64B8CE; 
+  }
+  .platform-name { 
+    font-size: 12px; 
+    color: #A8A9AD; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+    font-weight: 600; 
+    letter-spacing: 0.5px; 
+  }
+  .platform-count { font-size: 20px; font-weight: 700; color: #2E304E; }
+  .domain-item { 
+    background-color: #C7E0E7; 
+    padding: 12px 16px; 
+    border-radius: 6px; 
+    margin-bottom: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border-left: 3px solid #64B8CE; 
+  }
+  .domain-name { font-size: 14px; color: #2E304E; font-weight: 500; }
+  .domain-count { 
+    font-size: 14px; 
+    font-weight: 700; 
+    color: #2E304E; 
+    background-color: rgba(100,184,206,0.2); 
+    padding: 4px 12px; 
+    border-radius: 12px; 
+  }
+  .trend-item { 
+    background-color: #C7E0E7; 
+    padding: 12px 16px; 
+    border-radius: 6px; 
+    margin-bottom: 8px; 
+    display: flex; 
+    align-items: center; 
+    border: 1px solid #64B8CE; 
+  }
+  .trend-badge { 
+    font-size: 11px; 
+    text-transform: uppercase; 
+    font-weight: 700; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    margin-right: 12px; 
+    white-space: nowrap; 
+  }
+  .trend-negative { 
+    background-color: rgba(195,100,61,0.15); 
+    color: #C3643D; 
+    border: 1px solid #C3643D; 
+  }
+  .trend-positive { 
+    background-color: rgba(100,184,206,0.15); 
+    color: #64B8CE; 
+    border: 1px solid #64B8CE; 
+  }
+  .trend-ambiguous { 
+    background-color: rgba(233,207,201,0.3); 
+    color: #C3643D; 
+    border: 1px solid #E9CFC9; 
+  }
+  .alert-box { 
+    background-color: #fff5f0; 
+    border-left: 4px solid #C3643D; 
+    padding: 12px 16px; 
+    border-radius: 6px; 
+    margin-bottom: 12px; 
+  }
+  .alert-text { color: #C3643D; font-size: 14px; margin: 0; font-weight: 500; }
+  .cta-button { 
+    display: inline-block; 
+    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); 
+    color: #FFFFFF !important; 
+    padding: 14px 28px; 
+    text-decoration: none; 
+    border-bottom: none; 
+    border-radius: 6px; 
+    font-weight: 600; 
+    font-size: 14px; 
+    margin: 16px 0; 
+    box-shadow: 0 2px 4px rgba(100,184,206,0.3); 
+  }
+  .footer { 
+    background-color: #C7E0E7; 
+    padding: 20px 24px; 
+    text-align: center; 
+    font-size: 12px; 
+    color: #A8A9AD; 
+    border-top: 1px solid #64B8CE; 
+  }
+  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }
+  .divider { border: 0; height: 1px; background-color: #64B8CE; margin: 12px 0; }
+  a { color: #3A6B7E; text-decoration: none; }
+`;
+
+const email_subject = 'Weekly Intelligence Brief — ' + client_id_str + ' — Week of ' + period_start;
+
+const total_signals = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);
+
+let signal_bars_html = '';
+signal_bars_html += '<div class="metric-row"><span class="metric-label">T-NEGATIVE</span><span class="metric-value" style="color: #C3643D; font-weight: 700;">' + (s16.t_negative_count || 0) + ' signal(s)</span></div>';
+signal_bars_html += '<div class="metric-row"><span class="metric-label">T-AMBIGUOUS</span><span class="metric-value" style="color: #E9CFC9; font-weight: 700;">' + (s16.t_ambiguous_count || 0) + ' signal(s)</span></div>';
+signal_bars_html += '<div class="metric-row"><span class="metric-label">T-POSITIVE</span><span class="metric-value" style="color: #64B8CE; font-weight: 700;">' + (s16.t_positive_count || 0) + ' signal(s)</span></div>';
+
+let domain_cards_html = '';
+let domain_limit = top_domains.length > 5 ? 5 : top_domains.length;
+for (let i = 0; i < domain_limit; i++) {
+  let dom = top_domains[i];
+  domain_cards_html += '<div class="domain-item"><span class="domain-name">' + dom.domain + '</span><span class="domain-count">' + dom.total + '</span></div>';
+}
+
+let trend_cards_html = '';
+for (let i = 0; i < trend_signals.length; i++) {
+  let ts = trend_signals[i];
+  let badge_class = 'trend-ambiguous';
+  if (ts.tier === 'T-NEGATIVE') badge_class = 'trend-negative';
+  else if (ts.tier === 'T-POSITIVE') badge_class = 'trend-positive';
+  
+  let prior_str = 'new';
+  if (ts.prior_n !== null && ts.prior_n !== undefined) {
+    let arrow = '→';
+    if (ts.trend_direction === 'UP') arrow = '↑';
+    else if (ts.trend_direction === 'DOWN') arrow = '↓';
+    prior_str = arrow + ' from ' + ts.prior_n;
+  }
+  
+  trend_cards_html += '<div class="trend-item"><span class="trend-badge ' + badge_class + '">' + ts.tier + '</span><span style="flex: 1; color: #2E304E;">' + ts.domain + ' — <strong>' + ts.n + '</strong> signal(s) <em style="color: #A8A9AD;">(' + prior_str + ')</em></span></div>';
+}
+
+let platform_cards_html = '';
+const platform_order = ['Google', 'OpenTable', 'Yelp', 'TripAdvisor'];
+for (let i = 0; i < platform_order.length; i++) {
+  let plat = platform_order[i];
+  let count = platform_counts[plat] || 0;
+  platform_cards_html += '<div class="platform-item"><div class="platform-name">' + plat + '</div><div class="platform-count">' + count + '</div></div>';
+}
+
+let alert_html = '';
+if (t3_total > 0) {
+  alert_html = '<div class="alert-box"><p class="alert-text">⚠️ ' + t3_total + ' dignity-risk event(s) this week — elevated reviews requiring special attention</p></div>';
+}
+
+let email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';
+email_body += '<div class="container">';
+email_body += '<div class="header"><h1>Weekly Intelligence Brief</h1><p>' + client_id_str + ' • ' + period_start + ' – ' + period_end + '</p></div>';
+email_body += '<div class="content">';
+
+email_body += '<div class="section"><h2 class="section-title"><span class="emoji">📊</span>Signal Distribution</h2>';
+email_body += '<div class="metric-card">' + signal_bars_html;
+email_body += '<hr class="divider"><div class="metric-row"><span class="metric-label" style="font-weight: 600; color: #2E304E;">Total signals</span><span class="metric-value" style="font-size: 18px; color: #2E304E;">' + total_signals + '</span></div>';
+email_body += '</div></div>';
+
+if (domain_cards_html) {
+  email_body += '<div class="section"><h2 class="section-title"><span class="emoji">🔍</span>Top Pain Point Domains</h2>' + domain_cards_html + '</div>';
+}
+
+if (alert_html) {
+  email_body += alert_html;
+}
+
+email_body += '<div class="section"><h2 class="section-title"><span class="emoji">📈</span>Platform Breakdown</h2>';
+email_body += '<div class="platform-grid">' + platform_cards_html + '</div></div>';
+
+email_body += '<div class="section"><h2 class="section-title"><span class="emoji">📊</span>Performance Metrics</h2>';
+email_body += '<div class="metric-card">';
+email_body += '<div class="metric-row"><span class="metric-label">Average Star Rating</span><span class="metric-value">' + (s16.avg_star_rating || 0) + ' ⭐</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">SLA Compliance Rate</span><span class="metric-value">' + (s16.sla_compliance_rate || 0) + '%</span></div>';
+email_body += '</div></div>';
+
+if (trend_cards_html) {
+  email_body += '<div class="section"><h2 class="section-title"><span class="emoji">🔍</span>Trend Signals</h2>' + trend_cards_html + '</div>';
+}
+
+email_body += '<div class="section"><h2 class="section-title"><span class="emoji">📊</span>SEO Performance</h2>';
+email_body += '<div class="metric-card">';
+email_body += '<div class="metric-row"><span class="metric-label">Drafts with keyword placed</span><span class="metric-value">' + (s16.seo_keyword_hits || 0) + '</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">Top keyword</span><span class="metric-value">' + (s16.seo_top_keyword || 'none') + '</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">Coverage rate</span><span class="metric-value">' + (s16.seo_coverage_rate || 0) + '%</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">Response velocity</span><span class="metric-value">' + (s16.seo_avg_velocity_hrs || 0) + ' hrs avg</span></div>';
+email_body += '</div></div>';
+
+email_body += '<a href="' + dashboard_url + '" class="cta-button" style="color: #FFFFFF; text-decoration: none; border-bottom: none;">View Dashboard →</a>';
+
+email_body += '</div>';
+email_body += '<div class="footer"><div class="footer-note">SubtextCX detects and interprets signals only.<br>Operational decisions remain with your team.</div></div>';
+email_body += '</div></body></html>';
+
+const brevo_to = {};
+brevo_to['email'] = s16.approval_email || 'miguel@solofella.com';
+brevo_to['name'] = client_name;
+const brevo_to_arr = [];
+brevo_to_arr.push(brevo_to);
+
+const brevo_sender = {};
+brevo_sender['name'] = 'SubtextCX Reports';
+brevo_sender['email'] = 'marellano@solofella.com';
+
+const brevo_obj = {};
+brevo_obj['sender'] = brevo_sender;
+brevo_obj['to'] = brevo_to_arr;
+brevo_obj['subject'] = email_subject;
+brevo_obj['htmlContent'] = email_body;
+
+return [{ json: {
+  mra_run_id: s16.mra_run_id,
+  report_type: 'weekly',
+  client_id: client_id_str,
+  approval_email: s16.approval_email,
+  nocodb_record_id: s16.nocodb_record_id || null,
+  email_subject: email_subject,
+  email_body: email_body,
+  magic_token: magic_token,
+  dashboard_url: dashboard_url,
+  brevo_body: JSON.stringify(brevo_obj)
+} }];
