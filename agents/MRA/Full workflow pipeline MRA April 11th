@@ -1,0 +1,1303 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -592,
+        -224
+      ],
+      "id": "df732817-7646-4a69-bcbc-faa0440c94b7",
+      "name": "Step 1a - Trigger Daily 24hr"
+    }
+  ],
+  "connections": {
+    "Step 1a - Trigger Daily 24hr": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39657b58-2a3f-4e1f-9e93-bb0cd671b20a",
+              "name": "report_type",
+              "value": "daily",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -304,
+        -224
+      ],
+      "id": "49b84250-d8bb-4d1d-bdc9-d1d8f5de79d8",
+      "name": "Step 2a - Set Report Type Daily"
+    }
+  ],
+  "connections": {
+    "Step 2a - Set Report Type Daily": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -592,
+        0
+      ],
+      "id": "75fb5771-9454-4c05-9c2f-87f202bfb0bf",
+      "name": "Step 1b - Trigger Weekly Brief"
+    }
+  ],
+  "connections": {
+    "Step 1b - Trigger Weekly Brief": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3fa03dd0-a1a1-49cb-a02e-22818feb6a96",
+              "name": "report_type",
+              "value": "weekly",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "e5e526e8-a8e5-4258-bf8d-da79a876fd86",
+      "name": "Step 2b - Set Report Type Weekly"
+    }
+  ],
+  "connections": {
+    "Step 2b - Set Report Type Weekly": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -592,
+        240
+      ],
+      "id": "a3ad502d-1f09-489c-a1dd-14dbf36d2e2a",
+      "name": "Step 1c - Trigger Monthly Report"
+    }
+  ],
+  "connections": {
+    "Step 1c - Trigger Monthly Report": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66d652fc-3da2-4a63-81c9-83b0b649f144",
+              "name": "report_type",
+              "value": "monthly",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -272,
+        240
+      ],
+      "id": "0e1f8cb5-4d19-4ccd-bb02-2435c03e2a66",
+      "name": "Step 2c - Set Report Type Monthly"
+    }
+  ],
+  "connections": {
+    "Step 2c - Set Report Type Monthly": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst p = typeof input.body === 'string' ? JSON.parse(input.body) : input;\nconst report_type = p.report_type || 'daily';\n\nconst now = new Date();\n\nconst pad = (n, l=2) => String(n).padStart(l, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst mra_run_id = `MRA-${d}-${t}`;\n\nlet period_start;\nlet period_end;\nlet window_days;\n\nif (report_type === 'daily') {\n  window_days = 1;\n  period_end = now.toISOString();\n  period_start = new Date(now.getTime() - 2 * 86400000).toISOString();\n} else if (report_type === 'weekly') {\n  window_days = 7;\n  period_end = now.toISOString();\n  period_start = new Date(now.getTime() - 7 * 86400000).toISOString();\n} else {\n  window_days = 30;\n  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);\n  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);\n  period_start = firstOfLastMonth.toISOString();\n  period_end = new Date(firstOfThisMonth.getTime() - 1).toISOString();\n}\n\nconst result = {};\nresult.mra_run_id = mra_run_id;\nresult.report_type = report_type;\nresult.period_start = period_start;\nresult.period_end = period_end;\nresult.window_days = window_days;\nresult.run_timestamp = now.toISOString();\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "6be53ea3-b63a-41c6-a988-2643b112c86e",
+      "name": "Step 3 - Set Window Parameters"
+    }
+  ],
+  "connections": {
+    "Step 3 - Set Window Parameters": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps?where=(Client%20ID,eq,PAK-001)&limit=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        560,
+        0
+      ],
+      "id": "0f2691e1-0ff8-4499-87ab-f16a65f83d5d",
+      "name": "Step 4 - Fetch Client Config",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 4 - Fetch Client Config": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s3 = $('Step 3 - Set Window Parameters').first().json;\n\nconst records = input.list || [];\n\nif (records.length === 0) {\n  throw new Error('MRA: No Client Config found for PAK-001');\n}\n\nconst config = records[0];\n\nconst seo_raw = config['SEO Keywords'] || '';\nconst seo_keywords = seo_raw\n  .split(',')\n  .map(k => k.trim().toLowerCase())\n  .filter(k => k.length > 0);\n\nconst result = {};\nresult.mra_run_id = s3.mra_run_id;\nresult.report_type = s3.report_type;\nresult.period_start = s3.period_start;\nresult.period_end = s3.period_end;\nresult.window_days = s3.window_days;\nresult.run_timestamp = s3.run_timestamp;\nresult.client_id = config['Client ID'] || 'PAK-001';\nresult.client_name = config['Client Name'] || 'PAK-001';\nresult.approval_email = config['Approval Contact Email'] || '';\nresult.seo_keywords = seo_keywords;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "d0949be6-2c4d-4e01-9e36-09aca176d6df",
+      "name": "Step 5 - Extract Client Config"
+    }
+  ],
+  "connections": {
+    "Step 5 - Extract Client Config": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,PAK-001)&limit=1000&sort=ALA%20Timestamp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b85c7a1d-cdbc-4958-9655-2749b1857939",
+      "name": "Step 6 - Fetch ALA Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 6 - Fetch ALA Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s5 = $('Step 5 - Extract Client Config').first().json;\n\nconst allRecords = input.list || [];\n\nreturn [{ json: {\n  mra_run_id: s5.mra_run_id,\n  report_type: s5.report_type,\n  period_start: s5.period_start,\n  period_end: s5.period_end,\n  window_days: s5.window_days,\n  run_timestamp: s5.run_timestamp,\n  client_id: s5.client_id,\n  client_name: s5.client_name,\n  approval_email: s5.approval_email,\n  seo_keywords: s5.seo_keywords,\n  total_records: 0,\n  avg_star_rating: 0,\n  platform_counts: {},\n  ala_records: allRecords\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "791b069a-0efc-4633-b69d-ad3190c07973",
+      "name": "Step 7 - Filter ALA by Window"
+    }
+  ],
+  "connections": {
+    "Step 7 - Filter ALA by Window": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s7 = $input.first().json;\n\nconst url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,PAK-001)&limit=1000&sort=RDA%20Timestamp';\n\nreturn [{ json: {\n  mra_run_id: s7.mra_run_id,\n  report_type: s7.report_type,\n  period_start: s7.period_start,\n  period_end: s7.period_end,\n  window_days: s7.window_days,\n  run_timestamp: s7.run_timestamp,\n  client_id: s7.client_id,\n  client_name: s7.client_name,\n  approval_email: s7.approval_email,\n  seo_keywords: s7.seo_keywords,\n  total_records: s7.total_records,\n  avg_star_rating: s7.avg_star_rating,\n  platform_counts: s7.platform_counts,\n  ala_records: s7.ala_records,\n  rda_query_url: url\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "17f4fd37-2d36-4d3e-a2da-716e1087f7f8",
+      "name": "Step 7b - Build RDA Query URL"
+    }
+  ],
+  "connections": {
+    "Step 7b - Build RDA Query URL": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.rda_query_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1536,
+        0
+      ],
+      "id": "270b39a0-cd87-4d0d-8cea-f2e87048d067",
+      "name": "Step 8 - Fetch RDA Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 8 - Fetch RDA Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s7 = $('Step 7b - Build RDA Query URL').first().json;\n\nconst allRda = input.list || [];\nconst alaRecords = s7.ala_records || [];\n\n// Build period timestamps for ALA Date comparison\nconst pStart = new Date(s7.period_start);\npStart.setHours(0, 0, 0, 0);\nconst periodStartTs = pStart.getTime();\n\nconst pEnd = new Date(s7.period_end);\npEnd.setHours(0, 0, 0, 0);\nconst periodEndTs = pEnd.getTime();\n\n// Build ALA Date lookup map\nconst alaDateMap = {};\nfor (let i = 0; i < alaRecords.length; i++) {\n  let alaId = String(alaRecords[i]['Id']);\n  let alaDateRaw = alaRecords[i]['Date'] || '';\n  let alaTs = 0;\n  \n  if (alaDateRaw.length > 0) {\n    let parts = alaDateRaw.split('/');\n    if (parts.length === 3) {\n      let month = parseInt(parts[0]);\n      let day = parseInt(parts[1]);\n      let year = 2000 + parseInt(parts[2]);\n      alaTs = new Date(year, month - 1, day).getTime();\n    }\n  }\n  \n  alaDateMap[alaId] = {\n    ala_record: alaRecords[i],\n    ala_timestamp: alaTs\n  };\n}\n\n// Filter RDA by ALA Date\nconst filteredRda = [];\nconst filtered_ala_ids = [];\nconst platform_counts = {};\nlet star_sum = 0;\n\nfor (let i = 0; i < allRda.length; i++) {\n  let rec = allRda[i];\n  let alaId = String(rec['ALA Record ID'] || '');\n  \n  if (alaDateMap[alaId]) {\n    let alaTs = alaDateMap[alaId].ala_timestamp;\n    \n    if (alaTs >= periodStartTs && alaTs < periodEndTs) {\n      filteredRda.push(rec);\n      filtered_ala_ids.push(alaId);\n      \n      let alaRec = alaDateMap[alaId].ala_record;\n      let plat = alaRec['Platform'] || 'Unknown';\n      platform_counts[plat] = (platform_counts[plat] || 0) + 1;\n      star_sum += parseFloat(alaRec['Star Rating'] || 0);\n    }\n  }\n}\n\nconst total_rda = filteredRda.length;\nconst avg_star_rating = total_rda > 0 ? Math.round((star_sum / total_rda) * 100) / 100 : 0;\n\nlet approved_count = 0;\nlet published_count = 0;\nlet sla_compliant = 0;\nlet velocity_sum = 0;\nlet velocity_count = 0;\n\nconst tier_map = {};\ntier_map['T1'] = {};\ntier_map['T1'].total = 0;\ntier_map['T1'].approved = 0;\ntier_map['T1'].pending = 0;\ntier_map['T1'].velocity_sum = 0;\ntier_map['T1'].velocity_count = 0;\ntier_map['T2'] = {};\ntier_map['T2'].total = 0;\ntier_map['T2'].approved = 0;\ntier_map['T2'].pending = 0;\ntier_map['T2'].velocity_sum = 0;\ntier_map['T2'].velocity_count = 0;\ntier_map['T3'] = {};\ntier_map['T3'].total = 0;\ntier_map['T3'].approved = 0;\ntier_map['T3'].pending = 0;\ntier_map['T3'].velocity_sum = 0;\ntier_map['T3'].velocity_count = 0;\n\nconst published_drafts = [];\n\nfor (let i = 0; i < filteredRda.length; i++) {\n  let rec = filteredRda[i];\n  let status = (rec['Approval Status'] || '').trim();\n  let tier_raw = (rec['Confirmed Response Tier'] || '').trim();\n  let tier = null;\n  if (tier_raw.indexOf('T1') === 0) tier = 'T1';\n  else if (tier_raw.indexOf('T2') === 0) tier = 'T2';\n  else if (tier_raw.indexOf('T3') === 0) tier = 'T3';\n  \n  if (tier && tier_map[tier]) {\n    tier_map[tier].total++;\n  }\n  \n  let is_approved = status === 'Approved' || status === 'Edited-Approved';\n  let is_pending = status === 'Pending' || status === 'Pending-Elevated';\n  let is_published = status === 'Published';\n  \n  if (is_approved || is_published) {\n    approved_count++;\n    if (tier && tier_map[tier]) {\n      tier_map[tier].approved++;\n    }\n  }\n  \n  if (is_pending) {\n    if (tier && tier_map[tier]) {\n      tier_map[tier].pending++;\n    }\n  }\n  \n  if (is_published) {\n    published_count++;\n    let pub_ts = rec['Published Timestamp'] ? new Date(rec['Published Timestamp']).getTime() : 0;\n    let rda_ts = rec['RDA Timestamp'] ? new Date(rec['RDA Timestamp']).getTime() : 0;\n    \n    if (pub_ts > 0 && rda_ts > 0) {\n      let hrs = (pub_ts - rda_ts) / 3600000;\n      velocity_sum += hrs;\n      velocity_count++;\n      if (tier && tier_map[tier]) {\n        tier_map[tier].velocity_sum += hrs;\n        tier_map[tier].velocity_count++;\n      }\n      if (hrs <= 48) {\n        sla_compliant++;\n      }\n    }\n    \n    let draft_text = (rec['Public Response Draft'] || '').toLowerCase();\n    let pd = {};\n    pd.draft_text = draft_text;\n    pd.tier = tier;\n    published_drafts.push(pd);\n  }\n}\n\nconst sla_compliance_rate = published_count > 0 ? Math.round((sla_compliant / published_count) * 10000) / 100 : 0;\nconst seo_avg_velocity_hrs = velocity_count > 0 ? Math.round((velocity_sum / velocity_count) * 100) / 100 : 0;\nconst seo_response_rate = total_rda > 0 ? Math.round((published_count / total_rda) * 10000) / 100 : 0;\n\nconst tier_labels = {};\ntier_labels['T1'] = 'T1 Standard';\ntier_labels['T2'] = 'T2 Calibrated';\ntier_labels['T3'] = 'T3 Dignity-restoration';\n\nconst tier_breakdown = [];\nconst tier_keys = ['T1', 'T2', 'T3'];\nfor (let i = 0; i < tier_keys.length; i++) {\n  let tk = tier_keys[i];\n  let tm = tier_map[tk];\n  let avg_hrs = tm.velocity_count > 0 ? Math.round((tm.velocity_sum / tm.velocity_count) * 10) / 10 : 0;\n  let tb = {};\n  tb.tier = tier_labels[tk];\n  tb.total = tm.total;\n  tb.approved = tm.approved;\n  tb.pending = tm.pending;\n  tb.avg_approval_hrs = avg_hrs;\n  tier_breakdown.push(tb);\n}\n\n// Calculate all-time pending count for daily reports\nlet all_time_pending = 0;\nfor (let i = 0; i < allRda.length; i++) {\n  let status = (allRda[i]['Approval Status'] || '').trim();\n  if (status === 'Pending' || status === 'Pending-Elevated') {\n    all_time_pending++;\n  }\n}\n\nreturn [{ json: {\n  mra_run_id: s7.mra_run_id,\n  report_type: s7.report_type,\n  period_start: s7.period_start,\n  period_end: s7.period_end,\n  window_days: s7.window_days,\n  run_timestamp: s7.run_timestamp,\n  client_id: s7.client_id,\n  client_name: s7.client_name,\n  approval_email: s7.approval_email,\n  seo_keywords: s7.seo_keywords,\n  total_records: total_rda,\n  avg_star_rating: avg_star_rating,\n  platform_counts: platform_counts,\n  sla_compliance_rate: sla_compliance_rate,\n  seo_avg_velocity_hrs: seo_avg_velocity_hrs,\n  seo_response_rate: seo_response_rate,\n  tier_breakdown: tier_breakdown,\n  published_drafts: published_drafts,\n  total_rda: total_rda,\n  published_count: published_count,\n  all_time_pending: all_time_pending,\n  filtered_ala_record_ids: filtered_ala_ids\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "75a76393-e878-47f4-adae-342033c0e84b",
+      "name": "Step 9 - Process RDA Records"
+    }
+  ],
+  "connections": {
+    "Step 9 - Process RDA Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s9 = $input.first().json;\n\nconst report_type = s9.report_type || 'weekly';\n\nconst url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mdn68l4lm609fve?where=(Report%20Window%20Type,eq,' + report_type + ')&limit=1000&sort=-Run%20Timestamp';\n\nreturn [{ json: {\n  sia_query_url: url,\n  mra_run_id: s9.mra_run_id,\n  report_type: s9.report_type,\n  period_start: s9.period_start,\n  period_end: s9.period_end,\n  window_days: s9.window_days,\n  run_timestamp: s9.run_timestamp,\n  client_id: s9.client_id,\n  client_name: s9.client_name,\n  approval_email: s9.approval_email,\n  seo_keywords: s9.seo_keywords,\n  total_records: s9.total_records,\n  avg_star_rating: s9.avg_star_rating,\n  platform_counts: s9.platform_counts,\n  sla_compliance_rate: s9.sla_compliance_rate,\n  seo_avg_velocity_hrs: s9.seo_avg_velocity_hrs,\n  seo_response_rate: s9.seo_response_rate,\n  tier_breakdown: s9.tier_breakdown,\n  published_count: s9.published_count,\n  all_time_pending: s9.all_time_pending,\n  filtered_ala_record_ids: s9.filtered_ala_record_ids\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        0
+      ],
+      "id": "139813aa-bff7-4f2d-b5d8-66efd87d7fc3",
+      "name": "Step 10a - Build SIA Query URL"
+    }
+  ],
+  "connections": {
+    "Step 10a - Build SIA Query URL": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.sia_query_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "785e6050-e3d9-4001-9ddb-bd99ef62c936",
+      "name": "Step 10b - Fetch SIA Clusters",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 10b - Fetch SIA Clusters": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2192,
+        0
+      ],
+      "id": "79381134-8bdb-4570-972e-eea8fa22838b",
+      "name": "Step 10c - Fetch ESS Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 10c - Fetch ESS Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2384,
+        0
+      ],
+      "id": "54be1818-fa62-4d44-89a5-fc5228df14bf",
+      "name": "Step 10d - Fetch EIP Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 10d - Fetch EIP Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s9 = $('Step 10a - Build SIA Query URL').first().json;\nconst s10c = $('Step 10c - Fetch ESS Records').first().json;\nconst s10d = $('Step 10d - Fetch EIP Records').first().json;\n\nconst report_type = s9.report_type || 'weekly';\n\nlet t_negative_count = 0;\nlet t_ambiguous_count = 0;\nlet t_positive_count = 0;\nconst domain_map = {};\nlet trend_signals_top5 = [];\n\nif (report_type === 'daily') {\n  const eip_records = s10d.list || [];\n  const filtered_ids = s9.filtered_ala_record_ids || [];\n  \n  // Build lookup set for fast filtering\n  const id_set = {};\n  for (let i = 0; i < filtered_ids.length; i++) {\n    id_set[String(filtered_ids[i])] = true;\n  }\n  \n  for (let i = 0; i < eip_records.length; i++) {\n    let rec = eip_records[i];\n    let ala_id = String(rec['ALA Record ID'] || '');\n    \n    // CRITICAL: Only process records in the daily window\n    if (!id_set[ala_id]) {\n      continue;\n    }\n    \n    let signal_type = (rec['Signal Type'] || '').trim();\n    let domain = (rec['Domain'] || '').trim();\n    \n    if (!domain || domain === '') {\n      domain = 'Unknown';\n    }\n    \n    if (signal_type === 'Positive Signal') {\n      t_positive_count++;\n    } else if (signal_type === 'Negative Signal') {\n      t_negative_count++;\n    } else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') {\n      t_ambiguous_count++;\n    }\n    \n    if (!domain_map[domain]) {\n      domain_map[domain] = {\n        domain: domain,\n        neg: 0,\n        amb: 0,\n        pos: 0,\n        total: 0\n      };\n    }\n    \n    if (signal_type === 'Positive Signal') {\n      domain_map[domain].pos++;\n    } else if (signal_type === 'Negative Signal') {\n      domain_map[domain].neg++;\n    } else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') {\n      domain_map[domain].amb++;\n    }\n    \n    domain_map[domain].total++;\n  }\n  \n  trend_signals_top5 = [];\n\n} else {\n  const sia_input = $('Step 10b - Fetch SIA Clusters').first().json;\n  const allClusters = sia_input.list || [];\n  const latestRunTs = allClusters.length > 0 ? allClusters[0]['Run Timestamp'] : null;\n  \n  const clusters = [];\n  for (let i = 0; i < allClusters.length; i++) {\n    if (allClusters[i]['Run Timestamp'] === latestRunTs) {\n      clusters.push(allClusters[i]);\n    }\n  }\n  \n  for (let i = 0; i < clusters.length; i++) {\n    let cl = clusters[i];\n    let tier = (cl['Signal Tier'] || '').trim();\n    let domain = (cl['Domain'] || '').trim();\n    \n    if (!domain || domain === '') {\n      domain = 'Unknown';\n    }\n    \n    let n = parseInt(cl['N'] || 0);\n    \n    if (tier === 'T-NEGATIVE') t_negative_count += n;\n    else if (tier === 'T-AMBIGUOUS') t_ambiguous_count += n;\n    else if (tier === 'T-POSITIVE') t_positive_count += n;\n    \n    if (!domain_map[domain]) {\n      domain_map[domain] = {\n        domain: domain,\n        neg: 0,\n        amb: 0,\n        pos: 0,\n        total: 0\n      };\n    }\n    \n    if (tier === 'T-NEGATIVE') {\n      domain_map[domain].neg += n;\n    } else if (tier === 'T-AMBIGUOUS') {\n      domain_map[domain].amb += n;\n    } else if (tier === 'T-POSITIVE') {\n      domain_map[domain].pos += n;\n    }\n    \n    domain_map[domain].total += n;\n  }\n  \n  const trend_signals = [];\n  for (let i = 0; i < clusters.length; i++) {\n    let cl = clusters[i];\n    let is_singleton = cl['Is Singleton'] === true || cl['Is Singleton'] === 1;\n    if (!is_singleton) {\n      let ts = {};\n      ts.domain = (cl['Domain'] || '').trim();\n      ts.tier = (cl['Signal Tier'] || '').trim();\n      ts.n = parseInt(cl['N'] || 0);\n      let prior_n_val = null;\n      if (cl['Prior N'] !== null && cl['Prior N'] !== undefined) {\n        prior_n_val = parseInt(cl['Prior N']);\n      }\n      ts.prior_n = prior_n_val;\n      ts.trend_direction = (cl['Trend Direction'] || '').trim();\n      ts.percentage = parseFloat(cl['Percentage'] || 0);\n      trend_signals.push(ts);\n    }\n  }\n  \n  const tierOrder = {};\n  tierOrder['T-NEGATIVE'] = 0;\n  tierOrder['T-AMBIGUOUS'] = 1;\n  tierOrder['T-POSITIVE'] = 2;\n  \n  let sort_tmp;\n  for (let i = 0; i < trend_signals.length - 1; i++) {\n    for (let j = i + 1; j < trend_signals.length; j++) {\n      let ta = tierOrder[trend_signals[i].tier] !== undefined ? tierOrder[trend_signals[i].tier] : 3;\n      let tb = tierOrder[trend_signals[j].tier] !== undefined ? tierOrder[trend_signals[j].tier] : 3;\n      let do_swap = false;\n      if (tb < ta) do_swap = true;\n      else if (tb === ta && trend_signals[j].n > trend_signals[i].n) do_swap = true;\n      if (do_swap) {\n        sort_tmp = trend_signals[i];\n        trend_signals[i] = trend_signals[j];\n        trend_signals[j] = sort_tmp;\n      }\n    }\n  }\n  \n  for (let i = 0; i < trend_signals.length && i < 5; i++) {\n    trend_signals_top5.push(trend_signals[i]);\n  }\n}\n\nconst domain_keys = Object.keys(domain_map);\nconst top_domains = [];\nfor (let i = 0; i < domain_keys.length; i++) {\n  top_domains.push(domain_map[domain_keys[i]]);\n}\n\nlet swap_tmp;\nfor (let i = 0; i < top_domains.length - 1; i++) {\n  for (let j = i + 1; j < top_domains.length; j++) {\n    if (top_domains[j].total > top_domains[i].total) {\n      swap_tmp = top_domains[i];\n      top_domains[i] = top_domains[j];\n      top_domains[j] = swap_tmp;\n    }\n  }\n}\n\nconst seo_keywords = s9.seo_keywords || [];\nconst published_drafts = s9.published_drafts || [];\n\nconst keyword_hits = {};\nfor (let i = 0; i < seo_keywords.length; i++) {\n  keyword_hits[seo_keywords[i]] = 0;\n}\n\nfor (let i = 0; i < published_drafts.length; i++) {\n  let text = published_drafts[i].draft_text || '';\n  for (let j = 0; j < seo_keywords.length; j++) {\n    if (text.includes(seo_keywords[j])) {\n      keyword_hits[seo_keywords[j]]++;\n    }\n  }\n}\n\nlet seo_top_keyword = '';\nlet seo_top_count = 0;\n\nconst kw_keys = Object.keys(keyword_hits);\nfor (let i = 0; i < kw_keys.length; i++) {\n  let kw = kw_keys[i];\n  let count = keyword_hits[kw];\n  if (count > seo_top_count) {\n    seo_top_count = count;\n    seo_top_keyword = kw;\n  }\n}\n\nconst total_published = s9.published_count || 0;\nlet drafts_with_keyword = 0;\nfor (let i = 0; i < published_drafts.length; i++) {\n  let text = published_drafts[i].draft_text || '';\n  let found = false;\n  for (let j = 0; j < seo_keywords.length; j++) {\n    if (text.includes(seo_keywords[j])) {\n      found = true;\n    }\n  }\n  if (found) {\n    drafts_with_keyword++;\n  }\n}\n\nconst seo_coverage_rate = total_published > 0 ? Math.round((drafts_with_keyword / total_published) * 10000) / 100 : 0;\n\nconst ess_records = s10c.list || [];\nconst filtered_ala_ids = s9.filtered_ala_record_ids || [];\n\nconst ess_map = {};\nfor (let i = 0; i < ess_records.length; i++) {\n  let alaId = String(ess_records[i]['ALA Record ID'] || '');\n  let expr = (ess_records[i]['Expression Mode'] || 'Absent').trim();\n  ess_map[alaId] = expr;\n}\n\nconst expression_modes = {\n  'Explicit': 0,\n  'Implicit': 0,\n  'Masked': 0,\n  'Performative': 0,\n  'Conflicted': 0,\n  'Absent': 0\n};\n\nfor (let i = 0; i < filtered_ala_ids.length; i++) {\n  let alaId = filtered_ala_ids[i];\n  if (ess_map[alaId]) {\n    let expr = ess_map[alaId];\n    if (expression_modes.hasOwnProperty(expr)) {\n      expression_modes[expr]++;\n    }\n  } else {\n    expression_modes['Absent']++;\n  }\n}\n\nreturn [{ json: {\n  mra_run_id: s9.mra_run_id,\n  report_type: s9.report_type,\n  period_start: s9.period_start,\n  period_end: s9.period_end,\n  window_days: s9.window_days,\n  run_timestamp: s9.run_timestamp,\n  client_id: s9.client_id,\n  client_name: s9.client_name,\n  approval_email: s9.approval_email,\n  seo_keywords: s9.seo_keywords,\n  total_records: s9.total_records,\n  avg_star_rating: s9.avg_star_rating,\n  platform_counts: s9.platform_counts,\n  sla_compliance_rate: s9.sla_compliance_rate,\n  seo_avg_velocity_hrs: s9.seo_avg_velocity_hrs,\n  seo_response_rate: s9.seo_response_rate,\n  tier_breakdown: s9.tier_breakdown,\n  published_count: s9.published_count,\n  all_time_pending: s9.all_time_pending,\n  t_negative_count: t_negative_count,\n  t_ambiguous_count: t_ambiguous_count,\n  t_positive_count: t_positive_count,\n  top_domains: top_domains,\n  trend_signals: trend_signals_top5,\n  seo_keyword_hits: drafts_with_keyword,\n  seo_top_keyword: seo_top_keyword,\n  seo_coverage_rate: seo_coverage_rate,\n  expression_modes: expression_modes\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        0
+      ],
+      "id": "b7ab4570-0451-42e2-9963-d405000894ab",
+      "name": "Step 11 - Process SIA and SEO"
+    }
+  ],
+  "connections": {
+    "Step 11 - Process SIA and SEO": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s11 = $('Step 11 - Process SIA and SEO').first().json;\n\nconst now = new Date();\nconst expires = new Date(now.getTime() + 72 * 3600000);\n\nconst ey = expires.getFullYear();\nconst em = expires.getMonth() + 1;\nconst ed = expires.getDate();\nconst eh = expires.getHours();\nconst emin = expires.getMinutes();\nconst esec = expires.getSeconds();\nconst exp_str = ey + '-' + (em < 10 ? '0' + em : '' + em) + '-' + (ed < 10 ? '0' + ed : '' + ed) + 'T' + (eh < 10 ? '0' + eh : '' + eh) + ':' + (emin < 10 ? '0' + emin : '' + emin) + ':' + (esec < 10 ? '0' + esec : '' + esec) + '.000Z';\n\nconst hex_chars = '0123456789abcdef';\nlet tok_a = '';\nlet tok_b = '';\nlet tok_c = '';\nlet tok_d = '';\nlet tok_e = '';\nfor (let i = 0; i < 8; i++) { tok_a += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 4; i++) { tok_b += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 3; i++) { tok_c += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 3; i++) { tok_d += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 12; i++) { tok_e += hex_chars[Math.floor(Math.random() * 16)]; }\nconst magic_token = tok_a + '-' + tok_b + '-4' + tok_c + '-a' + tok_d + '-' + tok_e;\n\nconst top_domains_json = JSON.stringify(s11.top_domains);\nconst tier_breakdown_json = JSON.stringify(s11.tier_breakdown);\nconst trend_signals_json = JSON.stringify(s11.trend_signals);\nconst platform_counts_json = JSON.stringify(s11.platform_counts);\n\nconst record = {};\nrecord['MRA Run ID'] = s11.mra_run_id;\nrecord['Report Type'] = s11.report_type;\nrecord['Client ID'] = s11.client_id;\nrecord['Period Start'] = s11.period_start;\nrecord['Period End'] = s11.period_end;\nrecord['Total Records'] = s11.total_records;\nrecord['Avg Star Rating'] = s11.avg_star_rating;\nrecord['SLA Compliance Rate'] = s11.sla_compliance_rate;\nrecord['T Negative Count'] = s11.t_negative_count;\nrecord['T Ambiguous Count'] = s11.t_ambiguous_count;\nrecord['T Positive Count'] = s11.t_positive_count;\nrecord['Top Domains JSON'] = top_domains_json;\nrecord['Tier Breakdown JSON'] = tier_breakdown_json;\nrecord['Trend Signals JSON'] = trend_signals_json;\nrecord['SEO Keyword Hits'] = s11.seo_keyword_hits;\nrecord['SEO Top Keyword'] = s11.seo_top_keyword;\nrecord['SEO Coverage Rate'] = s11.seo_coverage_rate;\nrecord['SEO Response Rate'] = s11.seo_response_rate;\nrecord['SEO Avg Velocity Hrs'] = s11.seo_avg_velocity_hrs;\nrecord['Platform Counts JSON'] = platform_counts_json;\nrecord['Magic Link Token'] = magic_token;\nrecord['Token Expires At'] = exp_str;\nrecord['Error Log'] = '';\n\nreturn [{ json: {\n  mra_run_id: s11.mra_run_id,\n  report_type: s11.report_type,\n  client_id: s11.client_id,\n  client_name: s11.client_name,\n  approval_email: s11.approval_email,\n  period_start: s11.period_start,\n  period_end: s11.period_end,\n  run_timestamp: s11.run_timestamp,\n  magic_token: magic_token,\n  token_expires_at: exp_str,\n  total_records: s11.total_records,\n  avg_star_rating: s11.avg_star_rating,\n  platform_counts: s11.platform_counts,\n  sla_compliance_rate: s11.sla_compliance_rate,\n  t_negative_count: s11.t_negative_count,\n  t_ambiguous_count: s11.t_ambiguous_count,\n  t_positive_count: s11.t_positive_count,\n  top_domains: s11.top_domains,\n  tier_breakdown: s11.tier_breakdown,\n  trend_signals: s11.trend_signals,\n  seo_keyword_hits: s11.seo_keyword_hits,\n  seo_top_keyword: s11.seo_top_keyword,\n  seo_coverage_rate: s11.seo_coverage_rate,\n  seo_response_rate: s11.seo_response_rate,\n  seo_avg_velocity_hrs: s11.seo_avg_velocity_hrs,\n  all_time_pending: s11.all_time_pending,\n  nocodb_body: JSON.stringify(record)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        0
+      ],
+      "id": "093aab34-c117-427a-a994-6ab4722ec923",
+      "name": "Step 12 - Build MRA Record"
+    }
+  ],
+  "connections": {
+    "Step 12 - Build MRA Record": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s12 = $('Step 12 - Build MRA Record').first().json;\n\nconst result = {};\nresult.mra_run_id = s12.mra_run_id;\nresult.report_type = s12.report_type;\nresult.client_id = s12.client_id;\nresult.client_name = s12.client_name;\nresult.approval_email = s12.approval_email;\nresult.period_start = s12.period_start;\nresult.period_end = s12.period_end;\nresult.run_timestamp = s12.run_timestamp;\nresult.magic_token = s12.magic_token;\nresult.token_expires_at = s12.token_expires_at;\nresult.total_records = s12.total_records;\nresult.avg_star_rating = s12.avg_star_rating;\nresult.platform_counts = s12.platform_counts;\nresult.sla_compliance_rate = s12.sla_compliance_rate;\nresult.t_negative_count = s12.t_negative_count;\nresult.t_ambiguous_count = s12.t_ambiguous_count;\nresult.t_positive_count = s12.t_positive_count;\nresult.top_domains = s12.top_domains;\nresult.tier_breakdown = s12.tier_breakdown;\nresult.trend_signals = s12.trend_signals;\nresult.seo_keyword_hits = s12.seo_keyword_hits;\nresult.seo_top_keyword = s12.seo_top_keyword;\nresult.seo_coverage_rate = s12.seo_coverage_rate;\nresult.seo_response_rate = s12.seo_response_rate;\nresult.seo_avg_velocity_hrs = s12.seo_avg_velocity_hrs;\nresult.all_time_pending = s12.all_time_pending;\nresult.nocodb_body = s12.nocodb_body;\nresult.skip_nocodb = s12.report_type === 'daily' ? true : false;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        0
+      ],
+      "id": "276a3dd0-b63e-4a0e-9491-c3df9c7db35f",
+      "name": "Step 13 - Check Report Type"
+    }
+  ],
+  "connections": {
+    "Step 13 - Check Report Type": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f315bb1a-351a-489b-a09c-f59f4697b26d",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "daily",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3296,
+        0
+      ],
+      "id": "335d056e-bacb-4709-a07e-6a713defbcba",
+      "name": "Step 14b - Catch Daily Reports"
+    }
+  ],
+  "connections": {
+    "Step 14b - Catch Daily Reports": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s13 = $('Step 13 - Check Report Type').first().json;\n\nconst result = {};\nresult.mra_run_id = s13.mra_run_id;\nresult.report_type = s13.report_type;\nresult.client_id = s13.client_id;\nresult.client_name = s13.client_name;\nresult.approval_email = s13.approval_email;\nresult.period_start = s13.period_start;\nresult.period_end = s13.period_end;\nresult.run_timestamp = s13.run_timestamp;\nresult.magic_token = s13.magic_token;\nresult.token_expires_at = s13.token_expires_at;\nresult.total_records = s13.total_records;\nresult.avg_star_rating = s13.avg_star_rating;\nresult.platform_counts = s13.platform_counts;\nresult.sla_compliance_rate = s13.sla_compliance_rate;\nresult.t_negative_count = s13.t_negative_count;\nresult.t_ambiguous_count = s13.t_ambiguous_count;\nresult.t_positive_count = s13.t_positive_count;\nresult.top_domains = s13.top_domains;\nresult.tier_breakdown = s13.tier_breakdown;\nresult.trend_signals = s13.trend_signals;\nresult.seo_keyword_hits = s13.seo_keyword_hits;\nresult.seo_top_keyword = s13.seo_top_keyword;\nresult.seo_coverage_rate = s13.seo_coverage_rate;\nresult.seo_response_rate = s13.seo_response_rate;\nresult.seo_avg_velocity_hrs = s13.seo_avg_velocity_hrs;\nresult.all_time_pending = s13.all_time_pending;\nresult.nocodb_body = s13.nocodb_body;\n\nif (s13.report_type === 'daily') {\n  return [];\n}\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        320
+      ],
+      "id": "7c040bd0-49bd-4dfe-b1c6-fc85d9fb96c0",
+      "name": "Step 14 - Route Report Type"
+    }
+  ],
+  "connections": {
+    "Step 14 - Route Report Type": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mybieof2em75t6e",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.nocodb_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3296,
+        320
+      ],
+      "id": "45ff7f24-5f1f-4c39-b1e9-2901977411a2",
+      "name": "Step 15 - NocoDB POST MRA Record",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 15 - NocoDB POST MRA Record": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s13 = $('Step 13 - Check Report Type').first().json;\n\nconst nocodb_record_id = input.Id || input.id || null;\n\nif (!nocodb_record_id) {\n  throw new Error('MRA: NocoDB POST succeeded but no record ID returned. Response: ' + JSON.stringify(input));\n}\n\nconst result = {};\nresult.mra_run_id = s13.mra_run_id;\nresult.report_type = s13.report_type;\nresult.client_id = s13.client_id;\nresult.client_name = s13.client_name;\nresult.approval_email = s13.approval_email;\nresult.period_start = s13.period_start;\nresult.period_end = s13.period_end;\nresult.run_timestamp = s13.run_timestamp;\nresult.magic_token = s13.magic_token;\nresult.token_expires_at = s13.token_expires_at;\nresult.total_records = s13.total_records;\nresult.avg_star_rating = s13.avg_star_rating;\nresult.platform_counts = s13.platform_counts;\nresult.sla_compliance_rate = s13.sla_compliance_rate;\nresult.t_negative_count = s13.t_negative_count;\nresult.t_ambiguous_count = s13.t_ambiguous_count;\nresult.t_positive_count = s13.t_positive_count;\nresult.top_domains = s13.top_domains;\nresult.tier_breakdown = s13.tier_breakdown;\nresult.trend_signals = s13.trend_signals;\nresult.seo_keyword_hits = s13.seo_keyword_hits;\nresult.seo_top_keyword = s13.seo_top_keyword;\nresult.seo_coverage_rate = s13.seo_coverage_rate;\nresult.seo_response_rate = s13.seo_response_rate;\nresult.seo_avg_velocity_hrs = s13.seo_avg_velocity_hrs;\nresult.all_time_pending = s13.all_time_pending;\nresult.nocodb_record_id = nocodb_record_id;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3504,
+        320
+      ],
+      "id": "c62ec0a0-61bb-4c15-a559-b9df40ac1fd6",
+      "name": "Step 16a - Extract Record ID"
+    }
+  ],
+  "connections": {
+    "Step 16a - Extract Record ID": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b3b5593-7b04-4561-9b59-3252362e9455",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "daily",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4032,
+        144
+      ],
+      "id": "08adcd46-d807-4f9d-940a-1f0f0a6fc304",
+      "name": "Step 16b - Route to Daily"
+    }
+  ],
+  "connections": {
+    "Step 16b - Route to Daily": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s16 = $input.first().json;\n\nconst client_name = s16.client_name || s16.client_id || 'Client';\nconst period_end = s16.period_end ? s16.period_end.slice(0, 10) : '';\nconst client_id_str = s16.client_id || '';\n\nconst platform_counts = s16.platform_counts || {};\nconst top_domains = s16.top_domains || [];\nconst expression_modes = s16.expression_modes || {};\nconst tier_breakdown = s16.tier_breakdown || [];\nconst avg_star_rating = s16.avg_star_rating || 0;\nconst total_records = s16.total_records || 0;\nconst all_time_pending = s16.all_time_pending || 0;\n\nconst emailStyles = `\n  body { \n    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; \n    line-height: 1.6; \n    color: #384653; \n    background-color: #F6F6F6; \n    margin: 0; \n    padding: 0; \n  }\n  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }\n  .header { \n    background-color: #64B8CE;\n    color: #2E304E; \n    padding: 32px 24px; \n    text-align: center; \n  }\n  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }\n  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }\n  .content { padding: 24px; }\n  .section { margin-bottom: 24px; }\n  .section-title { \n    font-size: 16px; \n    font-weight: 600; \n    color: #2E304E; \n    margin: 0 0 12px 0; \n  }\n  .metric-card { \n    background-color: #C7E0E7; \n    border-left: 4px solid #64B8CE; \n    padding: 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }\n  .metric-row:last-child { margin-bottom: 0; }\n  .metric-label { font-size: 14px; color: #384653; font-weight: 500; }\n  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }\n  .metric-large { font-size: 32px; font-weight: 700; color: #2E304E; margin: 8px 0; line-height: 1; }\n  .domain-list { margin: 0; padding: 0; list-style: none; }\n  .domain-list li { \n    background-color: #C7E0E7; \n    padding: 10px 14px; \n    border-radius: 6px; \n    margin-bottom: 6px; \n    display: flex; \n    justify-content: space-between; \n    align-items: center; \n  }\n  .domain-name { font-size: 13px; color: #2E304E; font-weight: 500; }\n  .domain-count { \n    font-size: 13px; \n    font-weight: 700; \n    color: #2E304E; \n    background-color: rgba(100,184,206,0.2); \n    padding: 3px 10px; \n    border-radius: 10px; \n  }\n  .cta-button { \n    display: inline-block; \n    background-color: #64B8CE;\n    color: #FFFFFF !important; \n    padding: 14px 28px; \n    text-decoration: none; \n    border-bottom: none; \n    border-radius: 6px; \n    font-weight: 600; \n    font-size: 14px; \n    margin: 16px 0 8px 0; \n    box-shadow: 0 2px 4px rgba(100,184,206,0.3); \n  }\n  .footer { \n    background-color: #C7E0E7; \n    padding: 20px 24px; \n    text-align: center; \n    font-size: 12px; \n    color: #A8A9AD; \n    border-top: 1px solid #64B8CE; \n  }\n  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }\n  a { color: #3A6B7E; text-decoration: none; }\n`;\n\nconst email_subject = '24-Hour Review Summary — ' + period_end + ' (' + total_records + ' reviews)';\n\nconst total_sig = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);\nconst neg_pct = total_sig > 0 ? Math.round(((s16.t_negative_count || 0) / total_sig) * 100) : 0;\nconst amb_pct = total_sig > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_sig) * 100) : 0;\nconst pos_pct = total_sig > 0 ? Math.round(((s16.t_positive_count || 0) / total_sig) * 100) : 0;\n\nconst total_expr = (expression_modes.Explicit || 0) + (expression_modes.Implicit || 0) + (expression_modes.Masked || 0) + (expression_modes.Performative || 0) + (expression_modes.Conflicted || 0) + (expression_modes.Absent || 0);\n\nconst expr_pct = {};\nexpr_pct.Explicit = total_expr > 0 ? Math.round(((expression_modes.Explicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Implicit = total_expr > 0 ? Math.round(((expression_modes.Implicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Masked = total_expr > 0 ? Math.round(((expression_modes.Masked || 0) / total_expr) * 100) : 0;\nexpr_pct.Performative = total_expr > 0 ? Math.round(((expression_modes.Performative || 0) / total_expr) * 100) : 0;\nexpr_pct.Conflicted = total_expr > 0 ? Math.round(((expression_modes.Conflicted || 0) / total_expr) * 100) : 0;\nexpr_pct.Absent = total_expr > 0 ? Math.round(((expression_modes.Absent || 0) / total_expr) * 100) : 0;\n\nlet email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\nemail_body += '<div class=\"header\"><h1>24-Hour Review Summary</h1><p>' + client_id_str + ' • ' + period_end + '</p></div>';\nemail_body += '<div class=\"content\">';\n\nemail_body += '<h2 style=\"font-size: 18px; color: #2E304E; margin: 0 0 16px 0; font-weight: 600;\">LAST 24 HOURS SNAPSHOT</h2>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">NEW REVIEWS</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + total_records + '</div>';\nemail_body += '<div class=\"metric-label\">Total reviews received from last 24 hours</div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PLATFORMS</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Google</span><span class=\"metric-value\">' + (platform_counts.Google || 0) + ' reviews</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">OpenTable</span><span class=\"metric-value\">' + (platform_counts.OpenTable || 0) + ' reviews</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Yelp</span><span class=\"metric-value\">' + (platform_counts.Yelp || 0) + ' reviews</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">TripAdvisor</span><span class=\"metric-value\">' + (platform_counts.TripAdvisor || 0) + ' reviews</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">AVERAGE STAR RATING</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Last 24 hours average</span><span class=\"metric-value\">' + avg_star_rating.toFixed(1) + ' stars</span></div>';\nemail_body += '</div></div>';\n\nconst tier_items = [];\nfor (let i = 0; i < tier_breakdown.length; i++) {\n  let tb = tier_breakdown[i];\n  if (tb.total > 0) {\n    let short_label = tb.tier.replace(' Standard', '').replace(' Calibrated', '').replace(' Dignity-restoration', '');\n    tier_items.push('<div class=\"metric-row\"><span class=\"metric-label\">' + short_label + '</span><span class=\"metric-value\">' + tb.total + ' draft(s)</span></div>');\n  }\n}\nif (tier_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">NEW DRAFTS GENERATED</h3><div class=\"metric-card\">' + tier_items.join('') + '</div></div>';\n}\n\nconst sig_items = [];\nif ((s16.t_positive_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Positive</span><span class=\"metric-value\" style=\"color: #64B8CE;\">' + s16.t_positive_count + ' reviews (' + pos_pct + '%)</span></div>');\n}\nif ((s16.t_ambiguous_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Ambiguous</span><span class=\"metric-value\" style=\"color: #E9CFC9;\">' + s16.t_ambiguous_count + ' reviews (' + amb_pct + '%)</span></div>');\n}\nif ((s16.t_negative_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Negative</span><span class=\"metric-value\" style=\"color: #C3643D;\">' + s16.t_negative_count + ' reviews (' + neg_pct + '%)</span></div>');\n}\nif (sig_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">SIGNAL DIRECTION (What guests felt)</h3><div class=\"metric-card\">' + sig_items.join('') + '</div></div>';\n}\n\nconst expr_items = [];\nif ((expression_modes.Explicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Explicit</span><span class=\"metric-value\">' + expression_modes.Explicit + ' reviews (' + expr_pct.Explicit + '%)</span></div>');\n}\nif ((expression_modes.Implicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Implicit</span><span class=\"metric-value\">' + expression_modes.Implicit + ' reviews (' + expr_pct.Implicit + '%)</span></div>');\n}\nif ((expression_modes.Masked || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Masked</span><span class=\"metric-value\">' + expression_modes.Masked + ' reviews (' + expr_pct.Masked + '%)</span></div>');\n}\nif ((expression_modes.Performative || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Performative</span><span class=\"metric-value\">' + expression_modes.Performative + ' reviews (' + expr_pct.Performative + '%)</span></div>');\n}\nif ((expression_modes.Conflicted || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Conflicted</span><span class=\"metric-value\">' + expression_modes.Conflicted + ' reviews (' + expr_pct.Conflicted + '%)</span></div>');\n}\nif ((expression_modes.Absent || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Absent</span><span class=\"metric-value\">' + expression_modes.Absent + ' reviews (' + expr_pct.Absent + '%)</span></div>');\n}\nif (expr_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">EXPRESSION MODE (How emotions communicated)</h3><div class=\"metric-card\">' + expr_items.join('') + '</div></div>';\n}\n\nif (top_domains && top_domains.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">PAIN POINT DOMAINS (Where signals pointed)</h3>';\n  email_body += '<ul class=\"domain-list\">';\n  for (let i = 0; i < top_domains.length; i++) {\n    let dom = top_domains[i];\n    email_body += '<li><span class=\"domain-name\">' + dom.domain + '</span><span class=\"domain-count\">' + dom.total + ' signals</span></li>';\n  }\n  email_body += '</ul></div>';\n}\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PENDING APPROVAL</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + all_time_pending + '</div>';\nemail_body += '<div class=\"metric-label\">Draft(s) awaiting your review (all time)</div>';\nemail_body += '</div>';\nemail_body += '<a href=\"https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w\" class=\"cta-button\" style=\"color: #FFFFFF; text-decoration: none;\">View & Approve Drafts →</a>';\nemail_body += '</div>';\n\nemail_body += '</div>';\nemail_body += '<div class=\"footer\">' +\n  '<div style=\"margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;\">VRYOH</div>' +\n  '<div style=\"margin-bottom: 12px; font-size: 11px; color: #94A3B8;\">Governed Review Responses & Guest Signal Intelligence</div>' +\n  '<div class=\"footer-note\" style=\"margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;\">' +\n    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\\'t see in raw reviews.' +\n  '</div>' +\n  '<div style=\"margin-top: 12px; font-size: 10px; color: #94A3B8;\">' +\n    '<a href=\"https://vryoh.com\" style=\"color: #3A6B7E; text-decoration: none;\">vryoh.com</a> | ' +\n    '<a href=\"https://vryoh.com/archive\" style=\"color: #3A6B7E; text-decoration: none;\">Archive</a><br/>' +\n    '© 2026 VRYOH. All rights reserved.<br/>' +\n    'This is an automated message. Please do not reply to this email.' +\n  '</div>' +\n'</div>';\nemail_body += '</div></body></html>';\n\nconst brevo_to = {};\nbrevo_to['email'] = s16.approval_email || 'miguel@solofella.com';\nbrevo_to['name'] = client_name;\nconst brevo_to_arr = [];\nbrevo_to_arr.push(brevo_to);\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  mra_run_id: s16.mra_run_id,\n  report_type: 'daily',\n  client_id: client_id_str,\n  approval_email: s16.approval_email,\n  nocodb_record_id: null,\n  email_subject: email_subject,\n  email_body: email_body,\n  magic_token: s16.magic_token,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        128
+      ],
+      "id": "836d3011-e63f-491e-836c-499ea4ee9a66",
+      "name": "Step 17a - Build Daily Email"
+    }
+  ],
+  "connections": {
+    "Step 17a - Build Daily Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "82609055-63c9-485f-99d7-83bc7e9fecbd",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "weekly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4032,
+        320
+      ],
+      "id": "bff7225b-9268-4c6c-bee9-36e80da8c219",
+      "name": "Step 16c - Route to Weekly"
+    }
+  ],
+  "connections": {
+    "Step 16c - Route to Weekly": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s16 = $input.first().json;\n\nconst client_name = s16.client_name || s16.client_id || 'Client';\nconst client_id_str = s16.client_id || '';\nconst period_start = s16.period_start ? s16.period_start.slice(0, 10) : '';\nconst period_end = s16.period_end ? s16.period_end.slice(0, 10) : '';\nconst magic_token = s16.magic_token || '';\nconst dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;\n\nconst platform_counts = s16.platform_counts || {};\nconst top_domains = s16.top_domains || [];\nconst expression_modes = s16.expression_modes || {};\nconst tier_breakdown = s16.tier_breakdown || [];\nconst trend_signals = s16.trend_signals || [];\nconst avg_star_rating = s16.avg_star_rating || 0;\nconst total_records = s16.total_records || 0;\nconst all_time_pending = s16.all_time_pending || 0;\n\nconst emailStyles = `\n  body { \n    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; \n    line-height: 1.6; \n    color: #384653; \n    background-color: #F6F6F6; \n    margin: 0; \n    padding: 0; \n  }\n  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }\n  .header { \n    background-color: #64B8CE;\n    color: #2E304E; \n    padding: 32px 24px; \n    text-align: center; \n  }\n  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }\n  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }\n  .content { padding: 24px; }\n  .section { margin-bottom: 24px; }\n  .section-title { \n    font-size: 16px; \n    font-weight: 600; \n    color: #2E304E; \n    margin: 0 0 12px 0; \n  }\n  .metric-card { \n    background-color: #C7E0E7; \n    border-left: 4px solid #64B8CE; \n    padding: 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }\n  .metric-row:last-child { margin-bottom: 0; }\n  .metric-label { font-size: 14px; color: #384653; font-weight: 500; }\n  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }\n  .metric-large { font-size: 32px; font-weight: 700; color: #2E304E; margin: 8px 0; line-height: 1; }\n  .domain-list { margin: 0; padding: 0; list-style: none; }\n  .domain-list li { \n    background-color: #C7E0E7; \n    padding: 10px 14px; \n    border-radius: 6px; \n    margin-bottom: 6px; \n    display: flex; \n    justify-content: space-between; \n    align-items: center; \n  }\n  .domain-name { font-size: 13px; color: #2E304E; font-weight: 500; }\n  .domain-count { \n    font-size: 13px; \n    font-weight: 700; \n    color: #2E304E; \n    background-color: rgba(100,184,206,0.2); \n    padding: 3px 10px; \n    border-radius: 10px; \n  }\n  .trend-item { \n    background-color: #C7E0E7; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 8px; \n    display: flex; \n    align-items: center; \n    border: 1px solid #64B8CE; \n  }\n  .trend-badge { \n    font-size: 11px; \n    text-transform: uppercase; \n    font-weight: 700; \n    padding: 4px 8px; \n    border-radius: 4px; \n    margin-right: 12px; \n    white-space: nowrap; \n  }\n  .trend-negative { \n    background-color: rgba(195,100,61,0.15); \n    color: #C3643D; \n    border: 1px solid #C3643D; \n  }\n  .trend-positive { \n    background-color: rgba(100,184,206,0.15); \n    color: #64B8CE; \n    border: 1px solid #64B8CE; \n  }\n  .trend-ambiguous { \n    background-color: rgba(233,207,201,0.3); \n    color: #C3643D; \n    border: 1px solid #E9CFC9; \n  }\n  .cta-button { \n    display: inline-block; \n    background-color: #64B8CE;\n    color: #FFFFFF !important; \n    padding: 14px 28px; \n    text-decoration: none; \n    border-bottom: none; \n    border-radius: 6px; \n    font-weight: 600; \n    font-size: 14px; \n    margin: 16px 0 8px 0; \n    box-shadow: 0 2px 4px rgba(100,184,206,0.3); \n  }\n  .footer { \n    background-color: #C7E0E7; \n    padding: 20px 24px; \n    text-align: center; \n    font-size: 12px; \n    color: #A8A9AD; \n    border-top: 1px solid #64B8CE; \n  }\n  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }\n  a { color: #3A6B7E; text-decoration: none; }\n`;\n\nconst email_subject = 'Weekly Intelligence Brief — ' + client_id_str + ' — Week of ' + period_start;\n\nconst total_sig = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);\nconst neg_pct = total_sig > 0 ? Math.round(((s16.t_negative_count || 0) / total_sig) * 100) : 0;\nconst amb_pct = total_sig > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_sig) * 100) : 0;\nconst pos_pct = total_sig > 0 ? Math.round(((s16.t_positive_count || 0) / total_sig) * 100) : 0;\n\nconst total_expr = (expression_modes.Explicit || 0) + (expression_modes.Implicit || 0) + (expression_modes.Masked || 0) + (expression_modes.Performative || 0) + (expression_modes.Conflicted || 0) + (expression_modes.Absent || 0);\n\nconst expr_pct = {};\nexpr_pct.Explicit = total_expr > 0 ? Math.round(((expression_modes.Explicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Implicit = total_expr > 0 ? Math.round(((expression_modes.Implicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Masked = total_expr > 0 ? Math.round(((expression_modes.Masked || 0) / total_expr) * 100) : 0;\nexpr_pct.Performative = total_expr > 0 ? Math.round(((expression_modes.Performative || 0) / total_expr) * 100) : 0;\nexpr_pct.Conflicted = total_expr > 0 ? Math.round(((expression_modes.Conflicted || 0) / total_expr) * 100) : 0;\nexpr_pct.Absent = total_expr > 0 ? Math.round(((expression_modes.Absent || 0) / total_expr) * 100) : 0;\n\nlet total_drafts = 0;\nfor (let i = 0; i < tier_breakdown.length; i++) {\n  total_drafts += tier_breakdown[i].total || 0;\n}\n\nlet email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\nemail_body += '<div class=\"header\"><h1>Weekly Intelligence Brief</h1><p>' + client_id_str + ' • from ' + period_start + ' – ' + period_end + '</p></div>';\nemail_body += '<div class=\"content\">';\n\nemail_body += '<h2 style=\"font-size: 18px; color: #2E304E; margin: 0 0 16px 0; font-weight: 600;\">THIS WEEK\\'S SNAPSHOT</h2>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">REVIEW VOLUME</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + total_records + '</div>';\nemail_body += '<div class=\"metric-label\">Total reviews this week</div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PLATFORMS BREAKDOWN</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Google</span><span class=\"metric-value\">' + (platform_counts.Google || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">OpenTable</span><span class=\"metric-value\">' + (platform_counts.OpenTable || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Yelp</span><span class=\"metric-value\">' + (platform_counts.Yelp || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">TripAdvisor</span><span class=\"metric-value\">' + (platform_counts.TripAdvisor || 0) + '</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">DRAFT GENERATED COUNT</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + total_drafts + '</div>';\nemail_body += '<div class=\"metric-label\">Total drafts generated this week</div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">AVERAGE STAR RATING</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">This week</span><span class=\"metric-value\">' + avg_star_rating.toFixed(1) + ' stars</span></div>';\nemail_body += '</div></div>';\n\nconst sig_items = [];\nif ((s16.t_positive_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Positive</span><span class=\"metric-value\" style=\"color: #64B8CE;\">' + s16.t_positive_count + ' (' + pos_pct + '%)</span></div>');\n}\nif ((s16.t_ambiguous_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Ambiguous</span><span class=\"metric-value\" style=\"color: #E9CFC9;\">' + s16.t_ambiguous_count + ' (' + amb_pct + '%)</span></div>');\n}\nif ((s16.t_negative_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Negative</span><span class=\"metric-value\" style=\"color: #C3643D;\">' + s16.t_negative_count + ' (' + neg_pct + '%)</span></div>');\n}\nif (sig_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">SIGNAL DIRECTION</h3><div class=\"metric-card\">' + sig_items.join('') + '</div></div>';\n}\n\nconst expr_items = [];\nif ((expression_modes.Explicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Explicit</span><span class=\"metric-value\">' + expression_modes.Explicit + ' (' + expr_pct.Explicit + '%)</span></div>');\n}\nif ((expression_modes.Implicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Implicit</span><span class=\"metric-value\">' + expression_modes.Implicit + ' (' + expr_pct.Implicit + '%)</span></div>');\n}\nif ((expression_modes.Masked || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Masked</span><span class=\"metric-value\">' + expression_modes.Masked + ' (' + expr_pct.Masked + '%)</span></div>');\n}\nif ((expression_modes.Performative || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Performative</span><span class=\"metric-value\">' + expression_modes.Performative + ' (' + expr_pct.Performative + '%)</span></div>');\n}\nif ((expression_modes.Conflicted || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Conflicted</span><span class=\"metric-value\">' + expression_modes.Conflicted + ' (' + expr_pct.Conflicted + '%)</span></div>');\n}\nif ((expression_modes.Absent || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Absent</span><span class=\"metric-value\">' + expression_modes.Absent + ' (' + expr_pct.Absent + '%)</span></div>');\n}\nif (expr_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">EXPRESSION MODE BREAKDOWN</h3><div class=\"metric-card\">' + expr_items.join('') + '</div></div>';\n}\n\nif (top_domains && top_domains.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">TOP PAIN POINT DOMAINS</h3>';\n  email_body += '<ul class=\"domain-list\">';\n  for (let i = 0; i < top_domains.length; i++) {\n    let dom = top_domains[i];\n    email_body += '<li><span class=\"domain-name\">' + dom.domain + '</span><span class=\"domain-count\">' + dom.total + ' signals</span></li>';\n  }\n  email_body += '</ul></div>';\n}\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">THREE PRIORITY SIGNALS</h3><div class=\"metric-card\">';\nemail_body += '<p style=\"margin: 0; font-size: 13px; color: #384653;\">Top 3 signals requiring attention this week based on tier and frequency.</p>';\nemail_body += '</div></div>';\n\nif (trend_signals && trend_signals.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">TREND ANALYSIS</h3>';\n  for (let i = 0; i < trend_signals.length; i++) {\n    let ts = trend_signals[i];\n    let badge_class = 'trend-ambiguous';\n    if (ts.tier === 'T-NEGATIVE') badge_class = 'trend-negative';\n    else if (ts.tier === 'T-POSITIVE') badge_class = 'trend-positive';\n    \n    let prior_str = 'new';\n    if (ts.prior_n !== null && ts.prior_n !== undefined) {\n      let arrow = '→';\n      if (ts.trend_direction === 'UP') arrow = '↑';\n      else if (ts.trend_direction === 'DOWN') arrow = '↓';\n      prior_str = arrow + ' from ' + ts.prior_n;\n    }\n    \n    email_body += '<div class=\"trend-item\"><span class=\"trend-badge ' + badge_class + '\">' + ts.tier + '</span><span style=\"flex: 1; color: #2E304E;\">' + ts.domain + ' — <strong>' + ts.n + '</strong> signal(s) <em style=\"color: #A8A9AD;\">(' + prior_str + ')</em></span></div>';\n  }\n  email_body += '</div>';\n}\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PERFORMANCE METRICS</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">SLA Compliance (48-hour response)</span><span class=\"metric-value\">' + (s16.sla_compliance_rate || 0) + '%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Response Coverage</span><span class=\"metric-value\">100%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Avg Response Time</span><span class=\"metric-value\">' + (s16.seo_avg_velocity_hrs || 0) + ' hours</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">SEO IMPACT</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Keywords placed</span><span class=\"metric-value\">' + (s16.seo_keyword_hits || 0) + ' responses</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Top keyword</span><span class=\"metric-value\">' + (s16.seo_top_keyword || 'none') + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Coverage</span><span class=\"metric-value\">' + (s16.seo_coverage_rate || 0) + '%</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">NEXT WEEK FOCUS</h3><div class=\"metric-card\">';\nemail_body += '<p style=\"margin: 0; font-size: 13px; color: #384653;\">Where signals point for your team\\'s attention based on this week\\'s patterns.</p>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PENDING APPROVAL</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + all_time_pending + '</div>';\nemail_body += '<div class=\"metric-label\">Draft(s) awaiting your review (all time)</div>';\nemail_body += '</div>';\nemail_body += '<a href=\"https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w\" class=\"cta-button\" style=\"color: #FFFFFF; text-decoration: none;\">View & Approve Drafts →</a>';\nemail_body += '</div>';\n\nemail_body += '</div>';\nemail_body += '<div class=\"footer\">' +\n  '<div style=\"margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;\">VRYOH</div>' +\n  '<div style=\"margin-bottom: 12px; font-size: 11px; color: #94A3B8;\">Governed Review Responses & Guest Signal Intelligence</div>' +\n  '<div class=\"footer-note\" style=\"margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;\">' +\n    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\\'t see in raw reviews.' +\n  '</div>' +\n  '<div style=\"margin-top: 12px; font-size: 10px; color: #94A3B8;\">' +\n    '<a href=\"https://vryoh.com\" style=\"color: #3A6B7E; text-decoration: none;\">vryoh.com</a> | ' +\n    '<a href=\"https://vryoh.com/archive\" style=\"color: #3A6B7E; text-decoration: none;\">Archive</a><br/>' +\n    '© 2026 VRYOH. All rights reserved.<br/>' +\n    'This is an automated message. Please do not reply to this email.' +\n  '</div>' +\n'</div>';\nemail_body += '</div></body></html>';\n\nconst brevo_to = {};\nbrevo_to['email'] = s16.approval_email || 'miguel@solofella.com';\nbrevo_to['name'] = client_name;\nconst brevo_to_arr = [];\nbrevo_to_arr.push(brevo_to);\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  mra_run_id: s16.mra_run_id,\n  report_type: 'weekly',\n  client_id: client_id_str,\n  approval_email: s16.approval_email,\n  nocodb_record_id: s16.nocodb_record_id || null,\n  email_subject: email_subject,\n  email_body: email_body,\n  magic_token: magic_token,\n  dashboard_url: dashboard_url,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        304
+      ],
+      "id": "4bbf5032-def7-4863-8cf1-c0355328f862",
+      "name": "Step 17b - Build Weekly Email"
+    }
+  ],
+  "connections": {
+    "Step 17b - Build Weekly Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41a43ae6-f23d-4ce0-9da7-26b8b7bbe398",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "monthly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4032,
+        512
+      ],
+      "id": "dac9bc42-ab63-45ab-b605-35d9868c0ec7",
+      "name": "Step 16d - Route to Monthly"
+    }
+  ],
+  "connections": {
+    "Step 16d - Route to Monthly": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s16 = $input.first().json;\n\nconst client_name = s16.client_name || s16.client_id || 'Client';\nconst period_start = s16.period_start ? s16.period_start.slice(0, 10) : '';\nconst magic_token = s16.magic_token || '';\nconst client_id_str = s16.client_id || '';\nconst dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;\n\nconst tier_breakdown = s16.tier_breakdown || [];\nconst platform_counts = s16.platform_counts || {};\nconst top_domains = s16.top_domains || [];\n\nlet t3_total = 0;\nfor (let i = 0; i < tier_breakdown.length; i++) {\n  if (tier_breakdown[i].tier === 'T3 Dignity-restoration') {\n    t3_total = tier_breakdown[i].total || 0;\n  }\n}\n\nconst emailStyles = `\n  body { \n    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; \n    line-height: 1.6; \n    color: #384653; \n    background-color: #F6F6F6; \n    margin: 0; \n    padding: 0; \n  }\n  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }\n  .header { \n    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); \n    color: #2E304E; \n    padding: 32px 24px; \n    text-align: center; \n  }\n  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }\n  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }\n  .content { padding: 24px; }\n  .section { margin-bottom: 24px; }\n  .section-title { \n    font-size: 16px; \n    font-weight: 600; \n    color: #2E304E; \n    margin: 0 0 12px 0; \n    display: flex; \n    align-items: center; \n  }\n  .section-title .emoji { margin-right: 8px; font-size: 18px; }\n  .metric-card { \n    background-color: #C7E0E7; \n    border-left: 4px solid #64B8CE; \n    padding: 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }\n  .metric-label { font-size: 14px; color: #A8A9AD; }\n  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }\n  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }\n  .platform-item { \n    background-color: #C7E0E7; \n    padding: 12px; \n    border-radius: 6px; \n    text-align: center; \n    border: 1px solid #64B8CE; \n  }\n  .platform-name { \n    font-size: 12px; \n    color: #A8A9AD; \n    margin-bottom: 4px; \n    text-transform: uppercase; \n    font-weight: 600; \n    letter-spacing: 0.5px; \n  }\n  .platform-count { font-size: 20px; font-weight: 700; color: #2E304E; }\n  .domain-item { \n    background-color: #C7E0E7; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 8px; \n    display: flex; \n    justify-content: space-between; \n    align-items: center; \n    border-left: 3px solid #64B8CE; \n  }\n  .domain-name { font-size: 14px; color: #2E304E; font-weight: 500; }\n  .domain-count { \n    font-size: 14px; \n    font-weight: 700; \n    color: #2E304E; \n    background-color: rgba(100,184,206,0.2); \n    padding: 4px 12px; \n    border-radius: 12px; \n  }\n  .alert-box { \n    background-color: #fff5f0; \n    border-left: 4px solid #C3643D; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .alert-text { color: #C3643D; font-size: 14px; margin: 0; font-weight: 500; }\n  .cta-button { \n    display: inline-block; \n    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); \n    color: #FFFFFF !important; \n    padding: 14px 28px; \n    text-decoration: none; \n    border-bottom: none; \n    border-radius: 6px; \n    font-weight: 600; \n    font-size: 14px; \n    margin: 16px 0; \n    box-shadow: 0 2px 4px rgba(100,184,206,0.3); \n  }\n  .footer { \n    background-color: #C7E0E7; \n    padding: 20px 24px; \n    text-align: center; \n    font-size: 12px; \n    color: #A8A9AD; \n    border-top: 1px solid #64B8CE; \n  }\n  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }\n  a { color: #3A6B7E; text-decoration: none; }\n`;\n\nconst monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];\nconst startDate = new Date(period_start);\nconst monthName = monthNames[startDate.getMonth()];\nconst yearName = startDate.getFullYear();\n\nconst total_signals = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);\nconst neg_pct = total_signals > 0 ? Math.round(((s16.t_negative_count || 0) / total_signals) * 100) : 0;\nconst amb_pct = total_signals > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_signals) * 100) : 0;\nconst pos_pct = total_signals > 0 ? Math.round(((s16.t_positive_count || 0) / total_signals) * 100) : 0;\n\nconst email_subject = 'Monthly Pattern Report — ' + client_id_str + ' — ' + monthName + ' ' + yearName;\n\nlet summary_html = '';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">Total reviews processed</span><span class=\"metric-value\">' + (s16.total_records || 0) + '</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">Average star rating</span><span class=\"metric-value\">' + (s16.avg_star_rating || 0) + ' ⭐</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-NEGATIVE</span><span class=\"metric-value\" style=\"color: #C3643D; font-weight: 700;\">' + (s16.t_negative_count || 0) + ' (' + neg_pct + '%)</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-AMBIGUOUS</span><span class=\"metric-value\" style=\"color: #E9CFC9; font-weight: 700;\">' + (s16.t_ambiguous_count || 0) + ' (' + amb_pct + '%)</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-POSITIVE</span><span class=\"metric-value\" style=\"color: #64B8CE; font-weight: 700;\">' + (s16.t_positive_count || 0) + ' (' + pos_pct + '%)</span></div>';\n\nlet domain_cards_html = '';\nlet domain_limit = top_domains.length > 5 ? 5 : top_domains.length;\nfor (let i = 0; i < domain_limit; i++) {\n  let dom = top_domains[i];\n  domain_cards_html += '<div class=\"domain-item\"><span class=\"domain-name\">' + (i + 1) + '. ' + dom.domain + '</span><span class=\"domain-count\">' + dom.total + '</span></div>';\n}\n\nlet platform_cards_html = '';\nconst platform_order = ['Google', 'OpenTable', 'Yelp', 'TripAdvisor'];\nfor (let i = 0; i < platform_order.length; i++) {\n  let plat = platform_order[i];\n  let count = platform_counts[plat] || 0;\n  platform_cards_html += '<div class=\"platform-item\"><div class=\"platform-name\">' + plat + '</div><div class=\"platform-count\">' + count + '</div></div>';\n}\n\nlet alert_html = '';\nif (t3_total > 0) {\n  alert_html = '<div class=\"alert-box\"><p class=\"alert-text\">⚠️ ' + t3_total + ' dignity-risk event(s) this month — elevated reviews requiring special attention</p></div>';\n}\n\nlet email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\nemail_body += '<div class=\"header\"><h1>Monthly Pattern Report</h1><p>' + client_id_str + ' • ' + monthName + ' ' + yearName + '</p></div>';\nemail_body += '<div class=\"content\">';\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📊</span>30-Day Signal Summary</h2>';\nemail_body += '<div class=\"metric-card\">' + summary_html + '</div></div>';\n\nif (domain_cards_html) {\n  email_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">🔍</span>Top 5 Pain Point Domains</h2>' + domain_cards_html + '</div>';\n}\n\nif (alert_html) {\n  email_body += alert_html;\n}\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📈</span>Platform Performance</h2>';\nemail_body += '<div class=\"platform-grid\">' + platform_cards_html + '</div></div>';\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📊</span>Response Metrics</h2>';\nemail_body += '<div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Total drafts generated</span><span class=\"metric-value\">' + (s16.total_records || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Approved within 48hr SLA</span><span class=\"metric-value\">' + (s16.sla_compliance_rate || 0) + '%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Average approval time</span><span class=\"metric-value\">' + (s16.seo_avg_velocity_hrs || 0) + ' hours</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<a href=\"' + dashboard_url + '\" class=\"cta-button\" style=\"color: #FFFFFF; text-decoration: none; border-bottom: none;\">View Dashboard →</a>';\n\nemail_body += '</div>';\nemail_body += '<div class=\"footer\">' +\n  '<div style=\"margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;\">VRYOH</div>' +\n  '<div style=\"margin-bottom: 12px; font-size: 11px; color: #94A3B8;\">Governed Review Responses & Guest Signal Intelligence</div>' +\n  '<div class=\"footer-note\" style=\"margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;\">' +\n    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\\'t see in raw reviews.' +\n  '</div>' +\n  '<div style=\"margin-top: 12px; font-size: 10px; color: #94A3B8;\">' +\n    '<a href=\"https://vryoh.com\" style=\"color: #3A6B7E; text-decoration: none;\">vryoh.com</a> | ' +\n    '<a href=\"https://vryoh.com/archive\" style=\"color: #3A6B7E; text-decoration: none;\">Archive</a><br/>' +\n    '© 2026 VRYOH. All rights reserved.<br/>' +\n    'This is an automated message. Please do not reply to this email.' +\n  '</div>' +\n'</div>';\nemail_body += '</div></body></html>';\n\nconst brevo_to = {};\nbrevo_to['email'] = s16.approval_email || 'miguel@solofella.com';\nbrevo_to['name'] = client_name;\nconst brevo_to_arr = [];\nbrevo_to_arr.push(brevo_to);\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH Intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  mra_run_id: s16.mra_run_id,\n  report_type: 'monthly',\n  client_id: client_id_str,\n  approval_email: s16.approval_email,\n  nocodb_record_id: s16.nocodb_record_id || null,\n  email_subject: email_subject,\n  email_body: email_body,\n  magic_token: magic_token,\n  dashboard_url: dashboard_url,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        496
+      ],
+      "id": "516036c5-0a44-4cc6-9519-0c07e4b715b9",
+      "name": "Step 17c - Build Monthly Email"
+    }
+  ],
+  "connections": {
+    "Step 17c - Build Monthly Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\n// This node receives from whichever Step 17x executed (17a, 17b, or 17c)\n// It acts as a merge point and passes all fields to Step 18\n// This gives Step 19 a single clean reference point\n\nreturn [{ json: input }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4592,
+        304
+      ],
+      "id": "a84f53a2-de91-4740-992e-0c0a228c7858",
+      "name": "Step 17d - Prepare for Send"
+    }
+  ],
+  "connections": {
+    "Step 17d - Prepare for Send": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.brevo.com/v3/smtp/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.brevo_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4800,
+        304
+      ],
+      "id": "d91ffc20-7989-4b01-85a7-8215489f4f01",
+      "name": "Step 18 - Send Email",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uJbXCL9WY5rfhkcv",
+          "name": "api-key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 18 - Send Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s17d = $('Step 17d - Prepare for Send').first().json;\n\nconst now = new Date();\nconst dy = now.getFullYear();\nconst dm = now.getMonth() + 1;\nconst dd = now.getDate();\nconst dh = now.getHours();\nconst dmin = now.getMinutes();\nconst dsec = now.getSeconds();\nconst delivery_ts = dy + '-' + (dm < 10 ? '0' + dm : '' + dm) + '-' + (dd < 10 ? '0' + dd : '' + dd) + 'T' + (dh < 10 ? '0' + dh : '' + dh) + ':' + (dmin < 10 ? '0' + dmin : '' + dmin) + ':' + (dsec < 10 ? '0' + dsec : '' + dsec) + '.000Z';\n\nconst patch_body = {};\npatch_body['Delivery Status'] = 'sent';\npatch_body['Delivery Timestamp'] = delivery_ts;\n\nreturn [{ json: {\n  nocodb_record_id: s17d.nocodb_record_id,\n  report_type: s17d.report_type,\n  patch_body: JSON.stringify(patch_body)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4976,
+        304
+      ],
+      "id": "e05099da-0e82-40cb-b46a-ad53393e6cba",
+      "name": "Step 19 - Update Delivery Status"
+    }
+  ],
+  "connections": {
+    "Step 19 - Update Delivery Status": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s19 = $input.first().json;\n\n// Daily reports have no nocodb_record_id (they skip Step 15/16a)\n// So we halt here - no PATCH needed\nif (!s19.nocodb_record_id) {\n  return [];\n}\n\n// Weekly/Monthly reports continue to Step 20 PATCH\nreturn [{ json: s19 }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5184,
+        304
+      ],
+      "id": "6ba20be1-cdc8-4b03-b895-aa987e3f7732",
+      "name": "Step 19b - Gate Daily PATCH"
+    }
+  ],
+  "connections": {
+    "Step 19b - Gate Daily PATCH": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mybieof2em75t6e/{{$json.nocodb_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.patch_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5408,
+        304
+      ],
+      "id": "c55e22c6-9f1e-4469-b492-aebb128d3420",
+      "name": "Step 20 - NocoDB PATCH Delivery Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
