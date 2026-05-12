@@ -1,0 +1,537 @@
+SCX_MRA_HOW_v2.1
+Agent Name: MRA (Metrics & Reporting Agent)
+Version: 2.1
+Last Updated: Chat #82 · May 12, 2026
+Model: Pure JavaScript (zero LLM calls)
+Status: Production-ready - 28 nodes complete
+
+Purpose
+MRA generates scheduled intelligence reports for clients on three cadences:
+
+24-hour review summary (daily 8am UTC delivery)
+Weekly intelligence brief (Monday 9am UTC delivery)
+Monthly comprehensive report (1st of month 10am UTC delivery)
+
+MRA uses pure JavaScript - zero AI calls, zero token cost. All computation is deterministic aggregation and formatting.
+CRITICAL ARCHITECTURE PRINCIPLE: Reports filter by guest review posting date (ALA Date field), NOT by pipeline processing date (RDA Timestamp). This ensures reports reflect when guests actually posted reviews, not when VRYOH processed them.
+
+Input Sources
+MRA does NOT receive webhooks. Runs on n8n schedule triggers, queries NocoDB tables directly.
+Tables queried:
+
+ALA table (m57efwbtrvwohhr)
+
+Date field (M/D/YY format) — PRIMARY date filter for all reports
+Platform (Google, OpenTable, Yelp, TripAdvisor)
+Star Rating
+Client ID
+
+
+RDA table (mr1v67cszcklwns)
+
+ALA Record ID (FK to ALA for date matching)
+Confirmed Response Tier (T1/T2/T3)
+Approval Status (Pending/Pending-Elevated/Approved/Edited-Approved/Published)
+RDA Timestamp (draft generation time)
+Published Timestamp (approval time — for SLA calculation)
+Public Response Draft (for SEO keyword detection)
+
+
+SIA table (mdn68l4lm609fve)
+
+Report Window Type (daily/weekly/monthly)
+Client ID
+Domain (pain point category)
+Signal Tier (T-NEGATIVE/T-AMBIGUOUS/T-POSITIVE)
+N (signal count)
+Prior N (prior period count for trend direction)
+Trend Direction (UP/DOWN/STABLE/null for new clusters)
+Is Singleton (exclude from trend signals)
+
+
+EIP table (mhicpnrahaesxmy)
+
+ALA Record ID (FK to ALA)
+Signal Type (Positive Signal/Negative Signal/Mixed Signal/Ambiguous Signal)
+Domain (pain point category)
+Used for daily reports only
+
+
+ESS table (m5yektnbtxf8evk)
+
+ALA Record ID (FK to ALA)
+Expression Mode (Explicit/Implicit/Masked/Performative/Conflicted/Absent)
+Used for expression mode breakdowns
+
+
+Client Config table (m95cmabjfyb94ps)
+
+Client ID
+Client Name (display name for email)
+Approval Contact Email (comma-separated recipients supported)
+SEO Keywords (array for SEO performance tracking)
+
+
+
+
+Architecture Overview — 28 Nodes
+Three Schedule Triggers (Node 1a/1b/1c):
+
+Daily: Every day 8am UTC → report_type = 'daily'
+Weekly: Every Monday 9am UTC → report_type = 'weekly'
+Monthly: 1st of month 10am UTC → report_type = 'monthly'
+
+Processing Flow:
+Steps 1-5: Session initialization
+
+Steps 1a/1b/1c: Trigger on schedule
+Steps 2a/2b/2c: Set report_type (daily/weekly/monthly)
+Step 3: Calculate period window (2-day/7-day/30-day) and generate MRA Run ID
+Step 4: Fetch Client Config from NocoDB
+Step 5: Extract client config + SEO keywords
+
+Steps 6-10: Fetch data sources
+
+Step 6: Fetch ALL ALA records for client (no date filter in URL)
+Step 7: Filter ALA by window (stores ala_records array for downstream use)
+Step 7b: Build RDA query URL
+Step 8: Fetch ALL RDA records for client
+Step 9: CRITICAL DATE FILTERING NODE - Filter RDA by ALA Date matching, calculate star rating, platform counts, tier breakdown, all-time pending
+Step 10a: Build SIA query URL by report_type
+Step 10b: Fetch SIA clusters (weekly/monthly window)
+Step 10c: Fetch ESS records (for expression modes)
+Step 10d: Fetch EIP records (for daily signal aggregation)
+
+Step 11: CONDITIONAL PROCESSING NODE
+
+Daily branch: Aggregate from EIP records filtered by filtered_ala_record_ids from Step 9
+Weekly/Monthly branch: Aggregate from SIA clusters (latest run from Step 10b)
+Both paths: Calculate expression modes from ESS, SEO keyword hits, domain totals
+
+Steps 12-16: Build report data
+
+Step 12: Generate magic link token + expiration (72 hours)
+Step 13: Check report type (sets skip_nocodb flag for daily)
+Step 14: Route daily reports (IF node)
+Step 14b: Catch daily reports (FALSE branch gate)
+Step 15: NocoDB POST (weekly/monthly only)
+Step 16a: Extract NocoDB record ID
+Step 16b: Route to daily email builder (IF node)
+Step 16c: Route to weekly email builder (IF node)
+
+Steps 17+: Email generation & delivery
+
+Step 17a: Build daily HTML email
+Step 17b: Build weekly HTML email (includes trend signals, SEO metrics)
+Step 17c: Build monthly HTML email (30-day patterns)
+Step 18: Send email via Brevo API
+(Step 19: PATCH NocoDB delivery status - weekly/monthly only)
+
+Error Handler: 3 nodes (trigger, log, email notification)
+
+Step 11 Architecture — Conditional Processing (Chat #82 Fix)
+Problem (discovered Chat #82): Step 11 was reading from $input (Step 10d - EIP Records) for ALL report types, causing weekly/monthly reports to show 0 signal counts because EIP records don't have the aggregated cluster data.
+Solution: Step 11 now has explicit conditional branching based on report_type:
+Daily Branch (Lines 14-75)
+Data Source: EIP records from Step 10d, filtered by filtered_ala_record_ids from Step 9
+javascriptif (report_type === 'daily') {
+  const eip_records = s10d.list || [];
+  const filtered_ids = s9.filtered_ala_record_ids || [];
+  
+  // Build lookup set for fast filtering
+  const id_set = {};
+  for (let i = 0; i < filtered_ids.length; i++) {
+    id_set[String(filtered_ids[i])] = true;
+  }
+  
+  // Only process EIP records in the 2-day window
+  for (let i = 0; i < eip_records.length; i++) {
+    let rec = eip_records[i];
+    let ala_id = String(rec['ALA Record ID'] || '');
+    
+    if (!id_set[ala_id]) continue;  // Skip records outside window
+    
+    let signal_type = (rec['Signal Type'] || '').trim();
+    let domain = (rec['Domain'] || '').trim();
+    
+    // Aggregate by Signal Type
+    if (signal_type === 'Positive Signal') t_positive_count++;
+    else if (signal_type === 'Negative Signal') t_negative_count++;
+    else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') t_ambiguous_count++;
+    
+    // Aggregate by Domain
+    if (!domain_map[domain]) {
+      domain_map[domain] = { domain: domain, neg: 0, amb: 0, pos: 0, total: 0 };
+    }
+    domain_map[domain].total++;
+  }
+  
+  trend_signals_top5 = [];  // No trend analysis for daily
+}
+Why EIP for daily? EIP records are individual signals (N=68 for PAK-001 pilot), allowing granular 24-hour aggregation. SIA clusters are pre-aggregated for longer windows.
+Weekly/Monthly Branch (Lines 76-157)
+Data Source: SIA clusters from Step 10b (explicitly fetched by name)
+javascript} else {
+  // CRITICAL FIX Chat #82: Explicitly read from Step 10b, NOT $input
+  const sia_input = $('Step 10b - Fetch SIA Clusters').first().json;
+  const allClusters = sia_input.list || [];
+  const latestRunTs = allClusters.length > 0 ? allClusters[0]['Run Timestamp'] : null;
+  
+  // Filter to latest run only
+  const clusters = [];
+  for (let i = 0; i < allClusters.length; i++) {
+    if (allClusters[i]['Run Timestamp'] === latestRunTs) {
+      clusters.push(allClusters[i]);
+    }
+  }
+  
+  // Aggregate from SIA clusters
+  for (let i = 0; i < clusters.length; i++) {
+    let cl = clusters[i];
+    let tier = (cl['Signal Tier'] || '').trim();
+    let domain = (cl['Domain'] || '').trim();
+    let n = parseInt(cl['N'] || 0);
+    
+    // Aggregate by Signal Tier
+    if (tier === 'T-NEGATIVE') t_negative_count += n;
+    else if (tier === 'T-AMBIGUOUS') t_ambiguous_count += n;
+    else if (tier === 'T-POSITIVE') t_positive_count += n;
+    
+    // Aggregate by Domain
+    domain_map[domain].total += n;
+  }
+  
+  // Build trend signals (exclude singletons)
+  for (let i = 0; i < clusters.length; i++) {
+    if (!clusters[i]['Is Singleton']) {
+      trend_signals.push({
+        domain: clusters[i]['Domain'],
+        tier: clusters[i]['Signal Tier'],
+        n: clusters[i]['N'],
+        prior_n: clusters[i]['Prior N'],
+        trend_direction: clusters[i]['Trend Direction']
+      });
+    }
+  }
+}
+Key Fix: Line 77 changed from const allClusters = input.list || []; to explicit Step 10b reference.
+Expression Mode Aggregation (Lines 158-191)
+Shared by both branches - reads ESS records from Step 10c, filters by filtered_ala_record_ids:
+javascriptconst ess_records = s10c.list || [];
+const filtered_ala_ids = s9.filtered_ala_record_ids || [];
+
+const ess_map = {};
+for (let i = 0; i < ess_records.length; i++) {
+  let alaId = String(ess_records[i]['ALA Record ID'] || '');
+  let expr = (ess_records[i]['Expression Mode'] || 'Absent').trim();
+  ess_map[alaId] = expr;
+}
+
+const expression_modes = {
+  'Explicit': 0, 'Implicit': 0, 'Masked': 0,
+  'Performative': 0, 'Conflicted': 0, 'Absent': 0
+};
+
+for (let i = 0; i < filtered_ala_ids.length; i++) {
+  let alaId = filtered_ala_ids[i];
+  if (ess_map[alaId]) {
+    expression_modes[ess_map[alaId]]++;
+  } else {
+    expression_modes['Absent']++;
+  }
+}
+Output: Step 11 returns identical schema for both daily and weekly/monthly paths:
+
+t_negative_count, t_ambiguous_count, t_positive_count
+top_domains (array with domain/total/neg/amb/pos counts)
+trend_signals (array, empty for daily)
+expression_modes (object with 6 keys)
+seo_keyword_hits, seo_top_keyword, seo_coverage_rate
+
+
+Date Filtering Architecture
+Problem discovered Chat #78:
+MRA was filtering by RDA Timestamp (pipeline processing date) instead of ALA Date (guest review posting date). This caused incorrect metrics when reviews were processed days after posting.
+Solution (Chat #80):
+Step 6: Fetch ALL ALA records (no date filter)
+javascriptconst url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,PAK-001)&limit=1000';
+Step 9: Filter RDA by ALA Date matching
+javascript// Build ALA Date lookup map
+const alaDateMap = {};
+for (let i = 0; i < alaRecords.length; i++) {
+  let alaId = String(alaRecords[i]['Id']);
+  let alaDateRaw = alaRecords[i]['Date'] || '';  // M/D/YY format
+  
+  // Parse M/D/YY to timestamp
+  let parts = alaDateRaw.split('/');
+  let month = parseInt(parts[0]);
+  let day = parseInt(parts[1]);
+  let year = 2000 + parseInt(parts[2]);
+  let alaTs = new Date(year, month - 1, day).getTime();
+  
+  alaDateMap[alaId] = { ala_record: alaRecords[i], ala_timestamp: alaTs };
+}
+
+// Filter RDA by ALA Date
+for (let i = 0; i < allRda.length; i++) {
+  let alaId = String(rec['ALA Record ID'] || '');
+  
+  if (alaDateMap[alaId]) {
+    let alaTs = alaDateMap[alaId].ala_timestamp;
+    if (alaTs >= periodStartTs && alaTs < periodEndTs) {
+      filteredRda.push(rec);
+      filtered_ala_ids.push(alaId);  // NEW: Store for EIP/ESS filtering
+    }
+  }
+}
+Step 9 also calculates filtered_ala_record_ids array for downstream use in Step 11 (EIP filtering) and expression mode aggregation.
+
+Email Design & Branding (Chat #80 Update)
+Format: HTML email with inline CSS (email client compatible)
+VRYOH Brand Colors (Chat #80):
+
+#64B8CE (Cyan) — Header background, CTA button, positive signals
+#2E304E (Navy) — Primary text, section titles
+#C7E0E7 (Light Cyan) — Card backgrounds, footer
+#C3643D (Burnt Orange) — Negative signals, alert boxes
+#E9CFC9 (Light Peach) — Ambiguous signals
+#384653 (Dark Gray) — Body text
+#A8A9AD (Medium Gray) — Labels, muted text
+#F6F6F6 (Off White) — Page background
+
+Email Sender (Chat #82):
+
+Name: VRYOH Intelligence
+Email: intelligence@vryoh.com (was marellano@solofella.com in v2.0)
+
+Multi-Recipient Support (Chat #82):
+Client Config table's "Approval Contact Email" field now supports comma-separated addresses:
+christine@parkave.com,miguel@solofella.com
+Brevo API automatically parses comma-separated string into recipient array.
+Email Structure:
+
+Header: Cyan background (#64B8CE) with report title
+Metric Cards: Light cyan background (#C7E0E7) with cyan left border (#64B8CE)
+Alert Boxes: Light peach background for T3 warnings
+Platform Grid: Light cyan cards with navy text
+Domain Items: Cyan left border, signal counts in rounded badges
+Trend Badges: Color-coded by tier (orange/peach/cyan)
+CTA Button: Cyan background (#64B8CE), white text
+Footer: Light cyan background with governance note
+
+Governance Note (permanently locked):
+
+VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can't see in raw reviews.
+
+
+Report Types & Content
+1. 24-Hour Review Summary (Daily)
+Schedule: Every day 8am UTC (was 7am in v2.0)
+Content:
+
+NEW REVIEWS: Total count from last 24 hours
+PLATFORMS: Breakdown (Google/OpenTable/Yelp/TripAdvisor)
+AVERAGE STAR RATING: From last 24 hours
+NEW DRAFTS GENERATED: By tier (T1/T2/T3)
+SIGNAL DIRECTION: Positive/Ambiguous/Negative counts with percentages
+EXPRESSION MODE: Explicit/Implicit/Masked/Performative/Conflicted/Absent
+PAIN POINT DOMAINS: Top domains from last 24 hours
+PENDING APPROVAL: All-time count (not just 24hr)
+Link to Google Sheet approval interface
+
+Data Sources:
+
+ALA (date filtering)
+RDA (tier breakdown, all-time pending)
+EIP (signal direction, domains) — NOT SIA
+ESS (expression modes)
+
+Example output:
+NEW REVIEWS: 2
+PLATFORMS: Google 2
+AVERAGE STAR RATING: 0.0 stars (fixed in Step 9)
+SIGNAL DIRECTION: Positive 2 (100%)
+PAIN POINT DOMAINS: Food & Beverage Quality 2 signals
+PENDING APPROVAL: 68 (all-time)
+
+2. Weekly Intelligence Brief
+Schedule: Monday 9am UTC (was 7am in v2.0)
+Content:
+
+REVIEW VOLUME: Total from past 7 days
+PLATFORMS BREAKDOWN: Google/OpenTable/Yelp/TripAdvisor
+DRAFT GENERATED COUNT: Total T1+T2+T3
+AVERAGE STAR RATING: 7-day average
+SIGNAL DIRECTION: T-NEGATIVE/T-AMBIGUOUS/T-POSITIVE counts with percentages
+EXPRESSION MODE BREAKDOWN: 6 modes with percentages
+TOP PAIN POINT DOMAINS: Ranked by total signal count
+THREE PRIORITY SIGNALS: Top 3 requiring attention
+TREND ANALYSIS: Top 5 non-singleton clusters with trend direction (UP/DOWN/STABLE/new)
+PERFORMANCE METRICS: SLA compliance, response coverage, avg response time
+SEO IMPACT: Keywords placed, top keyword, coverage rate, response velocity
+Dashboard link with magic token (72hr expiry)
+
+Data Sources:
+
+ALA (date filtering, star rating)
+RDA (tier breakdown, SLA metrics, published drafts for SEO)
+SIA (signal direction, domains, trend signals) — NOT EIP
+ESS (expression modes)
+
+Example output (Chat #82 verified):
+REVIEW VOLUME: 4
+AVERAGE STAR RATING: 1.5 stars
+SIGNAL DIRECTION: Positive 2 (50%), Ambiguous 1 (25%), Negative 1 (25%)
+TOP PAIN POINT DOMAINS:
+  Food & Beverage Quality: 3 signals
+  Physical Environment: 1 signal
+TREND ANALYSIS:
+  [T-POSITIVE] Food & Beverage Quality — 2 signals (new)
+
+3. Monthly Pattern Report
+Schedule: 1st of month 10am UTC (was 7am in v2.0)
+Content:
+
+30-DAY SIGNAL SUMMARY: Total reviews, avg rating, tier percentages
+TOP 5 PAIN POINT DOMAINS: Ranked by signal count
+T3 DIGNITY-RISK EVENTS: Count of elevated signals
+PLATFORM PERFORMANCE: Review distribution
+RESPONSE METRICS: Total drafts, SLA compliance, avg approval time
+TREND ANALYSIS: Top 5 trend signals from SIA monthly run
+SEO PERFORMANCE: Keyword coverage, velocity, response rate
+Dashboard link with magic token
+
+Data Sources:
+
+ALA (date filtering, star rating, platform counts)
+RDA (tier breakdown, SLA compliance, SEO analysis)
+SIA (30-day clusters, trend signals)
+ESS (expression modes)
+
+
+NocoDB Schema
+Table ID: mybieof2em75t6e
+26 Fields (expanded in v2.1):
+Field NameTypePurposeIdAutoNumberPrimary keyMRA Run IDSingleLineTextMRA-YYYYMMDD-HHMMSSReport TypeSingleSelectdaily / weekly / monthlyClient IDSingleLineTextPAK-001, EDO-001, etc.Period StartDateTimeISO 8601 UTCPeriod EndDateTimeISO 8601 UTCTotal RecordsNumberReviews in periodAvg Star RatingNumberAverage rating (fixed Step 9)SLA Compliance RateNumber% approved within 48hrT Negative CountNumberNegative signal countT Ambiguous CountNumberAmbiguous signal countT Positive CountNumberPositive signal countTop Domains JSONJSONDomain breakdown arrayTier Breakdown JSONJSONT1/T2/T3 countsTrend Signals JSONJSONTop 5 trend clustersSEO Keyword HitsNumberDrafts with keywordsSEO Top KeywordSingleLineTextMost frequent keywordSEO Coverage RateNumber% drafts with keywordsSEO Response RateNumber% reviews with responsesSEO Avg Velocity HrsNumberAvg response timePlatform Counts JSONJSONReview counts by platformMagic Link TokenSingleLineTextDashboard access tokenToken Expires AtDateTime72hr expiryDelivery StatusSingleSelectsent / failed / pendingDelivery TimestampDateTimeEmail sent timeError LogLongTextDelivery failures
+Daily reports skip NocoDB write (Step 13 sets skip_nocodb: true, Step 14 returns empty array).
+
+Key Locked Lessons (Chat #78-82)
+Lesson 1: Date Filtering by Source Timestamp
+Problem: Filtering by RDA Timestamp (processing time) instead of ALA Date (guest posting time) caused incorrect period metrics.
+Solution: Always filter by the source event timestamp (when guest posted review), not when the pipeline processed it.
+Implementation: Build ALA Date lookup map, filter RDA by matching ALA Record ID, check ALA Date against period window.
+Lesson 2: Step 11 Conditional Data Source (Chat #82)
+Problem: Step 11 was reading from $input (Step 10d - EIP) for all report types, causing weekly/monthly to show 0 signal counts because it needed SIA clusters.
+Solution: Explicit conditional branching based on report_type:
+
+Daily: Read from Step 10d (EIP records)
+Weekly/Monthly: Read from Step 10b (SIA clusters) using $('Step 10b - Fetch SIA Clusters').first().json
+
+Implementation: Line 77 fix from const allClusters = input.list to const sia_input = $('Step 10b - Fetch SIA Clusters').first().json
+Why it matters: n8n $input references the PREVIOUS node in connection chain, not a named node. Step 11's previous node is Step 10d (EIP), but weekly/monthly need Step 10b (SIA).
+Lesson 3: SIA Window Type Alignment
+Problem: MRA weekly reports were querying 30-day SIA data because SIA only ran monthly.
+Solution: SIA now has 3 schedule branches (daily/weekly/monthly) with Report Window Type field. MRA queries SIA by matching report_type.
+Implementation: Step 10a builds dynamic URL: ?where=(Report%20Window%20Type,eq,weekly)
+Lesson 4: all_time_pending Field Chain
+Problem: Daily reports need all-time pending count, but tier_breakdown only shows period metrics.
+Solution: Calculate all_time_pending separately in Step 9 from ALL RDA records (not filtered by period).
+Implementation: Add all_time_pending to return statement in Steps 9, 10a, 11, 12, 13, 16.
+Lesson 5: filtered_ala_record_ids Array (Chat #82)
+Problem: Step 11 daily branch needed to filter EIP records by date window, but EIP doesn't have timestamps.
+Solution: Step 9 builds filtered_ala_record_ids array during RDA filtering. Step 11 builds lookup set for fast EIP filtering.
+Implementation:
+javascript// Step 9: Build array during RDA filtering
+const filtered_ala_ids = [];
+for (let i = 0; i < allRda.length; i++) {
+  if (alaTs >= periodStartTs && alaTs < periodEndTs) {
+    filtered_ala_ids.push(alaId);
+  }
+}
+
+// Step 11: Build lookup set for EIP filtering
+const id_set = {};
+for (let i = 0; i < filtered_ids.length; i++) {
+  id_set[String(filtered_ids[i])] = true;
+}
+if (!id_set[ala_id]) continue;  // Skip EIP record
+Lesson 6: HTML Email Client Compatibility
+Problem: CSS gradient and text-decoration not working in some email clients.
+Solution: Use inline styles on critical elements (CTA button, links).
+Implementation:
+html<a href="..." class="cta-button" style="color: #FFFFFF; text-decoration: none; border-bottom: none;">
+Lesson 7: M/D/YY Date Parsing
+Problem: ALA Date field uses M/D/YY format (e.g., "4/24/26"), not ISO 8601.
+Solution: Parse manually:
+javascriptlet parts = alaDateRaw.split('/');
+let month = parseInt(parts[0]);
+let day = parseInt(parts[1]);
+let year = 2000 + parseInt(parts[2]);
+let alaTs = new Date(year, month - 1, day).getTime();
+Lesson 8: Type Safety (String vs Integer)
+Problem: ALA Record ID is Integer in NocoDB, but RDA stores it as String.
+Solution: Always wrap in String() for comparisons:
+javascriptlet alaId = String(rec['ALA Record ID'] || '');
+Lesson 9: Multi-Recipient Email Support (Chat #82)
+Problem: Need to send reports to multiple recipients (Christine + Miguel).
+Solution: Brevo API accepts comma-separated string in Approval Contact Email field.
+Implementation:
+javascript// Client Config table
+Approval Contact Email: "christine@parkave.com,miguel@solofella.com"
+
+// Brevo automatically parses to:
+to: [
+  { email: "christine@parkave.com", name: "Client Name" },
+  { email: "miguel@solofella.com", name: "Client Name" }
+]
+
+Token Budget
+Zero tokens per report.
+MRA operations:
+
+NocoDB queries (read-only)
+JavaScript aggregation
+String concatenation
+Brevo API call (no AI)
+
+Cost: Infrastructure only (~$0 at pilot scale)
+
+Related Documents
+
+Changelog: SCX_MRA_CHANGELOG.md
+MCD v7.4.1: SubtextCX_MCD_v7_4_1.docx
+SIA HOW: ../SIA/SCX_SIA_HOW_v4.0.md (3-branch architecture)
+Dashboard Spec: ../../commercial/Dashboard_Freelancer_Brief.md
+Full MRA Workflow: Full workflow pipeline MRA April 11th
+
+
+n8n Workflow Details
+Workflow Name: SCX-MRA
+Triggers: 3 separate cron schedules (daily 8am/weekly Mon 9am/monthly 1st 10am)
+Credentials: NocoDB xc-token, Brevo API key
+Critical n8n 2.4.6 Rules:
+
+All aggregation in Code Nodes (pure JavaScript)
+No AI API calls anywhere
+Index-based for loops (no for...of)
+pageInfo.totalRows for counts (not list.length)
+Key-by-key object construction (no spread operator)
+Type-safe ID comparisons (wrap in String())
+M/D/YY date parsing (not ISO 8601)
+Explicit node references: $('Node Name').first().json not $input when reading upstream branches
+
+
+Change Log (v2.0 → v2.1)
+Chat #82 · May 12, 2026
+
+Step 11 fix: Weekly/monthly now explicitly read from Step 10b (SIA) instead of $input (EIP)
+Daily branch architecture: Documented EIP filtering by filtered_ala_record_ids lookup set
+Brand update: SubtextCX → VRYOH throughout (colors, sender name)
+Email sender: intelligence@vryoh.com (was marellano@solofella.com)
+Schedule times: Daily 8am, Weekly Mon 9am, Monthly 1st 10am (was all 7am)
+Multi-recipient support: Comma-separated approval emails now documented
+Expression mode aggregation: Added as shared Step 11 section (lines 158-191)
+filtered_ala_record_ids: Documented as Step 9 → Step 11 data pipeline
+Node count: 28 nodes (was 23 + 3 error in v2.0)
+New lesson: Lesson 9 (multi-recipient email), Lesson 5 (filtered_ala_record_ids)
+
