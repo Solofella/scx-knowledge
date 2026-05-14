@@ -1,0 +1,745 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scx-ess",
+        "options": {
+          "responseCode": {
+            "values": {}
+          },
+          "responseData": "={\"status\":\"received\"}"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "655b3e2a-c39f-4b94-b47f-41c3f385e3d9",
+      "name": "Webhook",
+      "webhookId": "f49b67f5-c9ec-4267-bc33-1df7d7335326"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst p = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n\nif (!p.eip_record_id) throw new Error('Missing eip_record_id');\n\nconst eipId = parseInt(p.eip_record_id);\nif (isNaN(eipId) || eipId <= 0) throw new Error('eip_record_id must be positive integer. Got: ' + p.eip_record_id);\n\nreturn [{ json: {\n  eip_record_id: eipId,\n  ala_record_id: p.ala_record_id || null,\n  enriched_emotion_tag: p.enriched_emotion_tag || null,\n  core_emotion: p.core_emotion || null,\n  pain_point_sub_category: p.pain_point_sub_category || null,\n  pain_point_domain_confirmed: p.pain_point_domain_confirmed || null,\n  need_state: p.need_state || null,\n  cognitive_driver: p.cognitive_driver || null,\n  polarity_balance: p.polarity_balance,\n  dominant_pole: p.dominant_pole || null,\n  intensity_level: p.intensity_level || null,\n  certainty_score: p.certainty_score,\n  ambiguity_flag: p.ambiguity_flag,\n  masked_emotion_flag: p.masked_emotion_flag,\n  collapse_flag: p.collapse_flag || false,\n  signal_type: p.signal_type || null,\n  signal_weight: p.signal_weight || null,\n  emotion_hypothesis: p.emotion_hypothesis || null,\n  pain_hypothesis: p.pain_hypothesis || null,\n  keywords: p.keywords || null,\n  reviewer_handle: p.reviewer_handle || null,\n  review_date: p.review_date || null,\n  platform: p.platform || null,\n  star_rating: p.star_rating || null,\n  lang: p.lang || null,\n  client_id: p.client_id || null,\n  eip_run_id: p.prior_run_id || p.eip_run_id || null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1349ace8-dd9e-4a4c-b362-c9ce1353a9d7",
+      "name": "Step 2 - Payload Validation"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "where",
+              "value": "=(EIP Record ID,eq,{{$json.eip_record_id}})"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "66f9b81f-ae60-46f5-af2d-cad0958f2f55",
+      "name": "Step 3 - Idempotency Check",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dff03764-26a0-430c-8367-aaa1f226d226",
+              "name": "skip_reason",
+              "value": "Duplicate: EIP Record ID already processed by ESS",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "1712cfaa-3a9b-445b-8d05-603b15a93cab",
+      "name": "Step 4b - Skip Exit"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a7786bbd-04e3-445a-8c7a-91cfd9c85223",
+              "leftValue": "={{$json.pageInfo.totalRows}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "f782daed-0c31-4326-9630-f417ccfb85e9",
+      "name": "Step 4a - IF Already Processed?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = $input.first().json.pageInfo?.totalRows || 0;\nif (total > 0) return [];\n\nconst rec = $('Step 2 - Payload Validation').first().json;\n\nreturn [{ json: {\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  core_emotion: rec.core_emotion,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  pain_point_domain_confirmed: rec.pain_point_domain_confirmed,\n  need_state: rec.need_state,\n  cognitive_driver: rec.cognitive_driver,\n  polarity_balance: rec.polarity_balance,\n  dominant_pole: rec.dominant_pole,\n  intensity_level: rec.intensity_level,\n  certainty_score: rec.certainty_score,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  signal_type: rec.signal_type,\n  signal_weight: rec.signal_weight,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  pain_hypothesis: rec.pain_hypothesis,\n  keywords: rec.keywords,\n  reviewer_handle: rec.reviewer_handle,\n  review_date: rec.review_date,\n  platform: rec.platform,\n  star_rating: rec.star_rating,\n  lang: rec.lang,\n  client_id: rec.client_id,\n  eip_run_id: rec.eip_run_id\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        96
+      ],
+      "id": "9aafe4c6-a12f-4ec7-a225-942159dc918d",
+      "name": "Step 4c - FALSE Branch Gate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\n\nconst hardErrors = [];\nconst softWarnings = [];\n\n// ── HARD CHECKS ────────────────────────────────────────\n\nconst nonEmpty = ['enriched_emotion_tag','pain_point_sub_category','cognitive_driver'];\nfor (const f of nonEmpty) {\n  if (!rec[f] || String(rec[f]).trim() === '') hardErrors.push(f + ': empty or null');\n}\n\nconst scoreFields = ['polarity_balance','certainty_score'];\nfor (const f of scoreFields) {\n  const v = parseFloat(rec[f]);\n  if (isNaN(v) || v < 0 || v > 1) hardErrors.push(f + ': not in range 0.0-1.0 (got ' + rec[f] + ')');\n}\n\nconst validPole = ['Positive','Negative','Mixed'];\nif (!validPole.includes(rec.dominant_pole)) hardErrors.push('dominant_pole: invalid ' + rec.dominant_pole);\n\nconst validIntensity = ['Low','Moderate','High','Critical'];\nif (!validIntensity.includes(rec.intensity_level)) hardErrors.push('intensity_level: invalid ' + rec.intensity_level);\n\nconst validSignalType = [\n  'Positive Signal',\n  'Negative Signal',\n  'Masked Negative Signal',\n  'Ambiguous Negative Signal',\n  'Dignity-Risk Signal',\n  'Mixed Signal'\n];\nif (!validSignalType.includes(rec.signal_type)) hardErrors.push('signal_type: invalid ' + rec.signal_type);\n\nconst boolFields = ['ambiguity_flag','masked_emotion_flag'];\nfor (const f of boolFields) {\n  if (rec[f] !== true && rec[f] !== false && rec[f] !== 1 && rec[f] !== 0)\n    hardErrors.push(f + ': not a boolean (got ' + rec[f] + ')');\n}\n\n// ── SOFT CHECKS ─────────────────────────────────────────\n\nconst hypoFields = ['emotion_hypothesis','pain_hypothesis'];\nfor (const f of hypoFields) {\n  const v = rec[f];\n  if (!v || String(v).trim() === '') softWarnings.push(f + ': missing --- confidence -0.10');\n  else if (String(v).trim().length < 10) softWarnings.push(f + ': too short --- confidence -0.05');\n}\n\nconst canon_pass = hardErrors.length === 0;\n\nreturn [{ json: {\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  core_emotion: rec.core_emotion,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  pain_point_domain_confirmed: rec.pain_point_domain_confirmed,\n  need_state: rec.need_state,\n  cognitive_driver: rec.cognitive_driver,\n  polarity_balance: rec.polarity_balance,\n  dominant_pole: rec.dominant_pole,\n  intensity_level: rec.intensity_level,\n  certainty_score: rec.certainty_score,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  signal_type: rec.signal_type,\n  signal_weight: rec.signal_weight,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  pain_hypothesis: rec.pain_hypothesis,\n  keywords: rec.keywords,\n  reviewer_handle: rec.reviewer_handle,\n  review_date: rec.review_date,\n  platform: rec.platform,\n  star_rating: rec.star_rating,\n  lang: rec.lang,\n  client_id: rec.client_id,\n  eip_run_id: rec.eip_run_id,\n  canon_pass: canon_pass ? 'true' : 'false',\n  failure_reason: hardErrors.length > 0 ? hardErrors.join(' | ') : null,\n  canon_warnings: softWarnings.length > 0 ? softWarnings : null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "7685d286-3222-4c1d-92e3-e4988b60f312",
+      "name": "Step 5 - Canonical Integrity Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8c97a7c6-c408-4d2d-a77b-48c351bf38a7",
+              "leftValue": "={{$json.canon_pass}}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        96
+      ],
+      "id": "5d842294-5936-47d1-aaae-6fbb007e4506",
+      "name": "Step 6 - IF Canon Pass?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "Content-Type",
+        "body": "={\n  \"ESS Run ID\": \"ERROR-{{$json.eip_record_id}}\",\n  \"EIP Record ID\": {{$json.eip_record_id}},\n  \"Canon Flag\": false,\n  \"Integrity Failure Reason\": \"{{$json.failure_reason}}\",\n  \"HSI Status\": \"Error\",\n  \"Error Log\": \"Canon hard fail — record rejected before Claude call\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1456,
+        192
+      ],
+      "id": "ba8e161d-6dd7-4535-b697-86208cc9d0b9",
+      "name": "Step 6a - NocoDB POST ESS Error Record",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy/{{$json.eip_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"ESS Status\": \"Error\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1664,
+        192
+      ],
+      "id": "f432c996-2f23-4768-973a-db6a0a88b7b9",
+      "name": "Step 6b - NocoDB PATCH EIP Error",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\n\nconst ess_system_prompt = `You are ESS — the Emotional Signal Stabilizer for Subtext CX.\nYou classify how emotion is being expressed and assess narrative coherence.\nYou do not interpret meaning. You do not speculate about customer motivation.\nReturn ONLY a valid JSON object with exactly 3 keys. No other text.\n\n{\n  \"expression_mode\": \"one of 6 values\",\n  \"emotional_clarity\": \"one of 4 values\",\n  \"narrative_alignment_score\": 0.00\n}\n\nexpression_mode — classify HOW emotion is communicated. Exactly one of:\nExplicit — emotion is directly stated in clear language\nImplicit — emotion is inferred from word choice and context, not stated\nMasked — emotion is hidden behind factual or neutral tone\nPerformative — emotion is exaggerated for social or rhetorical effect\nConflicted — contradictory emotional signals present simultaneously\nAbsent — no detectable emotional content\n\nemotional_clarity — classify the CLARITY of the emotional signal. Exactly one of:\nClear — single dominant emotion, coherent throughout\nDiffuse — multiple emotions present, none clearly dominant\nFragmented — emotional content is disjointed or incoherent\nAmbiguous — cannot determine without additional context\n\nnarrative_alignment_score — decimal 0.0 to 1.0.\nDoes the Enriched Emotion Tag logically align with the Pain Point Sub-Category,\nSignal Type, and Dominant Pole simultaneously?\n1.0 = perfect coherence across all three. 0.0 = no coherence.\n\nGovernance: Do not add fields. Do not include explanations.`;\n\nconst ess_user_prompt = `Classify this emotional signal:\\n\\n` +\n  `Enriched Emotion Tag: ${rec.enriched_emotion_tag}\\n` +\n  `Core Emotion: ${rec.core_emotion}\\n` +\n  `Expression context: ${rec.cognitive_driver} | Need: ${rec.need_state}\\n` +\n  `Pain Sub-Category: ${rec.pain_point_sub_category}\\n` +\n  `Domain: ${rec.pain_point_domain_confirmed}\\n` +\n  `Signal Type: ${rec.signal_type}\\n` +\n  `Dominant Pole: ${rec.dominant_pole} | Polarity Balance: ${rec.polarity_balance}\\n` +\n  `Certainty: ${rec.certainty_score} | Masked: ${rec.masked_emotion_flag}\\n` +\n  `Ambiguity Flag: ${rec.ambiguity_flag}\\n` +\n  `Emotion Hypothesis: ${rec.emotion_hypothesis}\\n` +\n  `Pain Hypothesis: ${rec.pain_hypothesis}\\n` +\n  (rec.lang ? `lang: ${rec.lang}\\n` : '') +\n  `\\nReturn JSON only. No preamble.`;\n\nreturn [{ json: {\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  core_emotion: rec.core_emotion,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  pain_point_domain_confirmed: rec.pain_point_domain_confirmed,\n  need_state: rec.need_state,\n  cognitive_driver: rec.cognitive_driver,\n  polarity_balance: rec.polarity_balance,\n  dominant_pole: rec.dominant_pole,\n  intensity_level: rec.intensity_level,\n  certainty_score: rec.certainty_score,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  signal_type: rec.signal_type,\n  signal_weight: rec.signal_weight,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  pain_hypothesis: rec.pain_hypothesis,\n  keywords: rec.keywords,\n  reviewer_handle: rec.reviewer_handle,\n  review_date: rec.review_date,\n  platform: rec.platform,\n  star_rating: rec.star_rating,\n  lang: rec.lang,\n  client_id: rec.client_id,\n  eip_run_id: rec.eip_run_id,\n  canon_pass: rec.canon_pass,\n  canon_warnings: rec.canon_warnings,\n  failure_reason: rec.failure_reason,\n  ess_system_prompt: ess_system_prompt,\n  ess_user_prompt: ess_user_prompt\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "97d5eb06-9bdf-49b0-803f-86d4a89b8b6e",
+      "name": "Step 7 - Build Claude Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 100,\n  temperature: 0.3,\n  system: inp.ess_system_prompt,\n  messages: [{ role: 'user', content: inp.ess_user_prompt }]\n});\n\nreturn [{ json: {\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  need_state: inp.need_state,\n  cognitive_driver: inp.cognitive_driver,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  intensity_level: inp.intensity_level,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  eip_run_id: inp.eip_run_id,\n  canon_pass: inp.canon_pass,\n  canon_warnings: inp.canon_warnings,\n  claude_request_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        0
+      ],
+      "id": "41f47e75-42f8-45d0-a8a2-12ac1a1ea65c",
+      "name": "Step 8 - Build Claude Request Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "Content-Type",
+        "body": "={{$json.claude_request_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1872,
+        0
+      ],
+      "id": "05f27558-851c-434e-ad03-ce8985d23d24",
+      "name": "Step 9 - Claude API Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\n\nif (!raw) throw new Error('Claude returned empty response.');\n\nlet clean = raw;\nclean = clean.replace(/`{1,3}json/gi, '');\nclean = clean.replace(/`{1,3}/g, '');\nclean = clean.trim();\n\nlet parsed;\ntry { parsed = JSON.parse(clean); }\ncatch(e) { throw new Error('Invalid JSON after strip: ' + clean.substring(0, 200)); }\n\nconst validEM = ['Explicit','Implicit','Masked','Performative','Conflicted','Absent'];\nif (!validEM.includes(parsed.expression_mode))\n  throw new Error('expression_mode invalid: ' + parsed.expression_mode);\n\nconst validEC = ['Clear','Diffuse','Fragmented','Ambiguous'];\nif (!validEC.includes(parsed.emotional_clarity))\n  throw new Error('emotional_clarity invalid: ' + parsed.emotional_clarity);\n\nconst nas = parseFloat(parsed.narrative_alignment_score);\nif (isNaN(nas) || nas < 0 || nas > 1)\n  throw new Error('narrative_alignment_score out of range: ' + parsed.narrative_alignment_score);\n\nconst inp = $('Step 8 - Build Claude Request Body').first().json;\n\nreturn [{ json: {\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  need_state: inp.need_state,\n  cognitive_driver: inp.cognitive_driver,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  intensity_level: inp.intensity_level,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  eip_run_id: inp.eip_run_id,\n  canon_pass: inp.canon_pass,\n  canon_warnings: inp.canon_warnings,\n  expression_mode: parsed.expression_mode,\n  emotional_clarity: parsed.emotional_clarity,\n  narrative_alignment_score: nas\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        0
+      ],
+      "id": "d772b7fe-9cf3-4d55-a00d-1e2e24919ba1",
+      "name": "Step 10 - Output Parsing + Validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\n\nconst certainty = parseFloat(rec.certainty_score) || 0;   // weight 0.40\nconst alignment = rec.narrative_alignment_score || 0;      // weight 0.35\nconst canon_bonus = 1.0;                                   // weight 0.25 — always 1.0 (hard fails exited)\n\nlet score = (certainty * 0.40) + (alignment * 0.35) + (canon_bonus * 0.25);\n\n// EIP field penalties\nif (rec.ambiguity_flag === true || rec.ambiguity_flag === 1) score -= 0.10;\nif (rec.masked_emotion_flag === true || rec.masked_emotion_flag === 1) score -= 0.05;\n\n// Soft-fail penalties from canon_warnings (Step 5)\nconst warnings = rec.canon_warnings || [];\nlet softPenalty = 0;\nfor (const w of warnings) {\n  if (w.includes('-0.10')) softPenalty += 0.10;\n  else if (w.includes('-0.05')) softPenalty += 0.05;\n}\nscore -= Math.min(softPenalty, 0.15); // cap soft penalty at -0.15\n\nconst structural_confidence_score = Math.max(0, Math.min(1, score));\n\nreturn [{ json: {\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  core_emotion: rec.core_emotion,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  pain_point_domain_confirmed: rec.pain_point_domain_confirmed,\n  need_state: rec.need_state,\n  cognitive_driver: rec.cognitive_driver,\n  polarity_balance: rec.polarity_balance,\n  dominant_pole: rec.dominant_pole,\n  intensity_level: rec.intensity_level,\n  certainty_score: rec.certainty_score,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  signal_type: rec.signal_type,\n  signal_weight: rec.signal_weight,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  pain_hypothesis: rec.pain_hypothesis,\n  keywords: rec.keywords,\n  reviewer_handle: rec.reviewer_handle,\n  review_date: rec.review_date,\n  platform: rec.platform,\n  star_rating: rec.star_rating,\n  lang: rec.lang,\n  client_id: rec.client_id,\n  eip_run_id: rec.eip_run_id,\n  canon_pass: rec.canon_pass,\n  canon_warnings: rec.canon_warnings,\n  expression_mode: rec.expression_mode,\n  emotional_clarity: rec.emotional_clarity,\n  narrative_alignment_score: rec.narrative_alignment_score,\n  structural_confidence_score: structural_confidence_score\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        0
+      ],
+      "id": "d018acdb-e537-40cc-955e-f4774dbee965",
+      "name": "Step 11 - Structural Confidence Score"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst now = new Date();\nconst pad = (n, l=2) => String(n).padStart(l, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst ms = pad(now.getMilliseconds(), 3);\n\nreturn [{ json: {\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  need_state: inp.need_state,\n  cognitive_driver: inp.cognitive_driver,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  intensity_level: inp.intensity_level,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  eip_run_id: inp.eip_run_id,\n  canon_pass: inp.canon_pass,\n  canon_warnings: inp.canon_warnings,\n  expression_mode: inp.expression_mode,\n  emotional_clarity: inp.emotional_clarity,\n  narrative_alignment_score: inp.narrative_alignment_score,\n  structural_confidence_score: inp.structural_confidence_score,\n  ess_run_id: `ESS-${d}-${t}-${ms}`,\n  ess_timestamp: now.toISOString()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        0
+      ],
+      "id": "24564186-f71e-4b03-b2ad-8685212154fd",
+      "name": "Step 12 - Run ID + Timestamp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst body = JSON.stringify({\n  \"ESS Run ID\": inp.ess_run_id,\n  \"EIP Record ID\": inp.eip_record_id,\n  \"ALA Record ID\": inp.ala_record_id,\n  \"ESS Timestamp\": inp.ess_timestamp,\n  \"Canon Flag\": inp.canon_pass === true || inp.canon_pass === 'true',\n  \"Canon Warnings\": inp.canon_warnings ? JSON.stringify(inp.canon_warnings) : null,\n  \"Integrity Failure Reason\": null,\n  \"Expression Mode\": inp.expression_mode,\n  \"Emotional Clarity\": inp.emotional_clarity,\n  \"Narrative Alignment Score\": inp.narrative_alignment_score,\n  \"Structural Confidence Score\": inp.structural_confidence_score,\n  \"Lang\": inp.lang,\n  \"HSI Status\": \"Ready\",\n  \"Error Log\": null,\n  \"Client ID\": inp.client_id,\n});\n\nreturn [{ json: {\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  need_state: inp.need_state,\n  cognitive_driver: inp.cognitive_driver,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  intensity_level: inp.intensity_level,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  eip_run_id: inp.eip_run_id,\n  canon_pass: inp.canon_pass,\n  canon_warnings: inp.canon_warnings,\n  expression_mode: inp.expression_mode,\n  emotional_clarity: inp.emotional_clarity,\n  narrative_alignment_score: inp.narrative_alignment_score,\n  structural_confidence_score: inp.structural_confidence_score,\n  ess_run_id: inp.ess_run_id,\n  ess_timestamp: inp.ess_timestamp,\n  nocodb_post_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        0
+      ],
+      "id": "274344ba-ce47-48ac-b580-16bf60a0fb79",
+      "name": "Step 13 - Build NocoDB POST Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.nocodb_post_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2912,
+        0
+      ],
+      "id": "a449b5f5-4cda-47cf-8167-9ecc5017874b",
+      "name": "Step 14 - NocoDB POST ESS Record",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nconst ess_record_id = response.Id || response.id;\nif (!ess_record_id) throw new Error('NocoDB ESS POST returned no Id. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst s12 = $('Step 12 - Run ID + Timestamp').first().json;\n\nreturn [{ json: {\n  ess_record_id: ess_record_id,\n  eip_record_id: s12.eip_record_id,\n  ala_record_id: s12.ala_record_id,\n  enriched_emotion_tag: s12.enriched_emotion_tag,\n  core_emotion: s12.core_emotion,\n  pain_point_sub_category: s12.pain_point_sub_category,\n  pain_point_domain_confirmed: s12.pain_point_domain_confirmed,\n  need_state: s12.need_state,\n  cognitive_driver: s12.cognitive_driver,\n  polarity_balance: s12.polarity_balance,\n  dominant_pole: s12.dominant_pole,\n  intensity_level: s12.intensity_level,\n  certainty_score: s12.certainty_score,\n  ambiguity_flag: s12.ambiguity_flag,\n  masked_emotion_flag: s12.masked_emotion_flag,\n  collapse_flag: s12.collapse_flag,\n  signal_type: s12.signal_type,\n  signal_weight: s12.signal_weight,\n  emotion_hypothesis: s12.emotion_hypothesis,\n  pain_hypothesis: s12.pain_hypothesis,\n  keywords: s12.keywords,\n  reviewer_handle: s12.reviewer_handle,\n  review_date: s12.review_date,\n  platform: s12.platform,\n  star_rating: s12.star_rating,\n  lang: s12.lang,\n  client_id: s12.client_id,\n  eip_run_id: s12.eip_run_id,\n  canon_pass: s12.canon_pass,\n  canon_warnings: s12.canon_warnings,\n  expression_mode: s12.expression_mode,\n  emotional_clarity: s12.emotional_clarity,\n  narrative_alignment_score: s12.narrative_alignment_score,\n  structural_confidence_score: s12.structural_confidence_score,\n  ess_run_id: s12.ess_run_id,\n  ess_timestamp: s12.ess_timestamp\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        0
+      ],
+      "id": "9e5192fd-0ea2-49ff-a2b7-1bbe8c1c563c",
+      "name": "Step 15 - Capture ESS Record ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nreturn [{ json: {\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  need_state: inp.need_state,\n  cognitive_driver: inp.cognitive_driver,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  intensity_level: inp.intensity_level,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  eip_run_id: inp.eip_run_id,\n  canon_pass: inp.canon_pass,\n  canon_warnings: inp.canon_warnings,\n  expression_mode: inp.expression_mode,\n  emotional_clarity: inp.emotional_clarity,\n  narrative_alignment_score: inp.narrative_alignment_score,\n  structural_confidence_score: inp.structural_confidence_score,\n  ess_run_id: inp.ess_run_id,\n  ess_timestamp: inp.ess_timestamp,\n  ess_patch_body: JSON.stringify({\"ESS Status\": \"Complete\"})\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3328,
+        0
+      ],
+      "id": "b4f3aa2b-81bd-4ba1-b267-3d9629cf4753",
+      "name": "Step 16 - Build Patch Body"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy/{{$json.eip_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"ESS Status\": \"Complete\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3536,
+        0
+      ],
+      "id": "44195339-1b99-4407-bdab-bfc228e048db",
+      "name": "Step 17 - NocoDB PATCH EIP Complete",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $('Step 15 - Capture ESS Record ID').first().json;\n\nconst hsiPayload = {\n  // ── Trace ──────────────────────────────────────────────\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.ess_run_id,\n  prior_table: 'ESS',\n\n  // ── ESS outputs ─────────────────────────────────────────\n  canon_flag: inp.canon_pass,\n  expression_mode: inp.expression_mode,\n  emotional_clarity: inp.emotional_clarity,\n  narrative_alignment_score: inp.narrative_alignment_score,\n  structural_confidence_score: inp.structural_confidence_score,\n  canon_warnings: inp.canon_warnings,\n  lang: inp.lang,\n  client_id: inp.client_id,\n\n  // ── EIP pass-throughs ───────────────────────────────────\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  keywords: inp.keywords,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating\n};\n\nreturn [{ json: {\n  hsi_trigger_body: hsiPayload\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3744,
+        0
+      ],
+      "id": "9e0762b9-a67e-4b85-a2b2-d23ea6df99ad",
+      "name": "Step 18 - Build HSI Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://161.35.133.49:5678/webhook/scx-hsi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.hsi_trigger_body}}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3952,
+        0
+      ],
+      "id": "a55efe07-59ac-455f-9a9c-efa7087d5cb8",
+      "name": "Step 19 - HSI Trigger",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Payload Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Payload Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Idempotency Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Idempotency Check": {
+      "main": [
+        [
+          {
+            "node": "Step 4a - IF Already Processed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4a - IF Already Processed?": {
+      "main": [
+        [
+          {
+            "node": "Step 4b - Skip Exit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 4c - FALSE Branch Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4c - FALSE Branch Gate": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - Canonical Integrity Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - Canonical Integrity Check": {
+      "main": [
+        [
+          {
+            "node": "Step 6 - IF Canon Pass?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6 - IF Canon Pass?": {
+      "main": [
+        [
+          {
+            "node": "Step 7 - Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 6a - NocoDB POST ESS Error Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6a - NocoDB POST ESS Error Record": {
+      "main": [
+        [
+          {
+            "node": "Step 6b - NocoDB PATCH EIP Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7 - Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Build Claude Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Build Claude Request Body": {
+      "main": [
+        [
+          {
+            "node": "Step 9 - Claude API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Claude API Call": {
+      "main": [
+        [
+          {
+            "node": "Step 10 - Output Parsing + Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10 - Output Parsing + Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 11 - Structural Confidence Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11 - Structural Confidence Score": {
+      "main": [
+        [
+          {
+            "node": "Step 12 - Run ID + Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Run ID + Timestamp": {
+      "main": [
+        [
+          {
+            "node": "Step 13 - Build NocoDB POST Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 13 - Build NocoDB POST Body": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - NocoDB POST ESS Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 14 - NocoDB POST ESS Record": {
+      "main": [
+        [
+          {
+            "node": "Step 15 - Capture ESS Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 15 - Capture ESS Record ID": {
+      "main": [
+        [
+          {
+            "node": "Step 16 - Build Patch Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 16 - Build Patch Body": {
+      "main": [
+        [
+          {
+            "node": "Step 17 - NocoDB PATCH EIP Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 17 - NocoDB PATCH EIP Complete": {
+      "main": [
+        [
+          {
+            "node": "Step 18 - Build HSI Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 18 - Build HSI Payload": {
+      "main": [
+        [
+          {
+            "node": "Step 19 - HSI Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+          "content-type": "Content-Type",
+          "user-agent": "axios/1.12.0",
+          "content-length": "1076",
+          "accept-encoding": "gzip, compress, deflate, br",
+          "host": "161.35.133.49:5678",
+          "connection": "close"
+        },
+        "params": {},
+        "query": {},
+        "body": {},
+        "webhookUrl": "http://161.35.133.49:5678/webhook/scx-ess",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
