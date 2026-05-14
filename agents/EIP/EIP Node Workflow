@@ -1,0 +1,891 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scx-eip",
+        "options": {
+          "rawBody": false,
+          "responseCode": {
+            "values": {}
+          },
+          "responseData": "={\"status\":\"received\"}"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        112
+      ],
+      "id": "5c24b743-2733-47a4-b2b2-05e0d80ec0ef",
+      "name": "Webhook",
+      "webhookId": "f7a44b76-8e7c-4f93-90f6-30efeb040676"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json.body;\n\nif (!payload.ala_record_id) {\n  throw new Error('Missing ala_record_id: ' + JSON.stringify(payload));\n}\n\nconst recordId = parseInt(payload.ala_record_id);\nif (isNaN(recordId) || recordId <= 0) {\n  throw new Error('ala_record_id must be positive integer. Got: ' + payload.ala_record_id);\n}\n\nreturn [{ json: {\n  ala_record_id: recordId,\n  prior_run_id: payload.prior_run_id || 'unknown',\n  prior_table: payload.prior_table || 'ALA',\n  lang: payload.lang || null,\n  client_id: payload.client_id || null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        112
+      ],
+      "id": "055975d4-87ac-4bb4-afb0-ec0927551834",
+      "name": "Step 1 - Payload Validation"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={\n  \"where\": \"(ALA Record ID,eq,{{$json.ala_record_id}})\",\n  \"limit\": \"1\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        368,
+        112
+      ],
+      "id": "9f0e022b-54ec-4e38-977d-ae37a44a6da4",
+      "name": "Step 2 - Idempotency Check",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "44cba805-f85c-4574-882d-81e8cd0c7221",
+              "leftValue": "={{$json.pageInfo.totalRows}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        112
+      ],
+      "id": "279c893c-ad77-4b62-bae3-23e517456f19",
+      "name": "Step 2 - Idempotency IF"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a9d8deea-1b11-4dd5-8f96-6634adf69390",
+              "name": "status",
+              "value": "EIP record already exists — skipped",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "94baf748-1783-4fc4-96e4-f358e171a5ae",
+      "name": "Step 2 - Skip Duplicate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = $input.first().json.pageInfo?.totalRows || 0;\nif (total > 0) return [];\n\nreturn [{ json: {\n  ala_record_id: $('Step 1 - Payload Validation').first().json.ala_record_id,\n  prior_run_id: $('Step 1 - Payload Validation').first().json.prior_run_id,\n  lang: $('Step 1 - Payload Validation').first().json.lang\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        128
+      ],
+      "id": "d046a994-f297-40d4-9784-435973807764",
+      "name": "Step 2 - False Branch Gate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const record = $input.first().json.list?.[0];\n\nif (!record) {\n  throw new Error('ALA record not found for Id=' + \n    $('Step 1 - Payload Validation').first().json.ala_record_id);\n}\n\nconst required = ['Raw Tex', 'Platform', 'Date', 'Pain Point Domain', 'Preliminary Emotion Tag'];\nconst missing = required.filter(f => !record[f] || record[f].toString().trim() === '');\nif (missing.length > 0) {\n  throw new Error('ALA record missing required fields: ' + missing.join(', '));\n}\n\nconst cleanText = record['Raw Tex'].replace(/^[\\[\\d[\\u2605*]?\\]\\s*]*/,'').trim();\n\nreturn [{ json: {\n  ala_record_id: record.Id,\n  ala_run_id: record['Run ID'],\n  prior_run_id: $('Step 1 - Payload Validation').first().json.prior_run_id,\n  lang: $('Step 1 - Payload Validation').first().json.lang || record['lang'] || null,\n  client_id: $('Step 1 - Payload Validation').first().json.client_id || record['Client ID'] || null,\n  raw_text: record['Raw Tex'],\n  clean_text: cleanText,\n  star_rating: record['Star Rating'] || null,\n  platform: record['Platform'],\n  review_date: record['Date'],\n  ala_pain_domain: record['Pain Point Domain'],\n  ala_prelim_emotion: record['Preliminary Emotion Tag'],\n  ala_keywords: record['Keywords'],\n  reviewer_handle: record['Reviewer Handle']\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        256
+      ],
+      "id": "7ecee616-33ef-4cd5-9896-f24cd2cb68dd",
+      "name": "Step 3b - ALA Validation"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"EIP Status\": \"Processing\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1328,
+        384
+      ],
+      "id": "4754ae2b-830f-4e3e-8d74-69290d0ab22b",
+      "name": "Step 4 - Patch ALA Processing",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $workflow.staticData || {};\nconst inp = $input.first().json;\n\nconst base = {\n  ala_record_id: inp.Id,\n  ala_run_id: inp['Run ID'],\n  prior_run_id: $('Step 1 - Payload Validation').first().json.prior_run_id,\n  lang: inp.Lang || $('Step 1 - Payload Validation').first().json.lang || null,\n  client_id: $('Step 1 - Payload Validation').first().json.client_id || inp['Client ID'] || null,\n  raw_text: inp['Raw Tex'],\n  clean_text: inp['Raw Tex'],\n  star_rating: inp['Star Rating'] || null,\n  platform: inp['Platform'],\n  review_date: inp['Date'],\n  ala_pain_domain: inp['Pain Point Domain'],\n  ala_prelim_emotion: inp['Preliminary Emotion Tag'],\n  ala_keywords: inp['Keywords'],\n  reviewer_handle: inp['Reviewer Handle'],\n  dict_status: (sd.emotion_dict_loaded && sd.pain_dict_loaded) ? 'from_cache' : 'needs_load'\n};\n\nreturn [{ json: base }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        528
+      ],
+      "id": "9d6af65d-509f-4db8-abe9-d31306029cdb",
+      "name": "Step 5 - Dictionary Load Check"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mrrscb955j1d2i7",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\"limit\": \"200\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1904,
+        528
+      ],
+      "id": "cb7f2016-1e1d-4452-8b3b-c32c00761066",
+      "name": "Step 5 - INIT 1 Emotion Dict GET",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const emotionData = $input.first().json;\nconst emotions = emotionData.list || [];\n\nif (emotions.length === 0) {\n  throw new Error('Emotion Dictionary returned empty.');\n}\n\nconst emotion_dictionary_text = emotions.map(e => {\n  let entry = `${e['Core Emotion']}\\n`;\n  entry += `  Definition: ${e['Definition'] || ''}\\n`;\n  entry += `  Synonyms: ${e['Synonyms'] || ''}\\n`;\n  entry += `  Masked Forms: ${e['Masked Forms'] || ''}\\n`;\n  entry += `  Common Expressions: ${e['Common Expressions'] || ''}\\n`;\n  entry += `  Need State: ${e['Need_State'] || ''}\\n`;\n  entry += `  Negative Cognitive Driver: ${e['Negative Cognitive Driver'] || ''}`;\n  if (e['Ambiguity Triggers']) {\n    entry += `\\n  Ambiguity Triggers: ${e['Ambiguity Triggers']}`;\n  }\n  return entry;\n}).join('\\n\\n');\n\nconst inp = $('Step 5 - Dictionary Load Check').first().json;\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_pain_domain: inp.ala_pain_domain,\n  ala_prelim_emotion: inp.ala_prelim_emotion,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: emotion_dictionary_text,\n  dict_status: 'emotion_cached'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        528
+      ],
+      "id": "60466d5e-34ec-4cc6-91a1-f6249c6f2f7a",
+      "name": "Step 5 - INIT 2 Emotion Dict Cache"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/meavqh37mdqgl4d",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\"limit\": \"400\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2256,
+        528
+      ],
+      "id": "b9d9d522-47b0-45af-b7bc-08f7392fc96f",
+      "name": "Step 5 - INIT 3 Pain Master GET",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const painData = $input.first().json;\nconst entries = painData.list || [];\n\nif (entries.length === 0) {\n  throw new Error('Pain Point Master returned empty.');\n}\n\nlet painLines = [];\nlet domainGroup = {};\nconst swMap = {};\n\nfor (const entry of entries) {\n  const domain = entry['Domain'];\n  const enrichedPP = entry['Enriched Pain Point'];\n  const sw = parseInt(entry['Signal Weight']);\n  if (enrichedPP && !isNaN(sw)) swMap[enrichedPP] = sw;\n  if (!domainGroup[domain]) domainGroup[domain] = [];\n\n  let block = `  ${enrichedPP}`;\n  if (entry['Description']) block += `\\n    Description: ${entry['Description']}`;\n  if (entry['Operational Signal']) block += `\\n    Operational Signal: ${entry['Operational Signal']}`;\n  if (entry['Emotional Signal']) block += `\\n    Emotional Signal: ${entry['Emotional Signal']}`;\n  if (entry['Sample User Expression']) block += `\\n    Sample Expression: ${entry['Sample User Expression']}`;\n\n  domainGroup[domain].push(block);\n}\n\nfor (const [domain, lines] of Object.entries(domainGroup)) {\n  painLines.push(domain + ':');\n  for (const line of lines) painLines.push(line);\n}\n\nconst pain_point_master_text = painLines.join('\\n\\n');\n\nconst inp = $('Step 5 - INIT 2 Emotion Dict Cache').first().json;\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_pain_domain: inp.ala_pain_domain,\n  ala_prelim_emotion: inp.ala_prelim_emotion,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: pain_point_master_text,\n  signal_weight_map: JSON.stringify(swMap),\n  dict_status: 'both_cached'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        528
+      ],
+      "id": "93ad9e7e-d48d-465d-88e7-39eb38e7e5bc",
+      "name": "Step 5 - INIT 4 Pain Master Cache"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3dc75632-e6c1-4bd7-b75a-4ab8850ffd33",
+              "name": "gpt_system_prompt",
+              "value": "=You are an emotional intelligence classifier for hospitality customer reviews.\nYour task: classify the review below into two structured JSON blocks — emotion and pain.\n\nOUTPUT FORMAT — return JSON only, no preamble, no markdown:\n{\n  \"emotion\": {\n    \"core_emotion\": \"<canonical name from Emotion Dictionary>\",\n    \"enriched_emotion_tag\": \"<2-4 word precise label>\",\n    \"emotion_category\": \"<parent category>\",\n    \"intensity_level\": \"<Low|Moderate|High|Critical>\",\n    \"dominant_pole\": \"<Positive|Negative|Mixed>\",\n    \"polarity_balance\": <0.0-1.0>,\n    \"certainty_score\": <0.0-1.0>,\n    \"masked_emotion_flag\": <true|false>,\n    \"cognitive_driver\": \"<violated belief or expectation>\",\n    \"need_state\": \"<Safety|Belonging|Autonomy|Competence|Fairness|Recognition>\",\n    \"emotion_hypothesis\": \"<one sentence>\"\n  },\n  \"pain\": {\n    \"pain_point_domain_confirmed\": \"<exact domain name from Pain Point Master>\",\n    \"pain_point_sub_category\": \"<exact Enriched Pain Point text from Pain Point Master>\",\n    \"enriched_pain_point\": \"<2-5 word precise pain description>\",\n    \"pain_hypothesis\": \"<one sentence>\"\n  }\n}\n\nALA SEED FIELDS — CONTEXT ONLY:\nThe user message contains two ALA seed fields: ALA Pain Domain and ALA Preliminary Emotion.\nThese are directional hints from a prior lightweight agent. They are NOT authoritative classifications.\nYour classification must come from the canonical dictionaries above.\nDo NOT adopt ALA labels as your output unless they match a dictionary entry exactly.\nIf ALA labels are absent or wrong, ignore them and classify from the review text.\n\nLANGUAGE INSTRUCTION:\nIf lang=es is present in the user message, output all text fields in Spanish.\nMatch Pain Point sub-category names cross-lingually to Pain Point Master v4.1 vocabulary.",
+              "type": "string"
+            },
+            {
+              "id": "3627ceac-2f48-4b0c-b149-ce8c7a0a92d3",
+              "name": "gpt_user_prompt",
+              "value": "=={{ 'Review Text: ' + $json.clean_text + '\\nPlatform: ' + $json.platform + '\\nStar Rating: ' + ($json.star_rating || 'not provided') + '\\nALA Pain Domain (context only): ' + ($json.ala_pain_domain || 'unknown') + '\\nALA Preliminary Emotion (context only): ' + ($json.ala_prelim_emotion || 'unknown') + ($json.lang ? '\\nlang: ' + $json.lang : '') + '\\n\\nClassify this review. Return JSON only.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2624,
+        720
+      ],
+      "id": "1861e120-618a-4d6a-894d-a30f67609047",
+      "name": "Step 6 - Build GPT Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst fullSystemPrompt = inp.gpt_system_prompt +\n  '\\n\\nEMOTION DICTIONARY (use ONLY these canonical emotion names):\\n' +\n  (inp.emotion_dictionary_text || 'NOT LOADED') +\n  '\\n\\nPAIN POINT MASTER (use ONLY these exact domain and enriched pain point names):\\n' +\n  (inp.pain_point_master_text || 'NOT LOADED');\n\nconst body = JSON.stringify({\n  model: 'gpt-5.2',\n  temperature: 0.2,\n  max_completion_tokens: 600,\n  response_format: { type: 'json_object' },\n  messages: [\n    { role: 'system', content: fullSystemPrompt },\n    { role: 'user', content: inp.gpt_user_prompt }\n  ]\n});\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_pain_domain: inp.ala_pain_domain,\n  ala_prelim_emotion: inp.ala_prelim_emotion,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: inp.pain_point_master_text,\n  signal_weight_map: inp.signal_weight_map,\n  gpt_request_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        720
+      ],
+      "id": "c3f878e0-a828-4fd1-be54-5ab95e53a5a9",
+      "name": "Step 7 - Build GPT Request Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.gpt_request_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2976,
+        720
+      ],
+      "id": "655d9dd5-f197-4233-9f83-aa331a13ab5a",
+      "name": "Step 8 - GPT Classification Call",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CvKoGOVG2ynbMugt",
+          "name": "Authorization"
+        },
+        "httpBearerAuth": {
+          "id": "T49GXkj8KTfkBfgD",
+          "name": "OpenAIToken"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.choices?.[0]?.message?.content;\nif (!raw) throw new Error('GPT returned empty response content.');\n\nlet parsed;\ntry { parsed = JSON.parse(raw); } \ncatch(e) { throw new Error('GPT invalid JSON: ' + raw.substring(0,300)); }\n\nif (!parsed.emotion || typeof parsed.emotion !== 'object') throw new Error('Missing emotion block.');\nif (!parsed.pain || typeof parsed.pain !== 'object') throw new Error('Missing pain block.');\n\nconst e = parsed.emotion;\nconst p = parsed.pain;\n\nconst reqEm = ['core_emotion','enriched_emotion_tag','emotion_category','intensity_level',\n               'dominant_pole','cognitive_driver','need_state','emotion_hypothesis'];\nfor (const f of reqEm) {\n  if (!e[f] || typeof e[f] !== 'string') throw new Error('Emotion block missing: ' + f);\n}\n\nconst validIntensity = ['Low','Moderate','High','Critical'];\nif (!validIntensity.includes(e.intensity_level)) throw new Error('Invalid intensity_level: ' + e.intensity_level);\n\nconst validPole = ['Positive','Negative','Mixed'];\nif (!validPole.includes(e.dominant_pole)) throw new Error('Invalid dominant_pole: ' + e.dominant_pole);\n\nlet polarity = parseFloat(e.polarity_balance);\nif (isNaN(polarity)) polarity = 0.5;\npolarity = Math.min(1, Math.max(0, polarity));\n\nlet certainty = parseFloat(e.certainty_score);\nif (isNaN(certainty)) certainty = 0.50;\ncertainty = Math.min(1, Math.max(0, certainty));\n\nconst masked = (e.masked_emotion_flag === true || e.masked_emotion_flag === 'true' || e.masked_emotion_flag === 1);\n\nif (/[0-9\\[\\]\\{\\}]/.test(e.enriched_emotion_tag)) certainty = Math.min(certainty, 0.40);\n\nconst validDomains = ['Service Quality & Delivery','Trust, Dignity & Belonging',\n  'Operational Failures','Expectation vs. Reality','Special Occasion & Personalization',\n  'Staff Behavior & Interaction','Physical Environment & Ambiance','Booking & Reservation Experience',\n  'Food & Beverage Quality','Value & Pricing Perception','Accessibility & Inclusion',\n  'Safety & Security','Digital Experience & Technology'];\nif (!validDomains.includes(p.pain_point_domain_confirmed))\n  throw new Error('Invalid pain domain: ' + p.pain_point_domain_confirmed);\n\nconst reqPain = ['pain_point_sub_category','enriched_pain_point','pain_hypothesis'];\nfor (const f of reqPain) {\n  if (!p[f] || typeof p[f] !== 'string') throw new Error('Pain block missing: ' + f);\n}\n\nconst inp = $('Step 7 - Build GPT Request Body').first().json;\nconst swMap = JSON.parse(inp.signal_weight_map || '{}');\nconst signal_weight = swMap[p.pain_point_sub_category] || null;\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_pain_domain: inp.ala_pain_domain,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: inp.pain_point_master_text,\n  signal_weight_map: inp.signal_weight_map,\n  core_emotion: e.core_emotion.trim(),\n  enriched_emotion_tag: e.enriched_emotion_tag.trim(),\n  emotion_category: e.emotion_category.trim(),\n  intensity_level: e.intensity_level,\n  polarity_balance: polarity,\n  dominant_pole: e.dominant_pole,\n  certainty_score: certainty,\n  masked_emotion_flag: masked,\n  cognitive_driver: e.cognitive_driver.trim(),\n  need_state: e.need_state.trim(),\n  emotion_hypothesis: e.emotion_hypothesis.trim(),\n  pain_point_domain_confirmed: p.pain_point_domain_confirmed,\n  pain_point_sub_category: p.pain_point_sub_category.trim(),\n  enriched_pain_point: p.enriched_pain_point.trim(),\n  pain_hypothesis: p.pain_hypothesis.trim(),\n  signal_weight: signal_weight\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        720
+      ],
+      "id": "24740435-a47d-43be-ae67-ef93466e094e",
+      "name": "Step 9 - Output Parsing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst now = new Date();\nconst pad = (n, l=2) => String(n).padStart(l, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst ms = pad(now.getMilliseconds(), 3);\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: inp.ambiguity_flag,\n  below_certainty_threshold: inp.below_certainty_threshold,\n  eip_run_id: `EIP-${d}-${t}-${ms}`,\n  eip_timestamp: now.toISOString()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3856,
+        896
+      ],
+      "id": "41aaef5e-a81d-45e2-93a6-de03b00afd28",
+      "name": "STEP 13 — RUN ID + TIMESTAMP"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.nocodb_post_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4208,
+        896
+      ],
+      "id": "6c9e6185-e9bc-463c-900b-9c06af5879b9",
+      "name": "STEP 15 — NOCODB POST — WRITE EIP RECORD",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst THRESHOLD = 0.65;\n\nconst ambiguity_flag = inp.certainty_score < THRESHOLD || inp.masked_emotion_flag === true;\nconst below_certainty_threshold = inp.certainty_score < THRESHOLD;\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: ambiguity_flag,\n  below_certainty_threshold: below_certainty_threshold\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        896
+      ],
+      "id": "e9cf3e9c-9d2a-40e4-a269-9a6b1bdd7c2f",
+      "name": "Step 12 - Ambiguity Flag"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst eip_record_id = inp.Id || inp.id;\nif (!eip_record_id) throw new Error('NocoDB POST did not return record Id. Response: ' + JSON.stringify(inp).substring(0,200));\nreturn [{ json: {\n  eip_record_id: eip_record_id,\n  ala_record_id: $('Step 14 - Build NocoDB Body').first().json.ala_record_id,\n  ala_run_id: $('Step 14 - Build NocoDB Body').first().json.ala_run_id,\n  prior_run_id: $('Step 14 - Build NocoDB Body').first().json.prior_run_id,\n  lang: $('Step 14 - Build NocoDB Body').first().json.lang,\n  client_id: $('Step 14 - Build NocoDB Body').first().json.client_id,\n  raw_text: $('Step 14 - Build NocoDB Body').first().json.raw_text,\n  review_date: $('Step 14 - Build NocoDB Body').first().json.review_date,\n  platform: $('Step 14 - Build NocoDB Body').first().json.platform,\n  star_rating: $('Step 14 - Build NocoDB Body').first().json.star_rating,\n  ala_keywords: $('Step 14 - Build NocoDB Body').first().json.ala_keywords,\n  reviewer_handle: $('Step 14 - Build NocoDB Body').first().json.reviewer_handle,\n  eip_run_id: $('Step 14 - Build NocoDB Body').first().json.eip_run_id,\n  enriched_emotion_tag: $('Step 14 - Build NocoDB Body').first().json.enriched_emotion_tag,\n  core_emotion: $('Step 14 - Build NocoDB Body').first().json.core_emotion,\n  intensity_level: $('Step 14 - Build NocoDB Body').first().json.intensity_level,\n  polarity_balance: $('Step 14 - Build NocoDB Body').first().json.polarity_balance,\n  dominant_pole: $('Step 14 - Build NocoDB Body').first().json.dominant_pole,\n  certainty_score: $('Step 14 - Build NocoDB Body').first().json.certainty_score,\n  ambiguity_flag: $('Step 14 - Build NocoDB Body').first().json.ambiguity_flag,\n  collapse_flag: $('Step 14 - Build NocoDB Body').first().json.collapse_flag,\n  masked_emotion_flag: $('Step 14 - Build NocoDB Body').first().json.masked_emotion_flag,\n  cognitive_driver: $('Step 14 - Build NocoDB Body').first().json.cognitive_driver,\n  need_state: $('Step 14 - Build NocoDB Body').first().json.need_state,\n  signal_type: $('Step 14 - Build NocoDB Body').first().json.signal_type,\n  signal_weight: $('Step 14 - Build NocoDB Body').first().json.signal_weight,\n  emotion_hypothesis: $('Step 14 - Build NocoDB Body').first().json.emotion_hypothesis,\n  pain_point_domain_confirmed: $('Step 14 - Build NocoDB Body').first().json.pain_point_domain_confirmed,\n  pain_point_sub_category: $('Step 14 - Build NocoDB Body').first().json.pain_point_sub_category,\n  pain_hypothesis: $('Step 14 - Build NocoDB Body').first().json.pain_hypothesis\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4416,
+        896
+      ],
+      "id": "1eb6e8a2-afe9-4fea-b35d-db45c2ff138d",
+      "name": "Step 16 - Capture EIP Record ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst body = JSON.stringify({\n  \"EIP Run ID\":          inp.eip_run_id,\n  \"ALA Record ID\":       inp.ala_record_id,\n  \"EIP Timestamp\":       inp.eip_timestamp,\n  \"Enriched Emotion Tag\": inp.core_emotion,\n  \"Enriched Pain Point\": inp.pain_point_sub_category,\n  \"Domain\":              inp.pain_point_domain_confirmed,\n  \"Intensity Level\":     inp.intensity_level,\n  \"Polarity Balance\":    inp.polarity_balance,\n  \"Dominant Pole\":       inp.dominant_pole,\n  \"Certainty Score\":     inp.certainty_score,\n  \"Ambiguity Flag\":      inp.ambiguity_flag,\n  \"Collapse flag\":       inp.collapse_flag,\n  \"Masked Emotion Flag\": inp.masked_emotion_flag,\n  \"Cognitive Driver\":    inp.cognitive_driver,\n  \"Need State\":          inp.need_state,\n  \"Signal Type\":         inp.signal_type,\n  \"Emotion Hypothesis\":  inp.emotion_hypothesis,\n  \"Pain Hypothesis\":     inp.pain_hypothesis,\n  \"Keywords\":            inp.ala_keywords,\n  \"Signal Weight\":       inp.signal_weight,\n  \"Client ID\":           inp.client_id,\n  \"ESS Status\":          \"Pending\",\n  \"Error Log\":           null\n});\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: inp.ambiguity_flag,\n  eip_run_id: inp.eip_run_id,\n  eip_timestamp: inp.eip_timestamp,\n  nocodb_post_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        896
+      ],
+      "id": "964ccc17-eaad-4f7a-b50d-4609ecb34dfa",
+      "name": "Step 14 - Build NocoDB Body"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"EIP Status\": \"Complete\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4864,
+        896
+      ],
+      "id": "9d66b208-dde6-4230-84fb-50b32bb71a57",
+      "name": "Step 17 - Patch ALA Complete",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  eip_run_id: inp.eip_run_id,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  collapse_flag: inp.collapse_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_hypothesis: inp.pain_hypothesis,\n  ala_patch_body: JSON.stringify({\"EIP Status\": \"Complete\"})\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4656,
+        896
+      ],
+      "id": "e9cbdccf-ca48-4328-bb02-18af7f355d46",
+      "name": "Step 17a - Build Patch Body"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $('Step 16 - Capture EIP Record ID').first().json;\n\nconst essPayload = {\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.eip_run_id,\n  prior_table: 'EIP',\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  core_emotion: inp.core_emotion,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  ambiguity_flag: inp.ambiguity_flag,\n  collapse_flag: inp.collapse_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  signal_type: inp.signal_type,\n  signal_weight: inp.signal_weight,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_hypothesis: inp.pain_hypothesis,\n  reviewer_handle: inp.reviewer_handle,\n  review_date: inp.review_date,\n  platform: inp.platform,\n  star_rating: inp.star_rating,\n  keywords: inp.ala_keywords,\n  lang: inp.lang,\n  client_id: inp.client_id,\n};\n\nreturn [{ json: { ess_trigger_body: essPayload } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5072,
+        896
+      ],
+      "id": "d1d69502-445b-4bc8-9e7c-5e64aa96dedd",
+      "name": "Step 18a - Build ESS Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://161.35.133.49:5678/webhook/scx-ess",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.ess_trigger_body}}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5280,
+        896
+      ],
+      "id": "52544f17-9f35-4287-857a-890ad4335b4a",
+      "name": "Step 18 - ESS Trigger"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={\n  \"where\": \"(Id,eq,{{$json.ala_record_id}})\",\n  \"limit\": \"1\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        944,
+        256
+      ],
+      "id": "42d3a490-dc52-4493-a88c-a6ceada14bd8",
+      "name": "Step 3 - Fetch ALA Record",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst pole = inp.dominant_pole;\nconst category = inp.emotion_category || '';\nconst masked = inp.masked_emotion_flag;\nconst certainty = inp.certainty_score;\nlet signal_type;\nif (pole === 'Positive') {\n  signal_type = 'Positive Signal';\n} else if (pole === 'Negative') {\n  if (masked) signal_type = 'Masked Negative Signal';\n  else if (certainty < 0.65) signal_type = 'Ambiguous Negative Signal';\n  else if (category.includes('Relational') || category.includes('Identity') ||\n           category.includes('Dignity') || category.includes('Trust')) {\n    signal_type = 'Dignity-Risk Signal';\n  } else signal_type = 'Negative Signal';\n} else {\n  signal_type = 'Mixed Signal';\n}\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id:inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: inp.pain_point_master_text,\n  signal_weight_map: inp.signal_weight_map,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: signal_type\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        720
+      ],
+      "id": "c5a2ab21-2fc0-464d-87da-9222442d213c",
+      "name": "Step 10 - Signal Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: false,\n  collapse_warning: null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3504,
+        896
+      ],
+      "id": "74942b34-79eb-4847-9fa6-1f83e79c2b80",
+      "name": "STEP 11 — SEMANTIC COLLAPSE DETECTION"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Step 1 - Payload Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1 - Payload Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Idempotency Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Idempotency Check": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Idempotency IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Idempotency IF": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Skip Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 2 - False Branch Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - False Branch Gate": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Fetch ALA Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3b - ALA Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 4 - Patch ALA Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4 - Patch ALA Processing": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - Dictionary Load Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - Dictionary Load Check": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - INIT 1 Emotion Dict GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - INIT 1 Emotion Dict GET": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - INIT 2 Emotion Dict Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - INIT 2 Emotion Dict Cache": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - INIT 3 Pain Master GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - INIT 3 Pain Master GET": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - INIT 4 Pain Master Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - INIT 4 Pain Master Cache": {
+      "main": [
+        [
+          {
+            "node": "Step 6 - Build GPT Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6 - Build GPT Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 7 - Build GPT Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7 - Build GPT Request Body": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - GPT Classification Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - GPT Classification Call": {
+      "main": [
+        [
+          {
+            "node": "Step 9 - Output Parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Output Parsing": {
+      "main": [
+        [
+          {
+            "node": "Step 10 - Signal Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STEP 13 — RUN ID + TIMESTAMP": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - Build NocoDB Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STEP 15 — NOCODB POST — WRITE EIP RECORD": {
+      "main": [
+        [
+          {
+            "node": "Step 16 - Capture EIP Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Ambiguity Flag": {
+      "main": [
+        [
+          {
+            "node": "STEP 13 — RUN ID + TIMESTAMP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 16 - Capture EIP Record ID": {
+      "main": [
+        [
+          {
+            "node": "Step 17a - Build Patch Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 14 - Build NocoDB Body": {
+      "main": [
+        [
+          {
+            "node": "STEP 15 — NOCODB POST — WRITE EIP RECORD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 17 - Patch ALA Complete": {
+      "main": [
+        [
+          {
+            "node": "Step 18a - Build ESS Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 17a - Build Patch Body": {
+      "main": [
+        [
+          {
+            "node": "Step 17 - Patch ALA Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 18a - Build ESS Payload": {
+      "main": [
+        [
+          {
+            "node": "Step 18 - ESS Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Fetch ALA Record": {
+      "main": [
+        [
+          {
+            "node": "Step 3b - ALA Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10 - Signal Type": {
+      "main": [
+        [
+          {
+            "node": "STEP 11 — SEMANTIC COLLAPSE DETECTION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STEP 11 — SEMANTIC COLLAPSE DETECTION": {
+      "main": [
+        [
+          {
+            "node": "Step 12 - Ambiguity Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "161.35.133.49:5678",
+          "user-agent": "curl/8.7.1",
+          "accept": "*/*",
+          "content-type": "application/json",
+          "content-length": "102"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "ala_record_id": 3614,
+          "prior_run_id": "ALA-20260324-195653-017",
+          "prior_table": "ALA",
+          "lang": "en"
+        },
+        "webhookUrl": "http://161.35.133.49:5678/webhook/scx-eip",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
