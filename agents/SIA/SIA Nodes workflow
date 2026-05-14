@@ -1,0 +1,561 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12a0b364-fe00-4a03-a8b0-dc1706c35170",
+              "name": "window_type",
+              "value": "weekly",
+              "type": "string"
+            },
+            {
+              "id": "1b190b4e-023e-4abc-883e-4845ef416bb3",
+              "name": "window_days",
+              "value": 7,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        0
+      ],
+      "id": "f101648b-056e-4e49-b731-0b217b60d1e6",
+      "name": "Step 2b - Set Weekly Window"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6815fee1-d2a1-4092-946b-718eefda0ce8",
+              "name": "window_type",
+              "value": "monthly",
+              "type": "string"
+            },
+            {
+              "id": "198555bd-a659-4eab-9938-c89e15959889",
+              "name": "window_days",
+              "value": 30,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        176
+      ],
+      "id": "ee0a61a4-94cb-43bd-8208-b1258b99165d",
+      "name": "Step 2c - Set Monthly Window"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        -176
+      ],
+      "id": "e70fa289-f3c2-4737-8e84-6428625f5591",
+      "name": "Step 1a - Schedule Trigger Daily"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c3b0f62-35c3-4953-a8d4-8ae5b0072202",
+              "name": "window_type",
+              "value": "daily",
+              "type": "string"
+            },
+            {
+              "id": "98eb2520-8429-441e-bd58-a23e8f98ea0a",
+              "name": "window_days",
+              "value": 2,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        -176
+      ],
+      "id": "b589d125-bc23-4834-a70e-b8342f9cca18",
+      "name": "Step 2a - Set  Daily Window"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        176
+      ],
+      "id": "e9172274-9375-4339-8220-0d054a909135",
+      "name": "Step 1c - Schedule Trigger Monthly"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        0
+      ],
+      "id": "229ce6db-0df3-42cd-9d86-47aa7f16a14a",
+      "name": "Step 1b - Schedule Trigger Weekly"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst now = new Date();\nconst window_type = inp.window_type || 'monthly';\nconst window_days = inp.window_days || 30;\n\nlet windowStart;\nlet windowEnd;\n\nif (window_type === 'weekly') {\n  // Calculate previous complete week (Monday-Sunday)\n  const currentDay = now.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday\n  \n  // If today is Monday, go back to previous Sunday 23:59:59\n  // If today is any other day, calculate back to most recent Sunday 23:59:59\n  let daysToLastSunday;\n  if (currentDay === 0) {\n    daysToLastSunday = 0; // Today is Sunday\n  } else if (currentDay === 1) {\n    daysToLastSunday = 1; // Today is Monday, go back 1 day to Sunday\n  } else {\n    daysToLastSunday = currentDay; // Go back to most recent Sunday\n  }\n  \n  // Last Sunday 23:59:59.999 UTC\n  const lastSunday = new Date(now.getTime() - daysToLastSunday * 86400000);\n  lastSunday.setUTCHours(23, 59, 59, 999);\n  windowEnd = lastSunday.toISOString();\n  \n  // Previous Monday 00:00:00.000 UTC (6 days before last Sunday)\n  const previousMonday = new Date(lastSunday.getTime() - 6 * 86400000);\n  previousMonday.setUTCHours(0, 0, 0, 0);\n  windowStart = previousMonday.toISOString();\n} else {\n  // Daily and Monthly use rolling window (unchanged)\n  windowEnd = now.toISOString();\n  windowStart = new Date(now.getTime() - window_days * 86400000).toISOString();\n}\n\nconst pad = (n, l=2) => String(n).padStart(l, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\n\nreturn [{ json: {\n  window_type: window_type,\n  window_days: window_days,\n  window_start: windowStart,\n  window_end: windowEnd,\n  trend_threshold: 0.20,\n  min_cluster_size: 2,\n  sia_run_id: `SIA-${d}-${t}`,\n  run_timestamp: now.toISOString()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -16
+      ],
+      "id": "441d6264-6dc8-4ca9-ac9b-3f4178d8dbad",
+      "name": "Step 3 - Set Window Parameters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nreturn [{ json: {\n  window_type: inp.window_type,\n  window_days: inp.window_days,\n  window_start: inp.window_start,\n  window_end: inp.window_end,\n  trend_threshold: inp.trend_threshold,\n  min_cluster_size: inp.min_cluster_size,\n  sia_run_id: inp.sia_run_id,\n  run_timestamp: inp.run_timestamp\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -16
+      ],
+      "id": "a7322a80-424a-4482-9d93-251a2e929ac7",
+      "name": "Step 4 - Set Window Bounds"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?limit=1000&sort=Date",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -144,
+        368
+      ],
+      "id": "04f47c33-2154-42ee-81d9-ff9e81e2abcc",
+      "name": "Step 5 - Fetch ALL ALA Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst allAla = response.list || [];\nconst s4 = $('Step 4 - Set Window Bounds').first().json;\n\nconst periodStartTs = new Date(s4.window_start).getTime();\nconst periodEndTs = new Date(s4.window_end).getTime();\n\nconst filteredAla = [];\nconst alaIdList = [];\nconst alaClientMap = {};\n\nfor (let i = 0; i < allAla.length; i++) {\n  const rec = allAla[i];\n  const raw = rec['Date'] || '';\n  \n  if (raw.length > 0) {\n    const parts = raw.split('/');\n    if (parts.length === 3) {\n      const month = parseInt(parts[0]);\n      const day = parseInt(parts[1]);\n      const year = 2000 + parseInt(parts[2]);\n      const ts = new Date(year, month - 1, day).getTime();\n      \n      if (ts >= periodStartTs && ts < periodEndTs) {\n        filteredAla.push(rec);\n        const alaId = rec['Id'];\n        alaIdList.push(alaId);\n        alaClientMap[alaId] = rec['Client ID'] || 'UNKNOWN';\n      }\n    }\n  }\n}\n\nreturn [{ json: {\n  window_type: s4.window_type,\n  window_days: s4.window_days,\n  window_start: s4.window_start,\n  window_end: s4.window_end,\n  trend_threshold: s4.trend_threshold,\n  min_cluster_size: s4.min_cluster_size,\n  sia_run_id: s4.sia_run_id,\n  run_timestamp: s4.run_timestamp,\n  filtered_ala_records: filteredAla,\n  ala_id_list: alaIdList,\n  ala_client_map: alaClientMap,\n  ala_count: filteredAla.length,\n  empty_run: filteredAla.length === 0\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        368
+      ],
+      "id": "f2e9d136-dedd-4c33-84a3-fae33acbf143",
+      "name": "Step 6 - Filter ALA by Date"
+    },
+    {
+      "parameters": {
+        "jsCode": "const eipResponse = $input.first().json;\nconst allEip = eipResponse.list || [];\nconst s6 = $('Step 6 - Filter ALA by Date').first().json;\n\nconst alaIdList = s6.ala_id_list;\nconst alaClientMap = s6.ala_client_map;\n\nconst alaIdSet = {};\nfor (let i = 0; i < alaIdList.length; i++) {\n  alaIdSet[alaIdList[i]] = true;\n}\n\nconst filteredEip = [];\nfor (let i = 0; i < allEip.length; i++) {\n  const rec = allEip[i];\n  const alaId = rec['ALA Record ID'];\n  if (alaIdSet[alaId]) {\n    rec.client_id = alaClientMap[alaId];\n    filteredEip.push(rec);\n  }\n}\n\nreturn [{ json: {\n  window_type: s6.window_type,\n  window_days: s6.window_days,\n  window_start: s6.window_start,\n  window_end: s6.window_end,\n  trend_threshold: s6.trend_threshold,\n  min_cluster_size: s6.min_cluster_size,\n  sia_run_id: s6.sia_run_id,\n  run_timestamp: s6.run_timestamp,\n  eip_records: filteredEip,\n  total_records: filteredEip.length,\n  empty_run: filteredEip.length === 0\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        368
+      ],
+      "id": "d596994e-ffe5-48eb-81e6-1b2cea63e63b",
+      "name": "Step 8 - Filter EIP by ALA Match"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy?where=(ESS%20Status,eq,Complete)&limit=1000",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"where\": \"(ESS Status,eq,Complete)\",\n  \"limit\": \"1000\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        272,
+        368
+      ],
+      "id": "8be3e6cf-d201-448a-ad7f-11591a69d2c7",
+      "name": "Step 7 - Fetch ALL EIP Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mdn68l4lm609fve",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={\n  \"where\": \"(Report Window Type,eq,{{$json.window_type}})\",\n  \"limit\": \"1000\",\n  \"sort\": \"-Run Timestamp\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        608,
+        -16
+      ],
+      "id": "02453553-2e05-445b-83b3-a53dfb66d432",
+      "name": "Step 9 - Load Prior SIA Clusters",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst priorClusters = response.list || [];\nconst s8 = $('Step 8 - Filter EIP by ALA Match').first().json;\n\nconst priorNByKey = {};\nfor (let i = 0; i < priorClusters.length; i++) {\n  const pc = priorClusters[i];\n  const key = (pc['Client ID'] || 'UNKNOWN') + '||' + pc['Domain'] + '||' + pc['Signal Tier'];\n  if (!priorNByKey[key]) {\n    priorNByKey[key] = parseInt(pc['N'] || 0);\n  }\n}\n\nreturn [{ json: {\n  window_type: s8.window_type,\n  window_days: s8.window_days,\n  window_start: s8.window_start,\n  window_end: s8.window_end,\n  trend_threshold: s8.trend_threshold,\n  min_cluster_size: s8.min_cluster_size,\n  sia_run_id: s8.sia_run_id,\n  run_timestamp: s8.run_timestamp,\n  eip_records: s8.eip_records,\n  total_records: s8.total_records,\n  empty_run: s8.empty_run,\n  prior_n_map: priorNByKey,\n  has_prior_run: priorClusters.length > 0\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -16
+      ],
+      "id": "05897fbb-1373-4fc7-89b0-a060738f45aa",
+      "name": "Step 10 - Build Prior N Map"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst eip_records = inp.eip_records;\nconst prior_n_map = inp.prior_n_map;\nconst has_prior_run = inp.has_prior_run;\nconst trend_threshold = inp.trend_threshold;\nconst min_cluster_size = inp.min_cluster_size;\n\nfunction getSignalTier(signal_type) {\n  if (['Dignity-Risk Signal','Negative Signal','Masked Negative Signal'].includes(signal_type))\n    return 'T-NEGATIVE';\n  if (['Ambiguous Negative Signal','Mixed Signal'].includes(signal_type))\n    return 'T-AMBIGUOUS';\n  return 'T-POSITIVE';\n}\n\nconst tierOrder = {};\ntierOrder['T-NEGATIVE'] = 0;\ntierOrder['T-AMBIGUOUS'] = 1;\ntierOrder['T-POSITIVE'] = 2;\n\nconst clusterMap = {};\n\nfor (let i = 0; i < eip_records.length; i++) {\n  const rec = eip_records[i];\n  const domain = rec['Domain'] || 'Unknown';\n  const tier = getSignalTier(rec['Signal Type'] || '');\n  const key = domain + '||' + tier;\n  if (!clusterMap[key]) {\n    clusterMap[key] = {};\n    clusterMap[key].domain = domain;\n    clusterMap[key].signal_tier = tier;\n    clusterMap[key].n = 0;\n    clusterMap[key].pain_points = {};\n    clusterMap[key].emotions = {};\n    clusterMap[key].client_id = rec.client_id || 'UNKNOWN';\n  }\n  const cl = clusterMap[key];\n  cl.n++;\n  const pp = rec['Enriched Pain Point'] || 'Unknown';\n  cl.pain_points[pp] = (cl.pain_points[pp] || 0) + 1;\n  const em = rec['Enriched Emotion Tag'] || 'Unknown';\n  cl.emotions[em] = (cl.emotions[em] || 0) + 1;\n}\n\nconst clusters = [];\nconst clusterKeys = Object.keys(clusterMap);\n\nfor (let j = 0; j < clusterKeys.length; j++) {\n  const key = clusterKeys[j];\n  const cl = clusterMap[key];\n  const clusterKey = cl.client_id + '||' + cl.domain + '||' + cl.signal_tier;\nconst priorN = prior_n_map[clusterKey];\n  let trend_direction = 'New';\n  let prior_n = null;\n  let n_delta = null;\n  if (has_prior_run && priorN !== undefined) {\n    prior_n = priorN;\n    n_delta = cl.n - priorN;\n    const pct = priorN > 0 ? Math.abs(n_delta) / priorN : 1;\n    trend_direction = pct <= trend_threshold ? 'Stable' : n_delta > 0 ? 'Growing' : 'Declining';\n  }\n  const ppEntries = Object.keys(cl.pain_points).map(k => ({ k: k, v: cl.pain_points[k] }));\n  ppEntries.sort((a,b) => b.v - a.v);\n  const ppBreakdown = {};\n  for (let p = 0; p < ppEntries.length; p++) {\n    const e = ppEntries[p];\n    ppBreakdown[e.k] = e.v;\n  }\n  const emEntries = Object.keys(cl.emotions).map(k => ({ k: k, v: cl.emotions[k] }));\n  emEntries.sort((a,b) => b.v - a.v);\n  const emBreakdown = {};\n  for (let m = 0; m < emEntries.length; m++) {\n    const e = emEntries[m];\n    emBreakdown[e.k] = e.v;\n  }\n  const clusterItem = {};\n  clusterItem.client_id = cl.client_id;\n  clusterItem.domain = cl.domain;\n  clusterItem.signal_tier = cl.signal_tier;\n  clusterItem.n = cl.n;\n  clusterItem.prior_n = prior_n;\n  clusterItem.n_delta = n_delta;\n  clusterItem.trend_direction = trend_direction;\n  clusterItem.enriched_pain_point_breakdown = JSON.stringify(ppBreakdown);\n  clusterItem.enriched_emotion_breakdown = JSON.stringify(emBreakdown);\n  clusterItem.is_singleton = cl.n < min_cluster_size;\n  clusterItem.tier_order = tierOrder[cl.signal_tier];\n  clusterItem.pct = 0;\n  clusters.push(clusterItem);\n}\n\nclusters.sort((a,b) => {\n  if (a.domain < b.domain) return -1;\n  if (a.domain > b.domain) return 1;\n  return a.tier_order - b.tier_order;\n});\n\nconst totalN = clusters.reduce((sum, c) => sum + c.n, 0);\nfor (let c = 0; c < clusters.length; c++) {\n  clusters[c].pct = totalN > 0 ? Math.round((clusters[c].n / totalN) * 10000) / 100 : 0;\n}\n\nlet tNeg = 0;\nlet tAmb = 0;\nlet tPos = 0;\nlet growing = 0;\nlet declining = 0;\nlet stable = 0;\nlet newC = 0;\nlet singletons = 0;\nlet active = 0;\n\nfor (let c = 0; c < clusters.length; c++) {\n  const cluster = clusters[c];\n  if (cluster.signal_tier === 'T-NEGATIVE') tNeg++;\n  else if (cluster.signal_tier === 'T-AMBIGUOUS') tAmb++;\n  else tPos++;\n  if (cluster.trend_direction === 'Growing') growing++;\n  else if (cluster.trend_direction === 'Declining') declining++;\n  else if (cluster.trend_direction === 'Stable') stable++;\n  else newC++;\n  if (cluster.is_singleton) singletons++;\n  else active++;\n}\n\nreturn [{ json: {\n  window_type: inp.window_type,\n  window_days: inp.window_days,\n  window_start: inp.window_start,\n  window_end: inp.window_end,\n  sia_run_id: inp.sia_run_id,\n  run_timestamp: inp.run_timestamp,\n  total_records: inp.total_records,\n  clusters: clusters,\n  cluster_count: clusters.length,\n  t_negative_count: tNeg,\n  t_ambiguous_count: tAmb,\n  t_positive_count: tPos,\n  growing: growing,\n  declining: declining,\n  stable: stable,\n  new_clusters: newC,\n  singletons: singletons,\n  active: active\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        -16
+      ],
+      "id": "faa7321b-d0cd-4d12-9511-38f481ac13ed",
+      "name": "Step 11 - Build Clusters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst clusters = inp.clusters || [];\nconst output = [];\n\nfor (let i = 0; i < clusters.length; i++) {\n  const cl = clusters[i];\n  const item = {};\n  item.client_id = cl.client_id;\n  item.domain = cl.domain;\n  item.signal_tier = cl.signal_tier;\n  item.n = cl.n;\n  item.prior_n = cl.prior_n;\n  item.n_delta = cl.n_delta;\n  item.trend_direction = cl.trend_direction;\n  item.enriched_pain_point_breakdown = cl.enriched_pain_point_breakdown;\n  item.enriched_emotion_breakdown = cl.enriched_emotion_breakdown;\n  item.is_singleton = cl.is_singleton;\n  item.pct = cl.pct;\n  item.window_type = inp.window_type;\n  item.sia_run_id = inp.sia_run_id;\n  item.run_timestamp = inp.run_timestamp;\n  item.window_days = inp.window_days;\n  item.total_records = inp.total_records;\n  item.cluster_count = inp.cluster_count;\n  item.t_negative_count = inp.t_negative_count;\n  item.t_ambiguous_count = inp.t_ambiguous_count;\n  item.t_positive_count = inp.t_positive_count;\n  item.growing = inp.growing;\n  item.declining = inp.declining;\n  item.stable = inp.stable;\n  item.new_clusters = inp.new_clusters;\n  item.singletons = inp.singletons;\n  item.active = inp.active;\n  output.push({ json: item });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        -16
+      ],
+      "id": "a901e1a0-7d96-473b-8282-e0c089152c3f",
+      "name": "Step 12 - Split Clusters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst records = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const cl = items[i].json;\n  const record = {};\n  record[\"Client ID\"] = cl.client_id;\n  record[\"SIA Run ID\"] = cl.sia_run_id;\n  record[\"Run Timestamp\"] = cl.run_timestamp;\n  record[\"Report Window Type\"] = cl.window_type;\n  record[\"Window Days\"] = cl.window_days;\n  record[\"Domain\"] = cl.domain;\n  record[\"Signal Tier\"] = cl.signal_tier;\n  record[\"N\"] = cl.n;\n  record[\"Prior N\"] = cl.prior_n;\n  record[\"N Delta\"] = cl.n_delta;\n  record[\"Trend Direction\"] = cl.trend_direction;\n  record[\"Enriched Pain Point Breakdown\"] = cl.enriched_pain_point_breakdown;\n  record[\"Enriched Emotion Breakdown\"] = cl.enriched_emotion_breakdown;\n  record[\"Is Singleton\"] = cl.is_singleton;\n  record[\"Percentage\"] = cl.pct;\n  records.push(record);\n}\n\nconst firstItem = $input.first().json;\n\nreturn [{ json: {\n  sia_run_id: firstItem.sia_run_id,\n  cluster_count: firstItem.cluster_count,\n  bulk_post_body: JSON.stringify(records)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -16
+      ],
+      "id": "69cb2bf7-e270-46d4-a5b2-d597a86c3846",
+      "name": "Step 13 - Build Bulk POST Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/bulk/noco/pq249fix22t3ofv/mdn68l4lm609fve",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.bulk_post_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1648,
+        -16
+      ],
+      "id": "725e1493-ceb4-46c3-b396-c14e0e8de24a",
+      "name": "Step 14 - NocoDB Bulk POST Clusters",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 2b - Set Weekly Window": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Set Window Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2c - Set Monthly Window": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Set Window Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1a - Schedule Trigger Daily": {
+      "main": [
+        [
+          {
+            "node": "Step 2a - Set  Daily Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2a - Set  Daily Window": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Set Window Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1c - Schedule Trigger Monthly": {
+      "main": [
+        [
+          {
+            "node": "Step 2c - Set Monthly Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1b - Schedule Trigger Weekly": {
+      "main": [
+        [
+          {
+            "node": "Step 2b - Set Weekly Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Set Window Parameters": {
+      "main": [
+        [
+          {
+            "node": "Step 4 - Set Window Bounds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4 - Set Window Bounds": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - Fetch ALL ALA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - Fetch ALL ALA Records": {
+      "main": [
+        [
+          {
+            "node": "Step 6 - Filter ALA by Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6 - Filter ALA by Date": {
+      "main": [
+        [
+          {
+            "node": "Step 7 - Fetch ALL EIP Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Filter EIP by ALA Match": {
+      "main": [
+        [
+          {
+            "node": "Step 9 - Load Prior SIA Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7 - Fetch ALL EIP Records": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Filter EIP by ALA Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Load Prior SIA Clusters": {
+      "main": [
+        [
+          {
+            "node": "Step 10 - Build Prior N Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10 - Build Prior N Map": {
+      "main": [
+        [
+          {
+            "node": "Step 11 - Build Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11 - Build Clusters": {
+      "main": [
+        [
+          {
+            "node": "Step 12 - Split Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Split Clusters": {
+      "main": [
+        [
+          {
+            "node": "Step 13 - Build Bulk POST Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 13 - Build Bulk POST Body": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - NocoDB Bulk POST Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
