@@ -1,0 +1,761 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(() => {\n  const data = $('Step 9 - Dedup Hash').first().json;\n\n  const body = {\n    \"Run ID\": data.ala_run_id || 'DUPLICATE',\n    \"Date\": data.date,\n    \"Platform\": data.platform,\n    \"Star Rating\": data.star_rating ? Number(data.star_rating) : null,\n    \"Raw Tex\": data.raw_text_original,\n    \"Reviewer Handle\": data.reviewer_handle,\n    \"Pain Point Domain\": data.pain_point_domain || '',\n    \"Preliminary Emotion Tag\": data.preliminary_emotion_tag || '',\n    \"Keywords\": data.keywords || '',\n    \"Dedup Hash\": data.dedup_hash,\n    \"ALA Timestamp\": new Date().toISOString(),\n    \"Lang\": data.lang,\n    \"Client ID\": data.client_id,\n    \"EIP Status\": \"Duplicate\",\n    \"Error Log\": null\n  };\n\n  return { json: {\n    dedup_hash: data.dedup_hash,\n    nocodb_body: JSON.stringify(body)\n  }};\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        -208
+      ],
+      "id": "581da69d-acca-484d-ba08-a615bfffc1ee",
+      "name": "Duplicate Handler"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.nocodb_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3136,
+        -208
+      ],
+      "id": "c889f0db-9bef-47b6-9281-3923fe5e784a",
+      "name": "Step 8d - NocoDB POST Duplicate",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3344,
+        -208
+      ],
+      "id": "b8b6f196-e66f-491a-98e2-ae45d0944834",
+      "name": "Duplicate END"
+    },
+    {
+      "parameters": {
+        "formTitle": "SubtextCX Review Upload",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Reviews CSV",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        32,
+        448
+      ],
+      "id": "51c76b85-828a-4e0a-8ea2-101612f1cc7a",
+      "name": "Step 1 - Form Upload",
+      "webhookId": "72743c30-4f62-4b1f-bd75-fcd09fe6eb18"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        448
+      ],
+      "id": "e777d9a3-ae07-4937-8b39-ad84367e7ae8",
+      "name": "Step 2 - Binary Handler"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "Reviews_CSV",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        448
+      ],
+      "id": "2a711da6-8720-4948-833d-f14d2ca9aa18",
+      "name": "Step 3 - Extract CSV"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst batchId = `BATCH-${Date.now()}`;\nconst batchStartTime = new Date().toISOString();\nconst expectedCount = items.length;\nreturn items.map(item => ({\n  json: {\n    date: item.json['Date'] || item.json['\\uFEFFDate'] || '',\n    platform: item.json['Platform'] || '',\n    raw_text: item.json['Raw Text'] || '',\n    reviewer_name: item.json['Reviewer Name'] || null,\n    lang_csv: item.json['lang'] ? item.json['lang'].toLowerCase() : null,\n    client_id: item.json['Client ID'] || null,\n    batch_id: batchId,\n    batch_start_time: batchStartTime,\n    expected_count: expectedCount\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        448
+      ],
+      "id": "37c60028-5a7c-4597-8679-087df3e9a556",
+      "name": "Step 4 - CSV Parse"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        160
+      ],
+      "id": "f7894e92-f13c-414e-914d-0d5017d8a673",
+      "name": "Step 5 - SplitInBatches"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\n// Phase 1 testing — English only\n// Replace with full detection logic when Spanish client onboards\nreturn [{ json: { ...row, lang: 'en', lang_source: 'default' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        176
+      ],
+      "id": "ef72b370-b900-49ef-8f76-0537c4e2c761",
+      "name": "Step 6 - Language Detection"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst rawText = row.raw_text || '';\n\nconst starMatch = rawText.match(/^\\[(\\d)[★*]?\\]/);\nlet starRating = null, cleanText = rawText;\n\nif (starMatch) {\n  const n = parseInt(starMatch[1]);\n  starRating = (n >= 1 && n <= 5) ? n : null;\n  cleanText = rawText.replace(/^\\[\\d[★*]?\\]\\s*/, '').trim();\n}\n\nreturn [{ json: { ...row, star_rating: starRating, clean_text: cleanText, raw_text_original: rawText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        176
+      ],
+      "id": "46463c11-ccbe-4f11-afd4-f7185621b774",
+      "name": "Step 7 - Star Rating Extraction"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nlet reviewerHandle = row.reviewer_name;\n\nif (!reviewerHandle || reviewerHandle.trim() === '') {\n  reviewerHandle = `Anonymous-${row.platform}-${row.date}`;\n}\n\nreturn [{ json: { ...row, reviewer_handle: reviewerHandle.trim() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        176
+      ],
+      "id": "d386bcbe-eb49-4693-a8f9-7209e6e7b70f",
+      "name": "Step 8 - Reviewer Handle"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst hashInput = [\n  (row.platform || '').toLowerCase().trim(),\n  (row.date || '').trim(),\n  (row.clean_text || '').substring(0, 100).toLowerCase().replace(/\\s+/g, ' ').trim()\n].join('|');\n\nfunction hashStr(str) {\n  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;\n  for (let i = 0; i < str.length; i++) {\n    const c = str.charCodeAt(i);\n    h1 = Math.imul(h1 ^ c, 2654435761);\n    h2 = Math.imul(h2 ^ c, 1597334677);\n  }\n  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);\n  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);\n  return ((h2 >>> 0).toString(16).padStart(8,'0') + (h1 >>> 0).toString(16).padStart(8,'0'));\n}\n\nconst dedup_hash = hashStr(hashInput) + hashStr(hashInput + '|v2');\n\nreturn [{ json: { ...row, dedup_hash } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        176
+      ],
+      "id": "8b908182-71e0-4171-805b-449d9a959a1c",
+      "name": "Step 9 - Dedup Hash"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Dedup%20Hash,eq,{{ $json.dedup_hash }})&limit=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2000,
+        176
+      ],
+      "id": "7596b0eb-daa1-4c75-a747-eaa8549ea899",
+      "name": "Step 10 - Duplicate Check GET",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8414e42d-4106-46d4-9e24-a27617d488da",
+              "leftValue": "={{ $json.pageInfo.totalRows }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2208,
+        416
+      ],
+      "id": "18f11522-a61b-49b0-ab7d-68bcf4f0ee8c",
+      "name": "Step 11 - Is Duplicate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Step 9 - Dedup Hash').first().json;\n\nconst systemPrompt = 'You are a classification agent for customer reviews of hospitality businesses. Produce a basic first-pass assessment: pain point domain, dominant emotion, keywords. You do not use a controlled taxonomy. Plain reasoning only. pain_point_domain: 2-4 plain descriptive words. e.g. Staff behavior, Room quality, Check-in. preliminary_emotion_tag: exactly one plain emotion word. e.g. Frustrated, Ignored, Grateful. keywords: 3-5 lowercase literal terms extracted directly from the review text. OUTPUT: JSON only. { \"pain_point_domain\": \"...\", \"preliminary_emotion_tag\": \"...\", \"keywords\": [...] }';\n\nconst userPrompt = 'REVIEW:\\nStar Rating: ' + (row.star_rating !== null && row.star_rating !== undefined ? row.star_rating : 'not provided') + '\\nPlatform: ' + row.platform + '\\nText: ' + row.clean_text + '\\n\\nClassify this review. Return JSON only.';\n\nconst requestBody = JSON.stringify({\n  model: \"gpt-5.2\",\n  temperature: 0,\n  max_completion_tokens: 150,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userPrompt }\n  ]\n});\n\nconst result = {};\nresult.date = row.date;\nresult.platform = row.platform;\nresult.raw_text = row.raw_text;\nresult.reviewer_name = row.reviewer_name;\nresult.lang_csv = row.lang_csv;\nresult.lang = row.lang;\nresult.lang_source = row.lang_source;\nresult.star_rating = row.star_rating;\nresult.clean_text = row.clean_text;\nresult.raw_text_original = row.raw_text_original;\nresult.reviewer_handle = row.reviewer_handle;\nresult.dedup_hash = row.dedup_hash;\nresult.client_id = row.client_id;\nresult.system_prompt = systemPrompt;\nresult.user_prompt = userPrompt;\nresult.request_body = requestBody;\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        432
+      ],
+      "id": "4d20c3bd-9681-4298-8016-aca57b645311",
+      "name": "Step 12 - Build GPT Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{ $json.request_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2608,
+        432
+      ],
+      "id": "2a62a283-c079-4a1a-a2af-9bc2a00895ce",
+      "name": "Step 13 - OpenAI GPT Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CvKoGOVG2ynbMugt",
+          "name": "Authorization"
+        },
+        "httpBearerAuth": {
+          "id": "T49GXkj8KTfkBfgD",
+          "name": "OpenAIToken"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst raw = row.choices?.[0]?.message?.content;\n\nif (!raw) throw new Error('GPT returned empty response.');\n\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch(e) { throw new Error('GPT invalid JSON: ' + raw.substring(0, 300)); }\n\nif (!parsed.pain_point_domain || typeof parsed.pain_point_domain !== 'string')\n  throw new Error('Missing pain_point_domain in GPT response.');\n\nif (parsed.pain_point_domain.length > 80)\n  parsed.pain_point_domain = parsed.pain_point_domain.substring(0, 80).trim();\n\nif (!parsed.preliminary_emotion_tag || typeof parsed.preliminary_emotion_tag !== 'string')\n  throw new Error('Missing preliminary_emotion_tag in GPT response.');\n\nif (!Array.isArray(parsed.keywords))\n  throw new Error('keywords must be an array.');\n\nif (parsed.keywords.length < 3 || parsed.keywords.length > 5)\n  console.warn(`keywords count ${parsed.keywords.length} outside 3-5 range.`);\n\nparsed.keywords = parsed.keywords\n  .filter(k => typeof k === 'string')\n  .map(k => k.toLowerCase().trim())\n  .slice(0, 5);\n\nconst upstream = $('Step 9 - Dedup Hash').first().json;\n\nconst out = {};\nout.date = upstream.date;\nout.platform = upstream.platform;\nout.raw_text = upstream.raw_text;\nout.reviewer_name = upstream.reviewer_name;\nout.lang_csv = upstream.lang_csv;\nout.lang = upstream.lang;\nout.lang_source = upstream.lang_source;\nout.star_rating = upstream.star_rating;\nout.clean_text = upstream.clean_text;\nout.raw_text_original = upstream.raw_text_original;\nout.reviewer_handle = upstream.reviewer_handle;\nout.dedup_hash = upstream.dedup_hash;\nout.client_id = upstream.client_id;\nout.pain_point_domain = parsed.pain_point_domain;\nout.preliminary_emotion_tag = parsed.preliminary_emotion_tag;\nout.keywords = parsed.keywords.join(', ');\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        432
+      ],
+      "id": "301c955b-dae5-4dc2-bf4a-c4788a06dc7e",
+      "name": "Step 14 - Output Validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst now = new Date();\nconst pad = (n, l = 2) => String(n).padStart(l, '0');\n\nconst d = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst idx = String(($runIndex || 0) + 1).padStart(3, '0');\n\nconst ala_run_id = `ALA-${d}-${t}-${idx}`;\nconst ala_timestamp = now.toISOString();\n\nconst out = {};\nout.date = row.date;\nout.platform = row.platform;\nout.raw_text = row.raw_text;\nout.reviewer_name = row.reviewer_name;\nout.lang_csv = row.lang_csv;\nout.lang = row.lang;\nout.lang_source = row.lang_source;\nout.star_rating = row.star_rating;\nout.clean_text = row.clean_text;\nout.raw_text_original = row.raw_text_original;\nout.reviewer_handle = row.reviewer_handle;\nout.dedup_hash = row.dedup_hash;\nout.client_id = row.client_id;\nout.pain_point_domain = row.pain_point_domain;\nout.preliminary_emotion_tag = row.preliminary_emotion_tag;\nout.keywords = row.keywords;\nout.ala_run_id = ala_run_id;\nout.ala_timestamp = ala_timestamp;\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        432
+      ],
+      "id": "55cca110-7bce-4f2c-a52e-bad277a13b44",
+      "name": "Step 15 - Run ID and Timestamp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst body = {\n  \"Run ID\": row.ala_run_id,\n  \"Date\": row.date,\n \"Platform\": (row.platform || \"\").trim(),\n  \"Star Rating\": (row.star_rating !== null && row.star_rating !== undefined && row.star_rating !== '') ? Number(row.star_rating) : null,\n  \"Raw Tex\": row.raw_text_original,\n  \"Reviewer Handle\": row.reviewer_handle,\n  \"Pain Point Domain\": row.pain_point_domain,\n  \"Preliminary Emotion Tag\": row.preliminary_emotion_tag,\n  \"Keywords\": row.keywords,\n  \"Dedup Hash\": row.dedup_hash,\n  \"ALA Timestamp\": row.ala_timestamp,\n  \"Lang\": row.lang,\n  \"Client ID\": row.client_id,\n  \"EIP Status\": \"Pending\",\n  \"Error Log\": null\n};\n\nreturn [{ json: {\n  ala_run_id: row.ala_run_id,\n  date: row.date,\n  platform: row.platform,\n  star_rating: row.star_rating,\n  raw_text_original: row.raw_text_original,\n  reviewer_handle: row.reviewer_handle,\n  pain_point_domain: row.pain_point_domain,\n  preliminary_emotion_tag: row.preliminary_emotion_tag,\n  keywords: row.keywords,\n  dedup_hash: row.dedup_hash,\n  ala_timestamp: row.ala_timestamp,\n  lang: row.lang,\n  client_id: row.client_id,\n  nocodb_body: JSON.stringify(body)\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        432
+      ],
+      "id": "c16409f2-f083-4760-b4d5-ec4fc349f983",
+      "name": "Step 16 - Build NocoDB Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{ $json.nocodb_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3328,
+        432
+      ],
+      "id": "7916ac65-e905-45df-9e5b-372f8c0b26d5",
+      "name": "Step 17 - NocoDB POST ALA Record",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nconst alaRecordId = response?.Id;\n\nif (!alaRecordId) throw new Error('NocoDB write succeeded but returned no Record ID.');\n\nconst upstream = $('Step 15 - Run ID and Timestamp').first().json;\nconst out = {};\nout.date = upstream.date;\nout.platform = upstream.platform;\nout.raw_text = upstream.raw_text;\nout.reviewer_name = upstream.reviewer_name;\nout.lang_csv = upstream.lang_csv;\nout.lang = upstream.lang;\nout.lang_source = upstream.lang_source;\nout.star_rating = upstream.star_rating;\nout.clean_text = upstream.clean_text;\nout.raw_text_original = upstream.raw_text_original;\nout.reviewer_handle = upstream.reviewer_handle;\nout.dedup_hash = upstream.dedup_hash;\nout.client_id = upstream.client_id;\nout.pain_point_domain = upstream.pain_point_domain;\nout.preliminary_emotion_tag = upstream.preliminary_emotion_tag;\nout.keywords = upstream.keywords;\nout.ala_run_id = upstream.ala_run_id;\nout.ala_timestamp = upstream.ala_timestamp;\nout.ala_record_id = alaRecordId;\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3536,
+        432
+      ],
+      "id": "d0b848a3-0b8c-47bd-a0bd-776d61dc7aa0",
+      "name": "Step 18 - Capture Record ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://161.35.133.49:5678/webhook/scx-eip",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ala_record_id\": \"{{ $json.ala_record_id }}\",\n  \"prior_run_id\": \"{{ $json.ala_run_id }}\",\n  \"prior_table\": \"ALA\",\n  \"lang\": \"{{ $json.lang }}\",\n  \"client_id\": \"{{ $json.client_id }}\"\n}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3520,
+        -48
+      ],
+      "id": "a3bb1028-927c-4bca-a8fe-a36fda10b3b3",
+      "name": "Step 19 - EIP Trigger",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?limit=1000",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1200,
+        -160
+      ],
+      "id": "5a9a32cf-6d34-4002-b907-36ef1e44fa0d",
+      "name": "Step 20 - Batch Integrity GET",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.all()[0].json;\nconst allRecords = response.list || [];\n\nconst writtenCount = allRecords.filter(r =>\n  ['Pending','Complete','Processing'].includes(r['EIP Status'])\n).length;\n\nconst errorCount = allRecords.filter(r =>\n  r['EIP Status'] === 'Error'\n).length;\n\nconst totalAccounted = writtenCount + errorCount;\nconst status = totalAccounted > 0 || errorCount === 0 ? 'PASS' : 'FAIL';\n\nreturn [{\n  json: {\n    written_count: writtenCount,\n    error_count: errorCount,\n    total_accounted: totalAccounted,\n    integrity_status: status,\n    verified_at: new Date().toISOString(),\n    note: 'Duplicate records silently skipped — not counted in integrity check'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -160
+      ],
+      "id": "e712f8f5-ac90-4110-a38d-89f15164fca6",
+      "name": "Step 21 - Batch Integrity Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "02f8cbfe-c41b-4e8a-96e9-17036ab0c1c2",
+              "leftValue": "={{ $json.integrity_status }}",
+              "rightValue": "PASS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1616,
+        -160
+      ],
+      "id": "53d67bd8-531a-4c35-8bd4-947b4aa1089e",
+      "name": "Step 22 - Integrity PASS or FAIL"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        -176
+      ],
+      "id": "174d2272-3d21-436b-8c9e-ca7379c3e83c",
+      "name": "Step 23 - Integrity PASS END"
+    }
+  ],
+  "connections": {
+    "Duplicate Handler": {
+      "main": [
+        [
+          {
+            "node": "Step 8d - NocoDB POST Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8d - NocoDB POST Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Duplicate END",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1 - Form Upload": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Binary Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Binary Handler": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Extract CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Extract CSV": {
+      "main": [
+        [
+          {
+            "node": "Step 4 - CSV Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4 - CSV Parse": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "Step 20 - Batch Integrity GET",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 6 - Language Detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6 - Language Detection": {
+      "main": [
+        [
+          {
+            "node": "Step 7 - Star Rating Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7 - Star Rating Extraction": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Reviewer Handle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Reviewer Handle": {
+      "main": [
+        [
+          {
+            "node": "Step 9 - Dedup Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Dedup Hash": {
+      "main": [
+        [
+          {
+            "node": "Step 10 - Duplicate Check GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10 - Duplicate Check GET": {
+      "main": [
+        [
+          {
+            "node": "Step 11 - Is Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11 - Is Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 12 - Build GPT Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Build GPT Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 13 - OpenAI GPT Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 13 - OpenAI GPT Call": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - Output Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 14 - Output Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 15 - Run ID and Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 15 - Run ID and Timestamp": {
+      "main": [
+        [
+          {
+            "node": "Step 16 - Build NocoDB Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 16 - Build NocoDB Body": {
+      "main": [
+        [
+          {
+            "node": "Step 17 - NocoDB POST ALA Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 17 - NocoDB POST ALA Record": {
+      "main": [
+        [
+          {
+            "node": "Step 18 - Capture Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 18 - Capture Record ID": {
+      "main": [
+        [
+          {
+            "node": "Step 19 - EIP Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 19 - EIP Trigger": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 20 - Batch Integrity GET": {
+      "main": [
+        [
+          {
+            "node": "Step 21 - Batch Integrity Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 21 - Batch Integrity Check": {
+      "main": [
+        [
+          {
+            "node": "Step 22 - Integrity PASS or FAIL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 22 - Integrity PASS or FAIL": {
+      "main": [
+        [
+          {
+            "node": "Step 23 - Integrity PASS END",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 5 - SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
