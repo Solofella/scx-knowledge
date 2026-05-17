@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps?limit=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        192,
+        0
+      ],
+      "id": "0f2691e1-0ff8-4499-87ab-f16a65f83d5d",
+      "name": "Step 4 - Fetch Client Config",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s3 = $('Step 3 - Set Window Parameters').first().json;\n\n// Loop Over Items sends the array items one at a time\n// Check if we received the raw NocoDB response or a single config\nlet config;\n\nif (input.list && Array.isArray(input.list)) {\n  // Direct from Step 4 (shouldn't happen after Loop Over Items is wired)\n  if (input.list.length === 0) {\n    throw new Error('MRA: No Client Config found in database');\n  }\n  config = input.list[0];\n} else {\n  // From Loop Over Items - single config item\n  config = input;\n}\n\nconst seo_raw = config['SEO Keywords'] || '';\nconst seo_keywords = seo_raw\n  .split(',')\n  .map(k => k.trim().toLowerCase())\n  .filter(k => k.length > 0);\n\nconst result = {};\nresult.mra_run_id = s3.mra_run_id;\nresult.report_type = s3.report_type;\nresult.period_start = s3.period_start;\nresult.period_end = s3.period_end;\nresult.window_days = s3.window_days;\nresult.run_timestamp = s3.run_timestamp;\nresult.client_id = config['Client ID'] || 'UNKNOWN';\nresult.client_name = config['Client Name'] || 'Unknown Client';\nresult.approval_email = config['Approval Contact Email'] || '';\nresult.seo_keywords = seo_keywords;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "d0949be6-2c4d-4e01-9e36-09aca176d6df",
+      "name": "Step 5 - Extract Client Config"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,{{$('Step 5 - Extract Client Config').first().json.client_id}})&limit=1000&sort=ALA%20Timestamp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b85c7a1d-cdbc-4958-9655-2749b1857939",
+      "name": "Step 6 - Fetch ALA Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        576,
+        192
+      ],
+      "id": "b5b5eaa8-4664-4249-a970-81288a419312",
+      "name": "Step 4b - Split Clients for Processing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst records = input.list || [];\n\nif (records.length === 0) {\n  throw new Error('MRA: No Client Config found in database');\n}\n\n// Convert array into separate items for Loop Over Items\nconst items = [];\nfor (let i = 0; i < records.length; i++) {\n  items.push({ json: records[i] });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "23bfbd05-4ab6-44cc-b2bd-ef48fe05018b",
+      "name": "Step 4a - Explode Client Array"
+    }
+  ],
+  "connections": {
+    "Step 4 - Fetch Client Config": {
+      "main": [
+        [
+          {
+            "node": "Step 4a - Explode Client Array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - Extract Client Config": {
+      "main": [
+        [
+          {
+            "node": "Step 6 - Fetch ALA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6 - Fetch ALA Records": {
+      "main": [
+        []
+      ]
+    },
+    "Step 4b - Split Clients for Processing": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Step 5 - Extract Client Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4a - Explode Client Array": {
+      "main": [
+        [
+          {
+            "node": "Step 4b - Split Clients for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
