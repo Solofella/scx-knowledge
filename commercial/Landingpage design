@@ -1,0 +1,311 @@
+Comprehensive Landing Page Development Prompt for VRYOH
+
+OVERVIEW & BRAND CONTEXT
+
+Product Name: VRYOH
+Tagline: Governed Review Responses & Guest Signal Intelligence for Managers Under Pressure.
+Sub-tagline: Speed Your Responses with confidence, Without Missing What Matters.
+Target Audience: Hospitality managers (hotel, restaurant) who are overwhelmed by online review management across multiple platforms.
+Core Value Proposition: VRYOH is an AI-powered review intelligence system that detects hidden emotional signals in guest reviews, drafts on-brand responses, and delivers structured weekly/monthly intelligence reports — all with a human approval gate before anything is published.
+
+BRAND & DESIGN SYSTEM
+
+Color Palette
+
+Page Background #FBF6EE (warm off-white / parchment) Primary Accent / Headings #B57152 (terracotta / burnt sienna) Secondary Text / Subheadings #B39A7D (warm taupe / sand) Dark Body Text #50352B (deep espresso brown) Light Box Fill (alternating) #EADBC7 (pale linen) Medium Box Fill (alternating) #D7C2AA (warm greige)
+Typography
+
+Display / H1: Large, bold, centered or left-aligned, color #B57152
+H2: Section headings, bold, color #B57152
+H3: Sub-section headings, bold, color #50352B
+H4: Label-style headings inside boxes/cards, bold, color #B57152 or #B39A7D
+Body / Paragraph (large): font-size: lg, color #50352B or inherited
+Body / Paragraph (small): font-size: sm, used for fine print or captions
+Italic emphasis: Used for taglines and sub-taglines, color #B57152
+Bold inline: Used to highlight key terms within bullet points
+Labels/Badges: Small solid-filled pill/badge labels above section headings (uppercase, solid background, brand color)
+Overall Aesthetic
+
+Warm, editorial, hospitality-luxury feel
+Cinematic photorealistic imagery with amber, terracotta, and warm natural light tones
+Clean whitespace, no harsh blacks or cool grays
+Structured but not corporate — feels like a premium service proposal
+SECTION-BY-SECTION BREAKDOWN
+
+SECTION 1 — HERO / COVER
+
+Layout: Two-column split. Left column: logo + headline + tagline + divider. Right column: full-height accent image.
+
+Left Column Content:
+
+Logo Image — Centered. A custom logo image (PNG file: IMG_3329.PNG) placed at the top of the left column. This is the VRYOH brand logo. It should be displayed at medium size, centered horizontally.
+H2 Headline (centered, color #B57152):
+"Governed Review Responses & Guest Signal Intelligence for Managers Under Pressure."
+
+Paragraph (small font, italic, color #B57152):
+"Speed Your Responses with confidence, Without Missing What Matters."
+
+Horizontal Rule / Divider — A thin line below the tagline, full width of the column.
+Right Column Content:
+
+Accent Image (right-aligned, fills the right half of the card/section):
+Subject: A person scrolling through online hotel reviews on a tablet
+Mood: Warm beige and terracotta tones, soft natural light, elegant hotel room background, close-up, cinematic photorealistic
+The image bleeds to the edge of the section on the right side
+Background Color: #FBF6EE
+
+SECTION 2 — PROBLEM STATEMENT
+
+Layout: Two-column layout (approximately 75% left / 25% right). The right column contains an accent image. The left column contains all text content.
+
+Badge/Label (top of left column, solid pill):
+
+WHAT YOU ARE MISSING
+
+H2 Heading (color #B57152):
+
+"You Have 48 Hours to Respond — But No Time to Do It Right"
+
+H4 Sub-label (color #B39A7D):
+
+THE REALITY:
+
+Large Paragraph (font-size lg):
+
+"Industry standard: respond within 48 hours or the guest has moved on. Faster replies rank higher, but managers are already buried in daily operations."
+
+Embedded Video/Media Block:
+
+An inline embedded video player (from Jumpshare) is placed here. It is displayed inline and expands on click. This is a supporting video asset that illustrates the problem. On the landing page, this should be replaced with an equivalent embedded video or a video thumbnail with a play button linking to: https://jumpshare.com/share/IsLkaNxciWoAVLpHAgba
+H4 Sub-label (color #B39A7D):
+
+THE COST:
+
+Bulleted List (font-size lg, 3 items):
+
+Lost repeat customers (bold, color #B39A7D) — Polite reviews can hide real problems.
+Brand damage (bold, color #B39A7D) — Defensive or inconsistent replies weaken trust.
+Pattern blindness (bold, color #B39A7D) — The real friction points stay buried until revenue is already gone.
+H4 Sub-label (color #B57152):
+
+WHAT YOU MISS EVERY DAY:
+
+Table — 3-column bordered table with the following structure:
+
+Everything was fine. Masked Negative — polite exit. Generic thank-you. Guest feels unheard.
+Column headers are bold, color #B57152
+Column widths approximately: 29% / 34% / 37%
+Table style: bordered (visible cell borders)
+Note: This table is intentionally minimal (one data row shown). On the landing page, consider expanding it with 2–3 additional rows to illustrate the pattern more fully, or keep it as a teaser.
+Right Column — Accent Image:
+
+Subject: A stressed hospitality manager at a desk surrounded by review notifications on screens
+Mood: Warm amber and terracotta lighting, cinematic mood, photorealistic
+Image is positioned in the right 25% column, vertically centered
+Background Color: #FBF6EE
+
+SECTION 3 — PRODUCT CAPABILITIES
+
+Layout: Single full-width column, centered content.
+
+Badge/Label (solid pill):
+
+What VRYOH DOES with reviews
+
+H2 Heading (centered, color #B57152):
+
+"What it Detects (Signals)"
+
+Smart Layout — 4-Box Grid (Outline Boxes with Label)
+Horizontal orientation, 4 equal boxes side by side. Alternating background fills: #EADBC7 and #D7C2AA. Each box has a bold H4 label in #B57152 followed by a body paragraph.
+
+Box 1 (background #EADBC7):
+
+Label: Signal Direction —
+Body: Positive / Negative / Ambiguous. The overall emotional direction — is this guest satisfied or not?
+Box 2 (background #D7C2AA):
+
+Label: Expression Mode —
+Body: Explicit / Implicit / Masked / Performative / Conflicted / Absent. How the emotion is being communicated?
+Box 3 (background #EADBC7):
+
+Label: Emotion Clarity —
+Body: Clear / Diffuse / Fragmented / Ambiguous. Is the emotion coherent and understandable, or is the guest confused or conflicted?
+Box 4 (background #D7C2AA):
+
+Label: Narrative Alignment —
+Body: High / Moderate / Low. Does what the guest said match what they actually experienced?
+H2 Heading (centered, color #B57152):
+
+"What it Delivers"
+
+H3 Paragraph (centered, color #50352B):
+
+"See signal patterns so you can act before small issues become reputation risks." Unified view — Google, OpenTable, Yelp, TripAdvisor in one report. Respond to every review with sharper on-brand replies that show you listened. Search visibility boost.
+
+(Note: The first sentence is bold; the rest is regular weight.)
+
+Diagram — Concentric Rings / "Rings" Diagram:
+
+Centered, medium size
+4 segments arranged in a ring/orbit layout, each with an icon and label:
+Consolidated sources (icon: sources/layers)
+On-brand responses (icon: brand/identity)
+Signal pattern detection (icon: pattern/analytics)
+Proactive issue alerts (icon: alert/bell)
+Color scheme: alternating (uses brand palette)
+This diagram visually communicates the four core delivery pillars of VRYOH
+Small Paragraph (centered, color #50352B):
+
+"No B2B SaaS detects Expression Mode + Emotion Clarity + Narrative Alignment at review-analysis level."
+
+Background Color: #FBF6EE
+
+SECTION 4 — SYSTEM OUTPUTS
+
+Layout: Single full-width column.
+
+Badge/Label (solid pill):
+
+System Outputs
+
+H2 Heading (color #B57152):
+
+"What You Receive — Three Outputs + Three Efficiency Gains"
+
+Paragraph:
+
+"Each output is deterministic, audited, and reproducible." (bold text in color #B39A7D)
+
+Smart Layout — 3-Box Numbered Grid (Outline Boxes with Top Circle)
+Three equal columns, numbered 1–2–3. Alternating fills: #EADBC7, #D7C2AA, #EADBC7. Each box contains an H4 heading, a bulleted list, a second H4 "Efficiency Gain" heading, and a paragraph.
+
+Box 1 — Output 1 (background #EADBC7, numbered "1"):
+
+H4 (color #B57152): Output 1: 24-Hour Review Response Drafts (Daily)
+
+Bullet List:
+
+Response draft calibrated to guest signal + your brand voice
+Pain point domains (where friction occurred)
+Human approval gate — you approve, edit, or reject before publishing
+48-hour response approval SLA target (Service Level Agreement)
+H4 (color #B57152): Efficiency Gain:
+
+Paragraph: Response quality standardized. Your team sees guest intent, not just sentiment. No unread reviews missed.
+
+Box 2 — Output 2 (background #D7C2AA, numbered "2"):
+
+H4 (color #B57152): Output 2: Weekly Intelligence Brief (Every Monday)
+
+Bullet List:
+
+Top pain point domains ranked by frequency
+Signal direction breakdown vs. prior week
+Three priority signals requiring immediate attention
+Platform breakdown (Google, OpenTable, Yelp, TripAdvisor)
+H4 (color #B57152): Efficiency Gain:
+
+Paragraph: Unified platform view — all reviews (Google, OpenTable, Yelp, TripAdvisor) in one sheet + daily email summary. No more platform-hopping.
+
+Box 3 — Output 3 (background #EADBC7, numbered "3"):
+
+H4 (color #B57152): Output 3: Monthly Pattern Report (1st of each month)
+
+Bullet List:
+
+30-day service category friction analysis
+Signal trend lines and month-over-month comparison
+Dignity-risk events flagged during period
+SEO keyword placement summary
+H4 (color #B57152): Efficiency Gain:
+
+Paragraph: SEO integration — keywords woven naturally into response drafts. Search visibility boost without dedicated SEO staff.
+
+Background Color: #FBF6EE
+
+SECTION 5 — GOVERNANCE PRINCIPLE
+
+Layout: Single centered column. This is a short, high-impact statement section — minimal content, maximum visual weight.
+
+Badge/Label (solid pill, inside a blockquote/callout box):
+
+Governance Principle
+
+Blockquote / Callout Box — The entire content of this section is wrapped in a styled blockquote or highlighted callout container.
+
+Display Text (large display size, color #B57152, centered):
+
+"VRYOH detects and interprets signals only. It never prescribes operational actions."
+
+Paragraph (centered, below the blockquote):
+
+"Your team applies operational judgment. We provide the intelligence you can't see in raw reviews."
+
+Design Note: This section should feel like a pause — a moment of clarity and trust-building. Use generous whitespace above and below. The blockquote box should have a subtle left border or background tint to distinguish it from the surrounding page. The display text should be the largest text on this section, commanding attention.
+
+Background Color: #FBF6EE
+
+SECTION 6 — NEXT STEPS / CTA
+
+Layout: Full-width section with a large accent image at the top (spanning the full width of the section), followed by text content below.
+
+Accent Image (top, full-width banner):
+
+Subject: Close-up of hands typing a thoughtful reply to a hotel guest review on a keyboard
+Props: Warm amber desk lamp light, coffee cup nearby
+Mood: Moody, cinematic atmosphere, photorealistic
+Image position: Slightly right-center crop (approximately 57% horizontal, 63% vertical focal point)
+The image acts as a full-width hero banner at the top of this section
+Badge/Label (solid pill, below image):
+
+Next Steps
+
+H1 Heading (color #B57152):
+
+"Next Steps"
+
+Large Paragraph (font-size lg, color #B57152):
+
+"If this resonates, here's what happens next:"
+
+Numbered List (font-size lg, 5 items, color #50352B):
+
+Brand Voice Discovery (bold) - Complete questionnaire (30 minutes)
+Data integration (bold) — we add review data from past four months from all your platforms to the sheet (starting January 1st, 2026)
+Review and approve drafts (bold) — you evaluate first batch responses
+First batch processed (bold) within 5 business days
+Weekly cadence begins (bold)
+Design Note: This is the closing CTA section. On a landing page, consider adding a contact form, calendar booking widget (e.g., Calendly embed), or a prominent CTA button (e.g., "Book a Discovery Call" or "Get Started") directly below the numbered list. The warm, intimate image of hands at a keyboard reinforces the human-in-the-loop nature of the service.
+
+CTA Interactive Element: Directly below the numbered list, generate a clean, centered Lead Capture Card using background color #EADBC7. Inside the card, include:
+- An H3 Heading (#50352B): "Get a Complimentary Cross-Venue Intelligence Audit"
+- A descriptive sub-paragraph: "Enter your restaurant group details to see where your brand standards are diluting."
+- Input Form Fields (Auto Layout frames with a 1px border colored #B39A7D, background #FBF6EE): Field 1: "Brand / Hospitality Group Name", Field 2: "Work Email Address".
+- A prominent full-width Terracotta (#B57152) Submit Button text: "Generate My Audit Summary".
+
+Background Color: #FBF6EE
+
+GLOBAL LAYOUT NOTES FOR LANDING PAGE IMPLEMENTATION
+
+Page background: #FBF6EE throughout — no white, no gray.
+Max content width: Approximately 1100–1200px centered, with generous horizontal padding on mobile.
+Section spacing: Generous vertical padding between sections (80–120px desktop, 48–64px mobile).
+Images: All photography should maintain warm amber/terracotta color grading. Avoid cool-toned or desaturated images.
+Badges/Labels: Small uppercase pill badges above section headings. Solid fill using #B57152 or #50352B with white or light text.
+Dividers: Thin horizontal rules (#D7C2AA or #B39A7D) used sparingly to separate sub-sections within a card.
+Tables: Bordered style with #B57152 header text. Keep clean and minimal.
+Diagrams/Smart Layouts: Recreate as custom HTML/CSS components or SVG. The rings diagram (Section 3) should be a circular icon-grid. The numbered boxes (Section 4) should use circular number badges at the top of each card.
+Mobile responsiveness: All multi-column layouts (Sections 1, 2, 3, 4) should stack vertically on mobile. Images should appear above text on mobile.
+No harsh shadows or gradients — keep the aesthetic flat, warm, and editorial.
+Font recommendation: A warm serif or humanist sans-serif typeface pairs best with this palette. Consider Playfair Display (headings) + Lato or Inter (body) as a starting point.
+Tone: Premium, calm, intelligent. Not aggressive SaaS. Not corporate. Think: a trusted advisor presenting a proposal over coffee.
+- FIGMA STRUCTURE REQUIREMENT: Every section, row, and multi-element card MUST be built using Figma Auto Layout. Set explicit vertical and horizontal resizing constraints (e.g., Hug contents or Fill container).
+- BUTTON COMPONENTS: All Call-to-Action (CTA) elements must be built as a component with 16px vertical and 32px horizontal padding, rounded corners (4px radius), filled with #B57152, and text colored #FBF6EE.
+- COMPONENT SPACING: Set universal Auto Layout gaps: 24px between items inside cards, 48px between grid elements, and 96px margins between major sections.
+
+IMPORTANT
+- MODIFICATION & EDITING REQUIREMENT: Do not flatten, rasterize, or lock any layers, groups, or components. Everything must remain 100% open and editable.
+- NO VECTOR BLOCKS: Tables, grids, and the Concentric Rings diagram must be constructed entirely out of individual, editable Auto Layout frames, text layers, and stroke vectors. Do not generate them as single SVG icons or flattened shapes.
+- TEXT INTEGRITY: All textual content must be rendered as raw, native Figma text layers. Do not convert text into outlines or vector paths.
+- FRAME GROUPING: Use Auto Layout Frames instead of traditional Groups (Cmd+G) to organize sections, ensuring that paddings, margins, and content blocks can be adjusted manually post-generation.
