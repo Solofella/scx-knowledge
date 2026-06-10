@@ -1,0 +1,297 @@
+Chat #78 · May 14, 2026Chat #78 · May 14, 2026
+
+Here is the full cold start prompt for the new chat:
+
+---
+
+# VRYOH Intelligence — RDA Real-Time Demo · New Chat Cold Start
+
+**This is Chat #79 · May 2026 · VRYOH Intelligence / Solofella LLC.**
+
+---
+
+## 1. PROJECT CONTEXT
+
+**Company:** Solofella LLC (Wyoming holding company)
+**Product:** VRYOH Intelligence — B2B guest signal intelligence platform for hospitality and F&B operators
+**Core function:** Processes guest reviews through an 8-agent AI pipeline. Detects emotion, pain points, masked signals. Produces governed response drafts requiring human approval.
+**Infrastructure:** n8n 2.4.6 self-hosted · DigitalOcean droplet 161.35.133.49 · NocoDB self-hosted · Claude API (Anthropic) · Ubuntu 24.04 · 4GB RAM
+**Domain:** vryoh.com
+**Active pilot:** PAK-001 — Park Avenue Kitchen by David Burke, Manhattan NY
+
+---
+
+## 2. EXISTING RDA ARCHITECTURE (PRODUCTION — DO NOT MODIFY)
+
+Production pipeline: **ALA → EIP → ESS → HSI → SIA → BRA → RDA → MRA**
+
+RDA (Response Drafting Agent) is the 6th agent. **Fully built, verified, running in production.**
+
+**RDA uses a 5-call Claude architecture per record:**
+- Call 1: Opening Constructor (Step 7b) — temp 0, max_tokens 150
+- Call 2: Body Builder (Step 7d) — temp 0.5, max_tokens 500
+- Call 3: SEO + Governance (Step 7f) — temp 0, max_tokens 600
+- Call 4: Internal Brief (Step 7h) — temp 0, max_tokens 400
+- Call 5: Audit (Step 9c) — temp 0, max_tokens 1500
+
+**Quality baseline: 87% (Chat #75, April 2026)**
+
+**HOW document:** SCX_RDA_HOW_v3.2
+Fetch at: `https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/RDA/SCX_RDA_HOW_v3.2.md`
+
+**CRITICAL RULE:** The production RDA pipeline (SCX-RDA workflow in n8n) is NOT to be modified. The real-time demo is a NEW, SEPARATE component.
+
+---
+
+## 3. WHAT WE ARE BUILDING IN THIS CHAT
+
+**A real-time review response generation demo for vryoh.com.**
+
+**Purpose:** Prospect lands on vryoh.com, pastes a real review they want a response to, submits their brand voice preferences, receives a draft response in real-time. Goal: prove VRYOH works before asking for email signup.
+
+**Success metric:** User gets a non-generic, high-quality draft response → feels confidence → signs up.
+
+---
+
+## 4. ARCHITECTURE DECISIONS (LOCKED — Chat #78)
+
+### Transport layer
+**n8n webhook** (not Express.js — production RDA pipeline already uses n8n, infrastructure is stable, zero new setup).
+
+### Claude calls
+**Full 5-call RDA architecture** — NOT a single call.
+
+**Why:** Single call produces generic output. Generic output = no signup. Quality IS the demo. The 5-call chain is what produces non-generic, precise drafts. Accept 10-15 second latency. Show a progress indicator.
+
+### Latency handling
+Progress indicator with 4 stages shown to user:
+```
+"Analyzing review signal..."     (~3 sec)
+"Calibrating brand voice..."     (~3 sec)
+"Drafting response..."           (~3 sec)
+"Running quality audit..."       (~3 sec)
+```
+
+### Input source
+User provides directly on landing page:
+- Review text (300-500 characters)
+- Brand voice preferences (tone, vocabulary, formality, phrases to avoid)
+- Restaurant name + location (for SEO signature)
+
+**No NocoDB Client Config lookup required** — user provides brand voice inline in the demo form.
+
+### Output
+Public response draft only (no internal brief shown to demo user).
+
+### Logging
+Every demo request logged to NocoDB demo table: review text + brand voice input + generated draft + timestamp + session ID.
+
+### Abuse prevention
+IP-based rate limit: max 3 demo requests per IP per hour.
+
+### Governance
+Same governance constraints as production RDA apply:
+- No refund/voucher/discount language
+- No email addresses or URLs in draft
+- No placeholder text
+- No "We apologize for any inconvenience"
+
+---
+
+## 5. TECHNICAL SPECIFICATIONS
+
+### Demo n8n Workflow Name
+`SCX-RDA-Demo`
+
+### Webhook path
+`/webhook/scx-rda-demo`
+
+### Inputs received from frontend POST
+```json
+{
+  "review_text": "string (max 600 chars)",
+  "reviewer_name": "string or null",
+  "platform": "Google | Yelp | OpenTable | TripAdvisor | Other",
+  "brand_name": "string",
+  "brand_location": "string",
+  "tone_descriptors": "string (e.g. warm, professional, chef-driven)",
+  "formality_level": "number 1-5",
+  "person_preference": "string (we / our team / brand name)",
+  "phrases_to_avoid": "string or null",
+  "language": "en | es"
+}
+```
+
+### Output returned to frontend
+```json
+{
+  "draft": "string — full public response draft with signature",
+  "tier": "T1 | T2 | T3",
+  "audit_passed": true | false,
+  "session_id": "string"
+}
+```
+
+### Signature line (locked — Chat #78)
+Every draft ends with deterministic rotating closing + brand signature:
+
+```javascript
+const closings = ['Warm regards', 'Warmly', 'Cheers!', 'Have the best day!'];
+const closingIndex = sessionIndex % closings.length;
+const closing = closings[closingIndex];
+const signature = closing + ',\n' + brand_name + ' – ' + brand_location;
+```
+
+### Tier detection
+Demo has no HSI agent. Tier is determined by a **lightweight classification Code Node** before Claude calls:
+
+```
+Review contains: discrimination / harassment / humiliation language → T3
+Review contains: negative language + frustration / complaint → T2
+Review is positive or mixed → T1
+```
+
+### Claude model
+`claude-sonnet-4-6` — same as production RDA.
+
+### Credentials
+`Subtext-CX-Anthropic` — existing credential in n8n. No new credential needed.
+
+---
+
+## 6. 5-CALL PROMPT ADAPTATION FOR DEMO
+
+Production RDA receives rich payload from BRA (emotional axis, pain axis, stability axis, behavior interpretation, signal-based consideration, etc.).
+
+Demo does NOT have upstream agents. Claude must infer these from review text directly.
+
+**Adaptation per call:**
+
+**Call 1 — Opening Constructor:**
+System prompt identical to production. User prompt replaces BRA payload fields with:
+- REVIEW TEXT: [raw review text]
+- REVIEWER NAME: [from form or null]
+- TONE STYLE: [derived from tier + formality level]
+- BRAND VOICE: [from form fields]
+
+**Call 2 — Body Builder:**
+Same system prompt as production. User prompt includes:
+- OPENING SENTENCE: [from Call 1]
+- REVIEW TEXT: [raw]
+- TIER: [from classification node]
+- BRAND VOICE BRIEF: [from form fields]
+
+**Call 3 — SEO + Governance:**
+Same 3-task structure (SEO integration + governance check + guest name check).
+SEO keywords = brand_name + brand_location (derived from form, not Client Config).
+
+**Call 4 — Internal Brief:**
+**SKIPPED in demo.** Demo returns public draft only. Saves ~2-3 seconds latency.
+
+**Call 5 — Audit:**
+Same 11-item checklist as production. Fallback to pre-audit draft if parse fails.
+
+**Total calls: 4 (not 5). Estimated latency: 8-12 seconds.**
+
+---
+
+## 7. DEMO NOCODB LOGGING TABLE
+
+**Table name:** RDA Demo Log
+**NocoDB Base ID:** pq249fix22t3ofv (existing base)
+
+**Fields:**
+| Field | Type | Notes |
+|-------|------|-------|
+| Session ID | SingleLineText | Generated per request |
+| Timestamp | DateTime | UTC |
+| IP Hash | SingleLineText | Hashed IP for rate limiting (not raw IP) |
+| Platform | SingleLineText | Google / Yelp / OpenTable / etc |
+| Review Text | LongText | Raw input from user |
+| Brand Name | SingleLineText | From form |
+| Brand Location | SingleLineText | From form |
+| Tone Descriptors | LongText | From form |
+| Formality Level | Number | 1-5 |
+| Detected Tier | SingleLineText | T1/T2/T3 |
+| Generated Draft | LongText | Final public draft |
+| Audit Passed | Checkbox | From Call 4 audit |
+| Language | SingleLineText | en/es |
+
+**Purpose:** Sales intelligence. Every demo attempt = prospect data + quality signal.
+
+---
+
+## 8. FRONTEND INTEGRATION SPEC
+
+**Landing page:** vryoh.com (single-file HTML, already built)
+**Form POST:** JavaScript fetch() to n8n webhook URL
+**CORS:** n8n webhook must return `Access-Control-Allow-Origin: *` header
+**Progress indicator:** 4-stage text animation while awaiting response
+**Response display:** Rendered in dedicated result div below form
+**Error handling:** Timeout at 20 seconds → "Generation took longer than expected. Please try again."
+
+---
+
+## 9. N8N ARCHITECTURE CONSTRAINTS (PERMANENT — all chats)
+
+- n8n version: 2.4.6 — DO NOT UPGRADE
+- No spread operators — key-by-key construction only
+- IF node fires both branches simultaneously — gate FALSE with `return []`
+- `console.warn` and unused variable declarations blocked
+- PATCH = JSON body mode (not RAW)
+- `for...of` loops cause red highlight — use index-based `for` loops
+- NocoDB URL inside n8n = `http://nocodb:8080` (never localhost)
+- NocoDB defaults to 25 records — always set explicit `limit=1000` in GET URLs
+- Webhook payload extraction: `$input.first().json.body`
+- Boolean IF — use Code Node
+- Payload parse: `typeof body==='string'?JSON.parse(body):body`
+- Claude output: strip ```json fences before JSON.parse
+- No template literals with curly braces in Code Nodes — use string concatenation
+
+---
+
+## 10. WHAT TO BUILD IN THIS CHAT
+
+### Step 1 — Tier Classification Node
+Code Node that reads review_text and assigns T1/T2/T3 without upstream agents.
+
+### Step 2 — Demo Payload Builder
+Code Node that constructs the demo payload object from form inputs. Replaces what BRA would normally provide.
+
+### Step 3 — 4 Claude Calls (Opening → Body → SEO/Gov → Audit)
+Adapted from production RDA prompts. Internal Brief call skipped.
+
+### Step 4 — Signature Appender
+Deterministic closing rotation + brand signature (locked Chat #78).
+
+### Step 5 — NocoDB Demo Log Write
+POST to RDA Demo Log table.
+
+### Step 6 — Return JSON to Frontend
+Webhook response node returning draft + tier + audit_passed + session_id.
+
+### Step 7 — Frontend Form + Progress Indicator
+HTML/JS additions to vryoh.com landing page for demo form and result display.
+
+### Step 8 — IP Rate Limiting
+Code Node: hash IP, check NocoDB for count in last hour, reject if >3.
+
+---
+
+## 11. BUILD SEQUENCE
+
+Build one node at a time. Confirm each node before proceeding to next. No skipping ahead.
+
+---
+
+## 12. COMMUNICATION RULES (PERMANENT)
+
+- Every response starts with current date and correlative chat number
+- Short, precise, straight to the point
+- No motivational language
+- Full code blocks only
+- One node confirmed before proceeding to next
+
+---
+
+**Begin with Step 1 — Tier Classification Node.**
