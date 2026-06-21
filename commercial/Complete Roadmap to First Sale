@@ -1,0 +1,122 @@
+VRYOH Intelligence
+Complete Roadmap to First Sale
+Solofella LLC  ·  Chat #84  ·  June 21, 2026  ·  Confidential
+
+Current state: The VRYOH pipeline is 90% complete. When the Spanish language extension deploys (EIP → ESS → RDA), the system reaches 100% for its core function — processing guest reviews in English and Spanish through 8 governed AI agents, detecting masked emotional signals, and producing human-approved response drafts. The full pipeline is documented in GitHub (Solofella/scx-knowledge). VRYOH Intelligence is the first and current product of Solofella LLC. What follows is every domain that must be addressed to convert that technical foundation into a functioning commercial operation.
+✓  Complete	◑  In progress / partial	○  Not started	◆  Domain not yet opened
+
+1 — PRODUCT
+[IN PROGRESS]  Pipeline — 8 agents (ALA → RDA)
+✓  English pipeline: all 8 agents complete, verified, authorized for pilot use
+◑  Spanish extension: EIP code delivered — deployment confirmation pending → ESS minor prompt → RDA
+When complete: pipeline = 100% for EN + ES review processing and signal detection
+◑  MRA (metrics + reporting agent): on hold — correctly deferred until pilot data exists
+✓  Full pipeline documented in GitHub (Solofella/scx-knowledge) — HOW docs per agent, PreBuild Protocol, Schema Registry
+
+[NOT STARTED]  Review ingestion — automated (Phase 1b)
+✓  Manual CSV upload: operational — covers all current pilots through Phase 1
+○  Google Business Profile API, Yelp Fusion API, OpenTable partner application, TripAdvisor developer program
+Build after pilot validation — manual CSV is sufficient for 10-location 2026 target
+
+[NOT STARTED]  Demo tool (SCX-RDA-Demo)
+◑  Architecture scoped: email gate → brand voice setup → full pipeline run → result display → conversion gate
+○  Build not executed — deferred until after first pilot cycles produce case study evidence
+
+2 — PUBLIC PRESENCE
+[NOT STARTED]  vryoh.com — hard gate on all outbound contact
+○  Landing page EN + ES: must exist before any prospect outreach beyond current pilots
+◑  One-sentence value proposition: capability vs. protection framing — decision still pending
+Locked brand positioning: "VRYOH gives restaurant operators the truth behind their digital reputation so every guest feels genuinely heard."
+○  DETECT / GOVERN / DELIVER pillars expressed in plain operator language
+○  Demo entry point / contact gate on the page
+
+3 — SALES INFRASTRUCTURE
+[NOT STARTED]  Sales materials
+○  One-pager EN: core differentiator + 3 outputs + pricing — Canva DIY or Fiverr (~$150 budgeted)
+○  One-pager ES: required before Peru network activation (EDO Q4, wider Peru contacts)
+○  Case study template: build after first pilot delivery (M3) — AJI and PAK are the source material
+○  Pitch deck (investor version): deferred — needed at M5 after case studies exist
+
+[IN PROGRESS]  Active pilots — current pipeline
+◑  AJI-001 → AJI-005 (Aji Ceviche, 5 locations simultaneous): live test starts Jun 25, 45-day trial
+One Client Config record per location. Five ingestion sheets required before Wednesday.
+◑  PAK-001 (Park Avenue Kitchen, 1 location): June audit complete — all review responses used as brand voice model. Eddie (Operations Director) is contact. Estimated live start Jul 15.
+SCX-Sheet-Sync approval contact email still placeholder — blocks automated delivery flow.
+○  EDO-001 (EDO Restaurants, Peru): moved to Q4 2026 or Q1 2027 — Client Config not yet created
+○  4 additional locations still needed to reach 10 by Dec 31 — active prospecting required Q3
+Peru network: Pardo's Chicken, Segundo Muelle, Punto Azul, Inca Rail — activate Q4 alongside EDO
+
+[LOCKED]  Pricing model
+✓  30-day free trial for all 10 test-phase locations
+✓  Post-trial introductory: $100/location/month
+✓  Regular rate: $150/location/month + tax. Includes: response drafts + daily report + weekly report
+✓  Monthly report optional: +$20/location/month
+○  Pricing not yet communicated publicly — needs to appear on vryoh.com and in the one-pager
+
+4 — COMMERCIAL MODEL (NOT YET OPENED)
+[NOT OPENED]  Revenue mechanics
+◆  Invoicing system: no tool selected — Stripe, Wave, QuickBooks, or manual invoice
+Must be defined before M2. A paying client with no invoice mechanism is a cash flow problem.
+◆  Payment collection: credit card, ACH, wire? Peru clients add currency and transfer complexity — USD invoicing and conversion needs to be defined
+◆  Trial-to-paid conversion moment: what exactly happens on day 30? Automatic email? Manual call? New signed addendum?
+◆  Monthly report upsell (+$20): opt-in at onboarding or proposed after first month of data?
+
+[NOT OPENED]  Client retention model
+◆  What keeps a client paying month 2, 3, 6? No retention strategy defined — the pipeline delivers but the relationship has no structure beyond delivery
+◆  Client success metric: how does a GM know VRYOH is working? Define what "value delivered" looks like to the client, not just to the pipeline
+◆  Churn early warning: at 10 locations you need to detect when a client goes quiet before they cancel. No process defined.
+
+[STALE]  Financial model — needs full rebuild
+◆  Business plan pricing ($750–$1,500/month) entirely superseded. All revenue projections in the existing plan are wrong.
+◆  Break-even recalculation: at $100/location, break-even = 2 locations. Cleaner story — needs to be restated.
+◆  Tax obligations: Wyoming LLC + US and Peru clients + sole member — 2026 tax exposure not yet discussed with Nazca INC under the new commercial model
+◆  AI cost at scale: EIP ~$0.0072/record × 10 locations × 150 reviews/month = ~$10.80/month. Negligible but should be documented as a known variable cost.
+
+5 — COMPETITIVE POSITIONING (NOT YET OPENED)
+[NOT OPENED]  Who VRYOH is sold against
+◆  Revinate, MARA AI, Customer Alliance, Widewail: no competitive response script exists
+"We already use MARA." — What is the 2-sentence answer? Not in any current document.
+◆  Replacement vs. complement framing: do you replace existing tools or run alongside them? This changes the entire sales conversation and must be decided per client type.
+◆  "Why now" argument: masked emotion detection as unclaimed frontier is an internal claim — not yet translated into prospect language a GM or owner actually responds to
+
+[NOT OPENED]  Proof points and social proof
+◆  Zero published case studies, zero testimonials, zero documented outcomes — expected at this stage but requires a deliberate capture plan from AJI and PAK pilots
+◆  PAK June audit: a real deliverable demonstrating VRYOH's analytical capability — not yet packaged as a proof-of-value document for Eddie. It should be.
+◆  David Burke / Park Avenue Kitchen association: a credibility signal that should appear on the one-pager and vryoh.com as a reference — without overstating commitment
+
+6 — LEGAL AND OPERATIONS
+[PARTIAL]  Solofella LLC — company structure
+✓  Wyoming LLC active — VRYOH Intelligence is the first and current product
+◑  Operating Agreement: Article III rewritten — remaining articles not yet reviewed for structural consistency
+○  Pilot service contract template: legal review needed before first paid engagement (~$300 budgeted)
+○  Data handling / privacy terms: required before processing real guest review data from paying clients
+
+[NOT STARTED]  Operational delivery system
+○  SCX-Sheet-Sync: PAK-001 approval contact email still placeholder — blocks automated delivery
+○  Client onboarding sequence: Brand Voice Discovery → Client Config creation → ingestion sheet setup → first batch run — not yet documented as a repeatable process
+○  Pilot feedback structure: 4-question system (action taken / nature / decision time saved / reason for inaction) — not yet deployed
+
+7 — SOLOPRENEUR CAPACITY (UNADDRESSED)
+[SOLO OPERATOR RISK]  Operational reality at 10 locations
+◆  Human approval gate: you review every RDA draft before client delivery. At 10 locations × avg 5 reviews/day = 50 drafts/day requiring human review before any other work.
+This is a real daily labor commitment. The 48-hour SLA is a contractual obligation — has the daily time cost been calculated?
+◆  Delivery SLA coverage: no backup or exception protocol when you are unavailable
+◆  Time budget per client: onboarding + weekly delivery + monthly report + approval review + client communication — total hours per location per month not yet estimated
+◆  Outsourcing trigger points: at what client count or MRR do you bring in a Spanish linguistic reviewer, delivery coordinator, or account manager?
+
+8 — BRAND AND COMMUNICATION (NOT YET OPENED)
+[NOT OPENED]  VRYOH as a brand beyond the pipeline
+◆  Email communication voice: how does intelligence@vryoh.com write to clients? The pipeline has a governed tone — the human delivery emails need one too
+◆  LinkedIn presence: as a solopreneur your personal credibility is the brand trust signal. No LinkedIn strategy for VRYOH or Miguel Arellano as founder defined.
+◆  Thought leadership: hospitality operators discover tools through peer networks and trusted content. One post per month on masked guest sentiment is a legitimate pipeline — not currently planned
+◆  VRYOH name: if a prospect asks "what does VRYOH mean?" — what is the answer? Must be defined and consistent across all touchpoints
+
+9 — MILESTONE SEQUENCE TO FIRST SALE
+NOW	Complete Spanish EIP deployment → ESS → RDA. Pipeline = 100%. AJI 5-location live test begins Jun 25. Five Client Config records + ingestion sheets required before Wednesday.
+M0	50 real reviews processed, zero pipeline errors. Internal quality gate passed. Proof the system is stable with real client data at multi-location volume.
+M1	vryoh.com live EN + ES. One-pager EN ready. Pilot service contract reviewed. Invoicing system selected. First external-facing commercial presence exists.
+M2	First signed agreement — any location at any price. AJI or PAK converts from trial to $100/location/month. First revenue event. Case study capture begins.
+M3	4× Weekly Briefs + drafts + Monthly Report delivered to at least one client. First case study drafted. Competitive response script documented from real prospect conversations.
+M4	10 locations live by Dec 31 2026. MRR $1,000–$1,700/month. MRA build begins. EDO Peru + Peru network activation. Financial model rebuilt with actuals.
+
+VRYOH Intelligence  ·  Solofella LLC  ·  Confidential  ·  June 2026
