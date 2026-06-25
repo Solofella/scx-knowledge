@@ -1,0 +1,260 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        416,
+        512
+      ],
+      "id": "616264e4-a6a1-4941-a0a6-588668a6c344",
+      "name": "Step 8 - Loop RDA Records"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst rda = input.rda_record;\nconst ala_map = input.ala_map || {};\nconst existing_rda_ids = input.existing_rda_ids || {};\n\nconst rda_record_id = String(rda['Id'] || '');\n\n// DEDUP CHECK\nif (existing_rda_ids[rda_record_id]) {\n  return [];\n}\n\n// ALA LOOKUP\nconst ala_id_raw = rda['ALA Record ID'];\nconst ala = ala_map[ala_id_raw] || ala_map[String(ala_id_raw)] || ala_map[parseInt(ala_id_raw)] || {};\n\n// BUILD ROW VALUES AS INDIVIDUAL FIELDS\nreturn [{ json: {\n  scx_date: (rda['RDA Timestamp'] || '').slice(0, 10),\n  review_date: ala.review_date || '',\n  platform: ala.platform || '',\n  star_rating: ala.star_rating || '',\n  reviewer_handle: ala.reviewer_handle || String(rda['Reviewer Handle'] || ''),\n  review_text: ala.review_text || '',\n  proposed_response: rda['Public Response Draft'] || '',\n  status: rda['Approval Status'] || 'Pending',\n  edited_response: '',\n  ala_record_id: String(ala_id_raw),\n  rda_record_id: rda_record_id,\n  sync_status: 'pending_sync'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        720
+      ],
+      "id": "55d110e2-6442-434f-890f-6ff8c1d3dc09",
+      "name": "Step 9 - Consolidated Logic",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        720
+      ],
+      "id": "4cda9966-2382-4a3b-b5ef-cd4796f63912",
+      "name": "Step 9b - Rate Limit Delay",
+      "webhookId": "ae175fff-6476-44ed-8dc4-12967bd22c6d"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SCX Date": "={{ $json.scx_date }}",
+            "Review Date": "={{ $json.review_date }}",
+            "Platform": "={{ $json.platform }}",
+            "Star Rating": "={{ $json.star_rating }}",
+            "Reviewer Handle": "={{ $json.reviewer_handle }}",
+            "Review Text": "={{ $json.review_text }}",
+            "Proposed Response": "={{ $json.proposed_response }}",
+            "Status": "={{ $json.status }}",
+            "Edited Response": "={{ $json.edited_response }}",
+            "ALA Record ID": "={{ $json.ala_record_id }}",
+            "RDA Record ID": "={{ $json.rda_record_id }}",
+            "Sync Status": "={{ $json.sync_status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "SCX Date",
+              "displayName": "SCX Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Review Date",
+              "displayName": "Review Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Star Rating",
+              "displayName": "Star Rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reviewer Handle",
+              "displayName": "Reviewer Handle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Review Text",
+              "displayName": "Review Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Proposed Response",
+              "displayName": "Proposed Response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Edited Response",
+              "displayName": "Edited Response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ALA Record ID",
+              "displayName": "ALA Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "RDA Record ID",
+              "displayName": "RDA Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sync Status",
+              "displayName": "Sync Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1088,
+        720
+      ],
+      "id": "3392466f-a1b8-4763-9603-cd57d1f4eb7c",
+      "name": "Step 10 - Append Row to Sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "Pf4MiR7hQF3eu3ts",
+          "name": "Subtext-CX-GoogleSheets-ServiceAccount"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 8 - Loop RDA Records": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Step 9 - Consolidated Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Consolidated Logic": {
+      "main": [
+        [
+          {
+            "node": "Step 9b - Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9b - Rate Limit Delay": {
+      "main": [
+        [
+          {
+            "node": "Step 10 - Append Row to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10 - Append Row to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Loop RDA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
