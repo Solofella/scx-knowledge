@@ -1,0 +1,147 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        144
+      ],
+      "id": "6d8eb5eb-6eee-4eae-bd90-6346cdb2a6f2",
+      "name": "Step 1 - Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pq249fix22t3ofv",
+        "table": "mr1v67cszcklwns",
+        "limit": 100,
+        "options": {
+          "fields": [],
+          "sort": {
+            "property": [
+              {
+                "field": "RDA Timestamp"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        -672,
+        144
+      ],
+      "id": "9a32fe7c-db17-4bc7-837d-c17b803d167c",
+      "name": "Step 2 - Fetch Pending RDA Records1",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "Deo2xEE2XImtA7ci",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "af7d88a5-d370-4b83-bf32-6b07b79c81b8",
+              "leftValue": "={{ $json.pageInfo.totalRows }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -192,
+        144
+      ],
+      "id": "93367fb8-aab4-49e1-9ae5-2b5c571ccec8",
+      "name": "Step 3 - Check Records Exist"
+    },
+    {
+      "parameters": {
+        "jsCode": "const all_input = $input.all();\n\n// Debug: Check what we received\nconst debug_count = all_input.length;\nconst debug_first = all_input.length > 0 ? all_input[0].json : null;\n\nconst filtered = [];\nfor (let i = 0; i < all_input.length; i++) {\n  const item = all_input[i];\n  const rec = item.json;\n  \n  const status = rec['Approval Status'];\n  const published = rec['Published Timestamp'];\n  const client = rec['Client ID'];\n  \n  // Simple checks\n  const status_ok = (status !== 'Published');\n  const published_ok = (published === null || published === undefined);\n  const client_ok = (client === 'PAK-001');\n  \n  if (status_ok && published_ok && client_ok) {\n    filtered.push(rec);\n  }\n}\n\nreturn [{ json: {\n  list: filtered,\n  pageInfo: {\n    totalRows: filtered.length\n  },\n  debug: {\n    input_count: debug_count,\n    filtered_count: filtered.length,\n    first_status: debug_first ? debug_first['Approval Status'] : 'none',\n    first_published: debug_first ? debug_first['Published Timestamp'] : 'none',\n    first_client: debug_first ? debug_first['Client ID'] : 'none'\n  }\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        144
+      ],
+      "id": "1714371b-862a-4509-97be-f1b8e5ea7100",
+      "name": "Step 2b - Filter Pending Records"
+    }
+  ],
+  "connections": {
+    "Step 1 - Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Fetch Pending RDA Records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Fetch Pending RDA Records1": {
+      "main": [
+        [
+          {
+            "node": "Step 2b - Filter Pending Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Check Records Exist": {
+      "main": [
+        []
+      ]
+    },
+    "Step 2b - Filter Pending Records": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Check Records Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
