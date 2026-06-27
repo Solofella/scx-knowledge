@@ -1,0 +1,51 @@
+Chat #83 · June 26, 2026
+
+**VRYOH Intelligence / Solofella LLC**
+
+---
+
+## PROMPT FOR RDA AGENT CONTEXT
+
+Copy this into the RDA session:
+
+---
+
+**SCX-Sheet-Sync Multi-Client Update Complete — Chat #83 · June 26, 2026**
+
+The downstream Google Sheets approval workflow (SCX-Sheet-Sync) has been updated from single-client (PAK-001 only) to multi-client architecture. RDA output requirements remain unchanged, but here's what RDA must know:
+
+**1. RDA output fields consumed by SCX-Sheet-Sync (no changes):**
+- RDA Timestamp
+- Public Response Draft
+- Approval Status (Pending / Pending-Elevated)
+- Client ID
+- ALA Record ID
+- Reviewer Handle
+- Published Timestamp
+
+**2. Client ID is now the routing key.** SCX-Sheet-Sync reads `Client ID` from each RDA record to determine which Google Sheet receives that record. If Client ID is missing or empty, the record is skipped entirely. RDA must always populate Client ID.
+
+**3. Active clients as of June 26, 2026:**
+
+| Client ID | Location | Sheet Tab |
+|-----------|----------|-----------|
+| PAK-001 | Park Avenue Kitchen, NY | Park Ave |
+| AJI-001 | Aji Ceviche Bar, Orlando | Orlando |
+| AJI-002 | Aji Ceviche Bar, Casselberry | Casselberry |
+| AJI-003 | Aji Ceviche Bar, Sarasota | Sarasota |
+| AJI-004 | Aji Ceviche Bar, Tampa | Tampa |
+| AJI-005 | Aji Ceviche Bar, St. Petersburg | St. Petersburg |
+
+**4. One Client ID per physical location.** This rule is unchanged. RDA receives client_id from upstream (ALA → EIP → ESS → HSI → BRA → RDA). RDA does not assign client_id — it passes it through.
+
+**5. Brand voice is fetched dynamically.** RDA Step 5 fetches Client Config using client_id. Each location has its own brand voice settings. No changes needed to RDA's Client Config fetch logic — the table structure is the same, just more rows.
+
+**6. New Client Config fields (informational only — RDA does not use these):**
+- `Sheet ID` (cwmclp9syachfpu) — used by SCX-Sheet-Sync only
+- `Sheet Tab Name` (cap99rmhaygpj88) — used by SCX-Sheet-Sync only
+
+**7. Email notifications are now per-client.** Each location's approval contact receives their own daily email with only their location's data. RDA does not need to change anything — this is handled entirely by SCX-Sheet-Sync.
+
+**8. No RDA code changes required.** RDA's output schema, field names, and pipeline behavior are unchanged. The multi-client routing happens entirely downstream in SCX-Sheet-Sync.
+
+**Summary:** RDA keeps doing exactly what it does. SCX-Sheet-Sync now handles the routing. The only hard requirement is that every RDA record has a valid Client ID that matches a row in Client Config.
