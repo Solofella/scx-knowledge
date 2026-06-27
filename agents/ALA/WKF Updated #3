@@ -1,0 +1,168 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8414e42d-4106-46d4-9e24-a27617d488da",
+              "leftValue": "={{ $json.pageInfo.totalRows }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2208,
+        416
+      ],
+      "id": "18f11522-a61b-49b0-ab7d-68bcf4f0ee8c",
+      "name": "Step 11 - Is Duplicate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Step 9 - Dedup Hash').first().json;\n\nconst systemPrompt = 'You are a classification agent for customer reviews of hospitality businesses. Produce a basic first-pass assessment: pain point domain, dominant emotion, keywords. You do not use a controlled taxonomy. Plain reasoning only. pain_point_domain: 2-4 plain descriptive words. e.g. Staff behavior, Room quality, Check-in. preliminary_emotion_tag: exactly one plain emotion word. e.g. Frustrated, Ignored, Grateful. keywords: 3-5 lowercase literal terms extracted directly from the review text. OUTPUT: JSON only. { \"pain_point_domain\": \"...\", \"preliminary_emotion_tag\": \"...\", \"keywords\": [...] }';\n\nconst userPrompt = 'REVIEW:\\nStar Rating: ' + (row.star_rating !== null && row.star_rating !== undefined ? row.star_rating : 'not provided') + '\\nPlatform: ' + row.platform + '\\nText: ' + row.clean_text + '\\n\\nClassify this review. Return JSON only.';\n\nconst requestBody = JSON.stringify({\n  model: \"gpt-5.2\",\n  temperature: 0,\n  max_completion_tokens: 150,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userPrompt }\n  ]\n});\n\nconst result = {};\nresult.date = row.date;\nresult.platform = row.platform;\nresult.raw_text = row.raw_text;\nresult.reviewer_name = row.reviewer_name;\nresult.lang_csv = row.lang_csv;\nresult.lang = row.lang;\nresult.lang_source = row.lang_source;\nresult.star_rating = row.star_rating;\nresult.clean_text = row.clean_text;\nresult.raw_text_original = row.raw_text_original;\nresult.reviewer_handle = row.reviewer_handle;\nresult.dedup_hash = row.dedup_hash;\nresult.client_id = row.client_id;\nresult.system_prompt = systemPrompt;\nresult.user_prompt = userPrompt;\nresult.request_body = requestBody;\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        432
+      ],
+      "id": "4d20c3bd-9681-4298-8016-aca57b645311",
+      "name": "Step 12 - Build GPT Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{ $json.request_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2608,
+        432
+      ],
+      "id": "2a62a283-c079-4a1a-a2af-9bc2a00895ce",
+      "name": "Step 13 - OpenAI GPT Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CvKoGOVG2ynbMugt",
+          "name": "Authorization"
+        },
+        "httpBearerAuth": {
+          "id": "T49GXkj8KTfkBfgD",
+          "name": "OpenAIToken"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst raw = row.choices?.[0]?.message?.content;\n\nif (!raw) throw new Error('GPT returned empty response.');\n\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch(e) { throw new Error('GPT invalid JSON: ' + raw.substring(0, 300)); }\n\nif (!parsed.pain_point_domain || typeof parsed.pain_point_domain !== 'string')\n  throw new Error('Missing pain_point_domain in GPT response.');\n\nif (parsed.pain_point_domain.length > 80)\n  parsed.pain_point_domain = parsed.pain_point_domain.substring(0, 80).trim();\n\nif (!parsed.preliminary_emotion_tag || typeof parsed.preliminary_emotion_tag !== 'string')\n  throw new Error('Missing preliminary_emotion_tag in GPT response.');\n\nif (!Array.isArray(parsed.keywords))\n  throw new Error('keywords must be an array.');\n\nif (parsed.keywords.length < 3 || parsed.keywords.length > 5)\n  console.warn(`keywords count ${parsed.keywords.length} outside 3-5 range.`);\n\nparsed.keywords = parsed.keywords\n  .filter(k => typeof k === 'string')\n  .map(k => k.toLowerCase().trim())\n  .slice(0, 5);\n\nconst upstream = $('Step 9 - Dedup Hash').first().json;\n\nconst out = {};\nout.date = upstream.date;\nout.platform = upstream.platform;\nout.raw_text = upstream.raw_text;\nout.reviewer_name = upstream.reviewer_name;\nout.lang_csv = upstream.lang_csv;\nout.lang = upstream.lang;\nout.lang_source = upstream.lang_source;\nout.star_rating = upstream.star_rating;\nout.clean_text = upstream.clean_text;\nout.raw_text_original = upstream.raw_text_original;\nout.reviewer_handle = upstream.reviewer_handle;\nout.dedup_hash = upstream.dedup_hash;\nout.client_id = upstream.client_id;\nout.pain_point_domain = parsed.pain_point_domain;\nout.preliminary_emotion_tag = parsed.preliminary_emotion_tag;\nout.keywords = parsed.keywords.join(', ');\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        432
+      ],
+      "id": "301c955b-dae5-4dc2-bf4a-c4788a06dc7e",
+      "name": "Step 14 - Output Validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst now = new Date();\nconst pad = (n, l = 2) => String(n).padStart(l, '0');\n\nconst d = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst idx = String(($runIndex || 0) + 1).padStart(3, '0');\n\nconst ala_run_id = `ALA-${d}-${t}-${idx}`;\nconst ala_timestamp = now.toISOString();\n\nconst out = {};\nout.date = row.date;\nout.platform = row.platform;\nout.raw_text = row.raw_text;\nout.reviewer_name = row.reviewer_name;\nout.lang_csv = row.lang_csv;\nout.lang = row.lang;\nout.lang_source = row.lang_source;\nout.star_rating = row.star_rating;\nout.clean_text = row.clean_text;\nout.raw_text_original = row.raw_text_original;\nout.reviewer_handle = row.reviewer_handle;\nout.dedup_hash = row.dedup_hash;\nout.client_id = row.client_id;\nout.pain_point_domain = row.pain_point_domain;\nout.preliminary_emotion_tag = row.preliminary_emotion_tag;\nout.keywords = row.keywords;\nout.ala_run_id = ala_run_id;\nout.ala_timestamp = ala_timestamp;\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        432
+      ],
+      "id": "55cca110-7bce-4f2c-a52e-bad277a13b44",
+      "name": "Step 15 - Run ID and Timestamp"
+    }
+  ],
+  "connections": {
+    "Step 11 - Is Duplicate": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Step 12 - Build GPT Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Build GPT Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 13 - OpenAI GPT Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 13 - OpenAI GPT Call": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - Output Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 14 - Output Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 15 - Run ID and Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 15 - Run ID and Timestamp": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
