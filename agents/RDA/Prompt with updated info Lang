@@ -1,0 +1,479 @@
+# VRYOH Intelligence · RDA Agent Update Brief
+## SCX_RDA_HOW — Delta from v3.2 to v3.4
+**Date:** June 26, 2026 · Chat #87  
+**Applies to:** SCX-RDA live workflow on DigitalOcean n8n-Solofella (161.35.133.49:5678)  
+**Base version:** SCX_RDA_HOW_v3.2 · April 21, 2026  
+**Updated version:** SCX_RDA_HOW_v3.4 · June 26, 2026
+
+---
+
+## 1. PURPOSE OF THIS UPDATE
+
+This document records every change made to the RDA workflow between v3.2 (April 21, 2026) and the current live state (June 26, 2026). It supersedes the v3.3 delta issued earlier in Chat #87.
+
+Scope of this update:
+- Spanish language processing activation (all 5 Claude calls + Step 9d closings)
+- Client Config schema fully rebuilt — field names, types, and new fields
+- Step 6 brand_voice object must be rewritten to match new schema
+- `lang_resolved` logic correction for MultiSelect Language field
+- Multi-client architecture confirmed (6 active locations)
+- Brand Voice Mapping Questionnaire fully deployed and populated for all 6 clients
+
+Any cold start, handoff, or agent re-initialization must load this document alongside SCX_RDA_HOW_v3.2.
+
+---
+
+## 2. CLIENT CONFIG SCHEMA — FULLY REBUILT
+
+The Client Config NocoDB table has been significantly updated since v3.2. Field names, field types, and new fields have all changed. The v3.2 schema is obsolete.
+
+### Complete Current Schema (June 26, 2026)
+
+| Field Name | Field ID | Type | RDA Use |
+|---|---|---|---|
+| Client ID | cuchy7c4qdoxxww | SingleLineText | Routing key — fetched via Step 5 GET |
+| Client Name | cqjammv6531we7q | SingleLineText | Brand signature in Step 9d |
+| Brand Personality | cmn7d93p9n43epw | **MultiSelect** | Replaces `Tone Descriptors` — personality adjectives |
+| Response for a negative experience | cem29cv8dzrlthb | **SingleSelect** | Replaces `Vocabulary Restrictions` — negative response approach |
+| Formality Level | c9fhsbt1he4vi4m | **SingleSelect** | Was Number — now descriptive string |
+| Person Preference | csdoh4radk2v5ef | **SingleSelect** | Was SingleLineText — same values |
+| Brand Phrases To Include | cqeg0jcakgpbsg4 | **MultiSelect** | Was LongText — now array |
+| Brand Phrases To Avoid | cwgipn9fzjuqzgf | **MultiSelect** | Was LongText — now array |
+| Language | cqtgui7mqrk0omq | **MultiSelect** | Was SingleLineText — now array e.g. ["En","Es"] |
+| Approval Contact Email | cy6btcle1yhe09s | Email | Unchanged |
+| SEO Keywords | clu27ricb3ujqe3 | LongText | Unchanged |
+| THE RECOVERY PROTOCOL | clhb0c56j58wmre | SingleSelect | **New** — T2/T3 behavioral switch |
+| Guests feeling after reading a response | cd11zo85ardr0im | MultiSelect | **New** — intended guest emotional outcome |
+| Commitments should NEVER be made | cgx9eeevvkdn1wd | MultiSelect | **New** — governance constraint list |
+| Differentiator | c9ynhdut4b6hnv0 | MultiSelect | **New** — brand's core competitive identity |
+| THE REGISTER | cojzudl53n8ck12 | SingleSelect | **New** — default communication style anchor |
+| THE CORE DRIVER | cjqh3djuasf119l | SingleSelect | **New** — response identity champion |
+| THE REGIONAL ACCENT | cy0p0x2i0ku25nx | SingleSelect | **New** — cultural and geographic tone anchor |
+| Sheet ID | cwmclp9syachfpu | SingleLineText | SCX-Sheet-Sync only — RDA does not read |
+| Sheet Tab Name | cap99rmhaygpj88 | SingleLineText | SCX-Sheet-Sync only — RDA does not read |
+
+### Key Type Changes That Break Step 6
+
+Fields that changed from scalar to MultiSelect now return arrays from NocoDB:
+
+| Field | Old Type | New Type | What NocoDB returns |
+|---|---|---|---|
+| Brand Personality | LongText | MultiSelect | `["Vibrant","Warm","Casual"]` |
+| Brand Phrases To Include | LongText | MultiSelect | `["Thank you for dining with us"]` |
+| Brand Phrases To Avoid | LongText | MultiSelect | `["We apologize for any inconvenience"]` |
+| Language | SingleLineText | MultiSelect | `["En","Es"]` |
+| Guests feeling after reading a response | — | MultiSelect | `["Valued"]` |
+| Commitments should NEVER be made | — | MultiSelect | `["Discounts","Complimentary items"]` |
+| Differentiator | — | MultiSelect | `["Chef-driven menu","Exceptional service"]` |
+
+---
+
+## 3. ACTIVE CLIENT DATA — ALL 6 RECORDS (June 26, 2026)
+
+All six client records are fully populated with Brand Voice Questionnaire responses.
+
+### PAK-001 — Park Avenue Kitchen by David Burke
+
+| Field | Value |
+|---|---|
+| Client ID | PAK-001 |
+| Client Name | Park Avenue Kitchen by David Burke |
+| Language | En |
+| Brand Personality | Vibrant, Warm, Casual, Refined, Energetic |
+| Guest Feeling | Valued |
+| Formality Level | 4 — Mostly polished and structured |
+| Person Preference | Our team |
+| Brand Phrases To Include | Thank you for dining with us |
+| Brand Phrases To Avoid | We apologize for any inconvenience |
+| Response for negative experience | Apologize directly and offer to make it right |
+| Commitments NEVER | Discounts, Complimentary items, Specific staff disciplinary actions |
+| Differentiator | Chef-driven menu, Unique atmosphere/vibe, Exceptional service |
+| THE REGISTER | Refined Casual |
+| THE CORE DRIVER | Hospitality / Human-Driven |
+| THE REGIONAL ACCENT | Metro Standard |
+| THE RECOVERY PROTOCOL | The Transparent Owner |
+| SEO Keywords | Park Avenue Kitchen, David Burke, East Midtown dining, contemporary American cuisine, New York restaurant, chef-driven dining, Midtown Manhattan restaurant, special occasion dining New York |
+| Sheet Tab | Park Ave |
+
+### AJI-001 — Aji Ceviche Bar · Orlando
+
+| Field | Value |
+|---|---|
+| Client ID | AJI-001 |
+| Client Name | Aji Ceviche Bar - Orlando |
+| Language | En, Es |
+| Brand Personality | Authentic, Casual, Vibrant, Playful, Family-oriented |
+| Guest Feeling | Valued |
+| Formality Level | 3 — Balanced — warm but professional |
+| Person Preference | Our team |
+| Brand Phrases To Include | Thank you for dining with us, We'd love to welcome you back, Our team works hard to make every visit memorable, We'd love the chance to make it right |
+| Brand Phrases To Avoid | Unfortunately |
+| Response for negative experience | Apologize directly and offer to make it right |
+| Commitments NEVER | Specific staff disciplinary actions |
+| Differentiator | Authentic cultural cuisine, Exceptional service, Multi-location consistency |
+| THE REGISTER | Refined Casual |
+| THE CORE DRIVER | Hospitality / Human-Driven |
+| THE REGIONAL ACCENT | Metro Standard |
+| THE RECOVERY PROTOCOL | The Gracious Host |
+| SEO Keywords | Aji Ceviche Bar, Orlando, Ceviche, Restaurant, Comida Peruana, Peruvian food, chef-driven dinning, special occasion, Pisco Sour, Ceviche bar, Best Peruvian Restaurant |
+| Sheet Tab | Orlando |
+
+### AJI-002 — Aji Ceviche Bar · Casselberry
+
+| Field | Value |
+|---|---|
+| Client ID | AJI-002 |
+| Client Name | Aji Ceviche Bar - Casselberry |
+| Language | En, Es |
+| Brand Personality | Authentic, Casual, Vibrant, Playful, Family-oriented |
+| Guest Feeling | Valued |
+| Formality Level | 3 — Balanced — warm but professional |
+| Person Preference | Our team |
+| Brand Phrases To Include | Thank you for dining with us |
+| Brand Phrases To Avoid | Unfortunately |
+| Response for negative experience | Apologize directly and offer to make it right |
+| Commitments NEVER | Specific staff disciplinary actions |
+| Differentiator | Authentic cultural cuisine |
+| THE REGISTER | Refined Casual |
+| THE CORE DRIVER | Hospitality / Human-Driven |
+| THE REGIONAL ACCENT | Metro Standard |
+| THE RECOVERY PROTOCOL | The Gracious Host |
+| SEO Keywords | Aji Ceviche Bar, Casselberry, Florida, Peru, Ceviche, Restaurant, Comida Peruana, Peruvian food, chef-driven dinning, special occasion, Pisco Sour, Ceviche bar, Best Peruvian Restaurant |
+| Sheet Tab | Casselberry |
+
+### AJI-003 — Aji Ceviche Bar · Sarasota
+*(Same brand personality, formality, register, driver, accent, and recovery protocol as AJI-001/002)*
+
+| Field | Value |
+|---|---|
+| Client ID | AJI-003 |
+| Client Name | Aji Ceviche Bar - Sarasota |
+| Language | En, Es |
+| Differentiator | Authentic cultural cuisine |
+| THE RECOVERY PROTOCOL | The Gracious Host |
+| SEO Keywords | Aji Ceviche Bar, Sarasota, Florida, Ceviche, Peru, Restaurant, Comida Peruana, Peruvian food, chef-driven dinning, special occasion, Pisco Sour, Ceviche bar, Best Peruvian Restaurant |
+| Sheet Tab | Sarasota |
+
+### AJI-004 — Aji Ceviche Bar · Tampa
+*(Same as AJI-003 except location)*
+
+| Field | Value |
+|---|---|
+| Client ID | AJI-004 |
+| Client Name | Aji Ceviche Bar - Tampa |
+| Language | En, Es |
+| Differentiator | Authentic cultural cuisine |
+| THE RECOVERY PROTOCOL | The Gracious Host |
+| SEO Keywords | Aji Ceviche Bar, Tampa, Florida, Ceviche, Peru, Restaurant, Comida Peruana, Peruvian food, chef-driven dinning, special occasion, Pisco Sour, Ceviche bar, Best Peruvian Restaurant |
+| Sheet Tab | Tampa |
+
+### AJI-005 — Aji Ceviche Bar · St. Petersburg
+*(Same as AJI-003 except location)*
+
+| Field | Value |
+|---|---|
+| Client ID | AJI-005 |
+| Client Name | Aji Ceviche Bar - St. Petersburg |
+| Language | En, Es |
+| Differentiator | Authentic cultural cuisine |
+| THE RECOVERY PROTOCOL | The Gracious Host |
+| SEO Keywords | Aji Ceviche Bar, St. Petersburg, Florida, Ceviche, Peru, Restaurant, Comida Peruana, Peruvian food, chef-driven dinning, special occasion, Pisco Sour, Ceviche bar, Best Peruvian Restaurant |
+| Sheet Tab | St. Petersburg |
+
+---
+
+## 4. WHAT CHANGED — NODE BY NODE
+
+### Step 5 — Brand Voice Load (HTTP GET · URL field)
+
+**Status:** No change required — already correct in live code.
+
+```
+=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps
+  ?where=(Client%20ID,eq,{{$('Step 2 - Payload Validation').first().json.client_id}})&limit=1
+```
+
+Dynamic via `client_id` from Step 2. No hardcoded client reference.
+
+---
+
+### Step 6 — Build Brand Voice Object (Code Node) — REQUIRES UPDATE
+
+**Status:** Must be fully rewritten. Current v3.3 code reads obsolete field names and cannot handle MultiSelect arrays.
+
+**Full replacement code for the brand_voice construction block:**
+
+```javascript
+const response = $input.first().json;
+const rec = response.list?.[0];
+if (!rec) throw new Error('Client Config not found. Check client_id: '
+  + $('Step 2 - Payload Validation').first().json.client_id);
+
+// MultiSelect fields return arrays from NocoDB — join to comma-separated string
+const ms = function(val) {
+  return Array.isArray(val) ? val.join(', ') : (val || null);
+};
+
+const brand_voice = {
+  Client_ID:               rec['Client ID'],
+  'Client Name':           rec['Client Name'] || null,
+  tone_descriptors:        ms(rec['Brand Personality']),
+  vocabulary_restrictions: rec['Response for a negative experience'] || null,
+  formality_level:         rec['Formality Level'] || '3 — Balanced',
+  person_preference:       rec['Person Preference'] || null,
+  brand_phrases_include:   ms(rec['Brand Phrases To Include']),
+  brand_phrases_avoid:     ms(rec['Brand Phrases To Avoid']),
+  language:                ms(rec['Language']) || 'en',
+  seo_keywords:            rec['SEO Keywords'] || null,
+  approval_contact_email:  rec['Approval Contact Email'] || null,
+  recovery_protocol:       rec['THE RECOVERY PROTOCOL - How you handle negative or mixed reviews *'] || null,
+  guest_feeling:           ms(rec['Guests feeling after reading a response']),
+  commitment_restrictions: ms(rec['Commitments should NEVER be made']),
+  differentiator:          ms(rec['Differentiator']),
+  the_register:            rec['THE REGISTER - Your default communication style *'] || null,
+  the_core_driver:         rec['THE CORE DRIVER - What your responses champion most *'] || null,
+  the_regional_accent:     rec['THE REGIONAL ACCENT - Your cultural and geographic tone *'] || null
+};
+
+const inp = $('Step 2 - Payload Validation').first().json;
+// ... remainder of return object unchanged — all existing payload fields
+// brand_voice: brand_voice  ← updated object replaces previous
+```
+
+**What the `ms()` helper does:** NocoDB MultiSelect fields return JavaScript arrays (`["Vibrant","Warm","Casual"]`). Passing an array into a Claude prompt produces `[object Array]`. The helper joins to a readable comma-separated string (`"Vibrant, Warm, Casual"`). Scalar fields pass through unchanged via the `(val || null)` path.
+
+**Fields removed from brand_voice object (old names — no longer exist in schema):**
+- `rec['Tone Descriptors']` — replaced by `rec['Brand Personality']`
+- `rec['Vocabulary Restrictions']` — replaced by `rec['Response for a negative experience']`
+
+---
+
+### Step 7a — Build Opening Prompt (Code Node)
+
+**Status — lang_resolved logic requires correction.**
+
+Current code resolves lang as:
+```javascript
+const lang_resolved = rec.lang || bv.language || 'en';
+```
+
+`bv.language` now returns `"En, Es"` for AJI clients (joined MultiSelect). This string does not match `'es'` in downstream conditionals — AJI Spanish records would resolve to `'en'` via the fallback chain.
+
+**Fix — replace lang resolution in Step 7a:**
+
+```javascript
+// record-level lang from pipeline payload is always a single value ('en' or 'es')
+// set at ALA Step 6 from the CSV lang column
+// bv.language is now a MultiSelect string listing supported languages — not a per-record selector
+const lang_resolved = (inp.lang || 'en').toLowerCase().trim();
+```
+
+**Why:** The Client Config `Language` field (`"En, Es"`) indicates which languages a client supports. It is not a per-record selector. Per-record language is always the single-value `lang` field that travels through the pipeline from ALA. The `bv.language` fallback is no longer valid for lang resolution.
+
+**Language instruction in opening_system_prompt:** Already present — no change.
+
+```
+LANGUAGE: If lang_resolved is "es", write the opening sentence in Spanish.
+Apply all tier rules and priority order in Spanish.
+The quality standard — specific, human, non-formulaic — is identical.
+```
+
+---
+
+### Step 7c — Parse Opening + Build Body Prompt (Code Node)
+
+**Status — brand voice user prompt block must be updated to include new fields.**
+
+The body builder user prompt currently includes a BRAND VOICE BRIEF block with the old field set. It must be updated to expose all new brand voice fields to Claude.
+
+**Updated BRAND VOICE BRIEF block in body user prompt:**
+
+```javascript
+'BRAND VOICE BRIEF\n' +
+'Register: ' + (bv.the_register || 'Not specified') + '\n' +
+'Core Driver: ' + (bv.the_core_driver || 'Not specified') + '\n' +
+'Regional Accent: ' + (bv.the_regional_accent || 'Not specified') + '\n' +
+'Recovery Protocol: ' + (bv.recovery_protocol || 'Not specified') + '\n' +
+'Brand Personality: ' + (bv.tone_descriptors || 'Not specified') + '\n' +
+'Formality Level: ' + (bv.formality_level || '3') + '\n' +
+'Person Preference: ' + (bv.person_preference || 'our team') + '\n' +
+'Guest Should Feel: ' + (bv.guest_feeling || 'Valued') + '\n' +
+'Differentiator: ' + (bv.differentiator || 'Not specified') + '\n' +
+'Brand Phrases To Include: ' + (bv.brand_phrases_include || 'None') + '\n' +
+'Brand Phrases To Avoid: ' + (bv.brand_phrases_avoid || 'None') + '\n' +
+'Negative Response Approach: ' + (bv.vocabulary_restrictions || 'Not specified') + '\n' +
+'Commitments NEVER To Make: ' + (bv.commitment_restrictions || 'None') + '\n'
+```
+
+**Language instruction in body_system_prompt:** Already present — no change.
+
+```
+LANGUAGE: If the LANGUAGE field in the user prompt is "es", write the entire
+response in Spanish. Apply all tier, tone, brand voice, and governance rules
+in Spanish. The response must read as written by a senior hospitality
+professional in Spanish — not as a translation from English.
+```
+
+---
+
+### Step 7e — Parse Body + Build SEO/Governance Prompt (Code Node)
+
+**Status:** Language instruction already present. No change required.
+
+```
+LANGUAGE: The draft may be in any language. Apply all three tasks in the same
+language as the draft. Do not translate. Return the draft in its original language.
+```
+
+---
+
+### Step 7g — Parse SEO Draft + Build Internal Brief Prompt (Code Node)
+
+**Status — internal brief user prompt must include Recovery Protocol.**
+
+The internal brief must know the client's Recovery Protocol to correctly frame the signal interpretation for T2/T3 records.
+
+**Add to internal brief user prompt:**
+
+```javascript
+'RECOVERY PROTOCOL: ' + (bv.recovery_protocol || 'Not specified') + '\n' +
+'COMMITMENT RESTRICTIONS: ' + (bv.commitment_restrictions || 'None') + '\n'
+```
+
+**Language instruction in internal_system_prompt:** Already present — no change.
+
+```
+LANGUAGE: If the LANGUAGE field in the user prompt is "es", write the internal
+brief in Spanish. Apply all governance and substance rules in Spanish.
+```
+
+---
+
+### Step 9b — Build Audit Prompt (Code Node)
+
+**Status:** Language block already present. No change required.
+
+---
+
+### Step 9d — Parse Audit Output (Code Node)
+
+**Status:** Two changes deployed in v3.3, both confirmed correct.
+
+**Change A — Language-conditional closings (deployed):**
+```javascript
+const closingsEN = ['Warm regards', 'Warmly', 'Cheers!', 'Have the best day!'];
+const closingsES = ['Atentamente', 'Cordialmente', 'Hasta pronto', 'Con gusto'];
+const closings = (inp.lang_resolved || 'en').toLowerCase() === 'es'
+  ? closingsES : closingsEN;
+```
+
+**Change B — Generic brand signature (deployed):**
+```javascript
+const brandSignature = bv?.['Client Name'] || inp.client_id || 'VRYOH Intelligence';
+```
+
+---
+
+## 5. `lang` FLOW — CORRECTED END-TO-END
+
+| Stage | Source | Value |
+|---|---|---|
+| ALA Step 6 | CSV `lang` column | `'en'` or `'es'` (single value) |
+| Pipeline payload | Travels ALA → EIP → ESS → HSI → BRA → RDA | `'en'` or `'es'` |
+| RDA Step 2 | `p.lang \|\| null` | `'en'` or `'es'` or `null` |
+| RDA Step 7a | `(inp.lang \|\| 'en').toLowerCase().trim()` | `'en'` or `'es'` |
+| RDA Steps 7c, 7e, 7g, 9b | `inp.lang_resolved` | `'en'` or `'es'` |
+| RDA Step 9d closings | `inp.lang_resolved === 'es'` | Correct closing array |
+| RDA Step 14 NocoDB write | `'lang': inp.lang_resolved` | Stored as `'en'` or `'es'` |
+
+**Client Config `Language` field is NOT used for per-record lang resolution.** It is informational only — indicates which languages that client supports. Do not use `bv.language` in any lang conditional.
+
+---
+
+## 6. SPANISH PROCESSING — RDA SUMMARY
+
+| Stage | Spanish Handling |
+|---|---|
+| `lang_resolved` | Step 7a: `(inp.lang \|\| 'en').toLowerCase().trim()` |
+| Opening | Step 7a: LANGUAGE instruction in system prompt |
+| Body draft | Step 7c: LANGUAGE instruction in system prompt |
+| SEO/Governance | Step 7e: LANGUAGE instruction in system prompt |
+| Internal brief | Step 7g: LANGUAGE instruction in system prompt |
+| Audit | Step 9b: LANGUAGE block present |
+| Commercial scan | Step 11: `prohibitedES` array active |
+| Closing | Step 9d: `closingsES` active when `lang_resolved = 'es'` |
+| Brand signature | Step 9d: `bv?.['Client Name']` — language-neutral |
+| NocoDB write | Step 14: `'lang': inp.lang_resolved` |
+
+---
+
+## 7. RECOVERY PROTOCOL — HOW IT WORKS IN RDA
+
+The Recovery Protocol is dormant for T1 (positive signal) records. It activates for T2 and T3 records only.
+
+| Selection | Claude Behavior in Steps 7c + 7g |
+|---|---|
+| The Transparent Owner | Lead with direct, unambiguous acknowledgment of the failure. No defensive language. No softening. Resolution-forward. Applied: PAK-001. |
+| The Gracious Host | Lead with emotional validation. Mirror the guest's emotional state before any resolution language. Protective and de-escalating. Applied: all AJI clients. |
+| The Forward-Looker | Brief acknowledgment of the friction point. Immediately pivot to what will be done and invitation to return. |
+
+`recovery_protocol` is now included in the `brand_voice` object (Step 6) and in the body user prompt (Step 7c) and internal brief user prompt (Step 7g). Claude receives it as a named instruction, not as part of a general style description.
+
+---
+
+## 8. MULTI-CLIENT STATE — CONFIRMED
+
+| Client ID | Client Name | Language(s) | Recovery Protocol | Sheet Tab |
+|---|---|---|---|---|
+| PAK-001 | Park Avenue Kitchen by David Burke | En | The Transparent Owner | Park Ave |
+| AJI-001 | Aji Ceviche Bar - Orlando | En, Es | The Gracious Host | Orlando |
+| AJI-002 | Aji Ceviche Bar - Casselberry | En, Es | The Gracious Host | Casselberry |
+| AJI-003 | Aji Ceviche Bar - Sarasota | En, Es | The Gracious Host | Sarasota |
+| AJI-004 | Aji Ceviche Bar - Tampa | En, Es | The Gracious Host | Tampa |
+| AJI-005 | Aji Ceviche Bar - St. Petersburg | En, Es | The Gracious Host | St. Petersburg |
+
+Architecture rule: one Client ID per physical location. RDA does not assign `client_id` — passes through from upstream. Adding a new client = new Client Config NocoDB row only. No RDA code changes.
+
+---
+
+## 9. PENDING ACTIONS BEFORE NEXT PILOT RUN
+
+| # | Action | Node | Blocking |
+|---|---|---|---|
+| 1 | Replace Step 6 brand_voice object with updated code | Step 6 | YES — old field names return undefined |
+| 2 | Fix lang_resolved to use `inp.lang` directly | Step 7a | YES — AJI Spanish records resolve to 'en' |
+| 3 | Update body user prompt BRAND VOICE BRIEF block | Step 7c | Recommended before first AJI run |
+| 4 | Add Recovery Protocol + Commitment Restrictions to internal brief user prompt | Step 7g | Recommended before first AJI run |
+| 5 | Confirm `Client Name` field populated for all 6 records | NocoDB | YES — brand signature breaks without it |
+
+Actions 1 and 2 are blocking. AJI Spanish records will not process correctly until both are deployed.
+
+---
+
+## 10. OPEN ITEMS STATUS
+
+| Item | v3.2 Status | v3.4 Status |
+|---|---|---|
+| SCX-Sheet-Sync OAuth failure | In Progress | Resolved — Google Service Account deployed |
+| Multi-client Sheet-Sync | Not built | Complete — Chat #83 |
+| MRA build | On hold | Complete — v2.1 Chat #82 |
+| AJI pilots | Exploratory | Live — 5 locations, 45-day trial started June 25, 2026 |
+| PAK-001 live start | Trial agreed | Estimated July 15, 2026 |
+| EDO-001 | Q2 2026 | Moved to Q4 2026 / Q1 2027 |
+| First-name extraction | Open | Still open |
+| vryoh.com landing page | Not started | Not yet live |
+| Step 6 schema update | Not needed in v3.2 | Required — Actions 1–4 above |
+
+---
+
+## 11. VERSION RECORD
+
+| Version | Date | Chat | Changes |
+|---|---|---|---|
+| v3.2 | April 21, 2026 | #77 | SCX-Sheet-Sync OAuth issue documented |
+| v3.3 | June 26, 2026 | #87 (earlier) | Spanish confirmed. Step 6 Client Name. Step 9d closings + signature. Multi-client confirmed. |
+| v3.4 | June 26, 2026 | #87 | Supersedes v3.3. Client Config schema fully rebuilt. Step 6 full rewrite required. lang_resolved fix. Body + internal brief user prompts updated for new brand voice fields. All 6 client records documented. Recovery Protocol operationalized. |
+
+---
+
+*VRYOH Intelligence · Solofella LLC · SCX_RDA_HOW_v3.4 Delta · June 26, 2026 · Chat #87*
