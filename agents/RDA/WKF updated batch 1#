@@ -1,0 +1,197 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scx-rda",
+        "options": {
+          "responseCode": {
+            "values": {}
+          },
+          "responseData": "={\"status\":\"received\"}"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "99558ed2-fc97-46b3-ab82-8214fa93826c",
+      "name": "Step 1 - Webhook",
+      "webhookId": "b279471a-fcae-49f0-92b0-dd3034d06e4d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst p = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n\nif (!p.bra_record_id) throw new Error('Missing bra_record_id');\n\nconst braId = parseInt(p.bra_record_id);\n\nif (isNaN(braId) || braId <= 0) throw new Error('bra_record_id must be positive integer. Got: ' + p.bra_record_id);\n\nif (p.governance_flag === 'Halt') throw new Error('Halt record reached RDA --- BRA suppression failure. Record: ' + braId);\n\nreturn [{ json: {\n  bra_record_id: braId,\n  confirmed_response_tier: p.confirmed_response_tier || null,\n  governance_flag: p.governance_flag || 'None',\n  human_review_required: p.human_review_required || false,\n  solution_type: p.solution_type || null,\n  emotional_axis: p.emotional_axis || null,\n  pain_axis: p.pain_axis || null,\n  stability_axis: p.stability_axis || null,\n  signal_based_consideration: p.signal_based_consideration || null,\n  tone_style: p.tone_style || null,\n  urgency_level: p.urgency_level || null,\n  commercial_risk_flag: p.commercial_risk_flag || false,\n  behavioral_interpretation: p.behavioral_interpretation || null,\n  lang: p.lang || null,\n  client_id: p.client_id || null,\n  enriched_emotion_tag: p.enriched_emotion_tag || null,\n  enriched_pain_point: p.enriched_pain_point || null,\n  pain_point_sub_category: p.pain_point_sub_category || null,\n  signal_type: p.signal_type || null,\n  intensity_level: p.intensity_level || null,\n  hsi_record_id: parseInt(p.hsi_record_id) || null,\n  ess_record_id: parseInt(p.ess_record_id) || null,\n  eip_record_id: parseInt(p.eip_record_id) || null,\n  ala_record_id: parseInt(p.ala_record_id) || null,\n  prior_run_id: p.prior_run_id || null,\n  emotion_hypothesis: p.emotion_hypothesis || null,\n  keywords: p.keywords || null,\n  reviewer_handle: p.reviewer_handle || null,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "59c1cab9-b565-4f5f-b250-7caa03581fc5",
+      "name": "Step 2 - Payload Validation"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(BRA%20Record%20ID,eq,{{$json.bra_record_id}})&limit=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        528,
+        0
+      ],
+      "id": "4210b94b-00c9-4b90-8884-972c5c498f43",
+      "name": "Step 3 - Idempotency Check",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = $input.first().json.pageInfo?.totalRows || 0;\n\nif (total > 0) return [];\n\nconst rec = $('Step 2 - Payload Validation').first().json;\n\nreturn [{ json: {\n  bra_record_id: rec.bra_record_id,\n  confirmed_response_tier: rec.confirmed_response_tier,\n  governance_flag: rec.governance_flag,\n  human_review_required: rec.human_review_required,\n  solution_type: rec.solution_type,\n  emotional_axis: rec.emotional_axis,\n  pain_axis: rec.pain_axis,\n  stability_axis: rec.stability_axis,\n  signal_based_consideration: rec.signal_based_consideration,\n  tone_style: rec.tone_style,\n  urgency_level: rec.urgency_level,\n  commercial_risk_flag: rec.commercial_risk_flag,\n  behavioral_interpretation: rec.behavioral_interpretation,\n  lang: rec.lang,\n  reviewer_handle: rec.reviewer_handle,\n  client_id: rec.client_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  hsi_record_id: rec.hsi_record_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        0
+      ],
+      "id": "b1043f5b-7fc8-4bd4-a917-b9e8c808810b",
+      "name": "Step 4 - Already Processed"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m95cmabjfyb94ps?where=(Client%20ID,eq,{{$('Step 2 - Payload Validation').first().json.client_id}})&limit=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        832,
+        320
+      ],
+      "id": "c3ab01f5-2895-4d8c-a98d-1c5b2415da4b",
+      "name": "Step 5 - Brand Voice Load",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 1 - Webhook": {
+      "main": [
+        [
+          {
+            "node": "Step 2 - Payload Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 - Payload Validation": {
+      "main": [
+        [
+          {
+            "node": "Step 3 - Idempotency Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3 - Idempotency Check": {
+      "main": [
+        [
+          {
+            "node": "Step 4 - Already Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4 - Already Processed": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - Brand Voice Load",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - Brand Voice Load": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {
+    "Step 1 - Webhook": [
+      {
+        "headers": {
+          "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+          "content-type": "application/json",
+          "user-agent": "axios/1.12.0",
+          "content-length": "3178",
+          "accept-encoding": "gzip, compress, deflate, br",
+          "host": "161.35.133.49:5678",
+          "connection": "close"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "bra_record_id": 73,
+          "confirmed_response_tier": "T3",
+          "governance_flag": "Flag",
+          "human_review_required": true,
+          "solution_type": "Claude-Governed Response Strategy",
+          "emotional_axis": "Violated trust beneath restrained fairness",
+          "pain_axis": "Unclassified operational pain",
+          "stability_axis": "As a first recorded signal, there is no recurrence baseline to draw from, which makes the trajectory ambiguous but not neutral. First-signal food safety incidents carry disproportionate churn risk because the guest has no reservoir of positive history to buffer against the harm — this experience is, in effect, the entire relationship. Without a recovery touchpoint, the probability of silent attrition is high, as guests who experience physical harm rarely return to test whether the issue was resolved.",
+          "signal_based_consideration": "This signal carries the structural weight of a food safety incident reported by a first-time guest with no prior positive history to draw from, meaning the recovery window is narrow and the relationship is entirely defined by this experience. The inclusion of a second affected individual elevates the signal beyond a personal complaint into a perceived shared harm, which changes the nature of the response required — acknowledgment must reflect that scope. The guest's measured, praise-inclusive framing should not be read as low distress; it is a deliberate moderation of what is likely a deeper sense of betrayal and fear around family safety. The operations team should consider what internal review processes are appropriate when a specific menu item is named with causal specificity by a guest reporting physical symptoms across multiple people.",
+          "tone_style": "Dignity-Restorative",
+          "urgency_level": "Immediate",
+          "commercial_risk_flag": true,
+          "behavioral_interpretation": "A guest who arrived with genuine goodwill and leaves reporting physical harm to themselves and a family member represents one of the highest-risk signal profiles in hospitality — the positive intent makes the breach feel more acute, not less. The causal specificity around a named menu item, combined with a second affected person, suggests this guest has moved from emotional reaction into deliberate evidence-based reasoning, which increases the probability that this signal will be shared externally if not met with a response that matches its gravity. Silent attrition is the most likely outcome without meaningful recovery contact, as guests who experience physical harm in the absence of a prior relationship have no reservoir of goodwill to draw from when deciding whether to return.",
+          "lang": "en",
+          "client_id": "PAK-001",
+          "enriched_emotion_tag": "food poisoning distress",
+          "enriched_pain_point": null,
+          "pain_point_sub_category": "Food safety or hygiene concern",
+          "signal_type": "Mixed Signal",
+          "intensity_level": "High",
+          "hsi_record_id": 318,
+          "ess_record_id": 351,
+          "eip_record_id": 1058,
+          "ala_record_id": 4201,
+          "prior_run_id": "BRA-20260403-203312-001",
+          "emotion_hypothesis": "Despite praising the server and overall experience, the guest feels significant distress because the Caesar salad appears to have caused food poisoning.",
+          "keywords": "amazing, cesar salad, next day, sick, food poisoning"
+        },
+        "webhookUrl": "http://161.35.133.49:5678/webhook/scx-rda",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
