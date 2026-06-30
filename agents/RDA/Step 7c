@@ -1,0 +1,139 @@
+const response = $input.first().json;
+const raw = response.content?.[0]?.text;
+if (!raw || raw.trim().length < 5)
+  throw new Error('Opening Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));
+
+const opening_sentence = raw.trim();
+const inp = $('Step 7a - Build Opening Prompt').first().json;
+const bv = inp.brand_voice;
+
+const body_system_prompt = `Your role: complete a response draft that reads as written by a senior hospitality professional — not assembled from parts. The response must feel specific to this guest, this signal, and this moment.
+
+You are the Draft Body Builder for VRYOH RDA. Your job: complete a hospitality response draft using a pre-constructed opening sentence as the first line.
+
+CRITICAL OPENING RULE — NON-NEGOTIABLE:
+Your response MUST begin with the opening sentence provided in the user prompt, copied exactly word for word. Do not paraphrase it. Do not improve it. Do not rewrite it. Your first word must be the first word of that opening sentence. Failure to use this sentence exactly will invalidate the entire draft.
+
+TIER COMPLETION RULES:
+
+  T1: Write exactly 1-2 sentences after the opening. Total draft including opening: 2-3 sentences.
+    If you have said what needs to be said in 1 sentence, stop. Never add a sentence that restates what the opening already said.
+    T1 SUB-RULES — apply in this order:
+      1. If the opening references a staff member by name, that name must appear at least once in the body sentences as well.
+      2. If the review contains a minor criticism alongside overall positive sentiment, dedicate one sentence to acknowledging it by name. Do not generalize.
+      3. Close with something specific to this guest's visit — the occasion, the dish, their own words, their frequency. Never a generic formula.
+
+  T2: Write exactly 1-3 sentences after the opening. Total draft including opening: 2-4 sentences.
+    Reference the specific signal — name what the guest experienced. Acknowledge without asserting full understanding. Preserve ambiguity.
+    End with a direct invitation to contact using generic language only — no email address, URL, or named channel. This closing invitation is required for T2.
+    Each sentence must add a different dimension — do not restate.
+
+  T3: Write exactly 2-4 sentences after the opening. Total draft including opening: 3-5 sentences.
+    Restore dignity through specificity. Acknowledge the actual harm — not a category. No generic apology.
+    Offer direct private contact using generic language only — no email address, URL, or named channel.
+    Each sentence must serve a distinct purpose: acknowledge the harm, acknowledge the scope, offer contact. Never restate.
+
+PADDING TEST:
+Before finalizing, read each sentence after the opening. Ask: does this sentence add something the previous sentence did not say? If no — delete it.
+
+TONE: Apply tone_style exactly.
+  Empathetic-Formal: Warm but structured. Formal register. No contractions.
+  Empathetic-Warm: Conversational, human, genuine. Contractions allowed.
+  Neutral-Professional: Measured, factual. Acknowledge without amplifying.
+  Dignity-Restorative: Specific, human, non-formulaic. Acknowledge the actual experience. Never generic.
+
+BRAND VOICE:
+  - Write in first-person plural using person_preference consistently throughout.
+  - Match formality_level: 1 = very casual, 5 = very polished.
+  - Include at most ONE phrase from brand_phrases_include per draft. ONE is absolute. Only when it emerges naturally — never as filler. If no phrase fits, omit entirely.
+  - Never use any word or phrase from brand_phrases_avoid or vocabulary_restrictions.
+
+HUMAN NATURALNESS:
+  - Write as a thoughtful, senior hospitality professional would.
+  - Each response must feel written specifically for that guest.
+  - For T2 and T3: name what the guest experienced directly in the body — not just the opening.
+  - Short responses are better than padded responses. Say one thing well.
+
+CLOSING RULE:
+  The closing sentence must derive from something specific in this guest's review — the occasion, the dish, their frequency, their own words.
+  Never close with a generic formula. Never repeat a specific noun already used in the opening.
+  If a brand phrase from brand_phrases_include is used as the closing, it must be followed by something specific to this guest — never stand alone as the final sentence.
+
+RETURN the complete draft as plain text only — no JSON, no preamble, no explanation.
+Start with the opening sentence exactly as provided, then continue the response.
+
+LANGUAGE: If the LANGUAGE field in the user prompt is "es", write the entire response in Spanish. Apply all tier, tone, brand voice, and governance rules in Spanish. The response must read as written by a senior hospitality professional in Spanish — not as a translation from English.`;
+
+const body_user_prompt =
+`OPENING SENTENCE (use exactly as line 1):\n${opening_sentence}\n\n` +
+`RESPONSE TIER: ${inp.confirmed_response_tier}\n` +
+`TONE STYLE: ${inp.tone_style}\n` +
+`LANGUAGE: ${inp.lang_resolved}\n\n` +
+`BRAND VOICE BRIEF:\n` +
+` Register: ${bv.the_register || 'Not specified'}\n` +
+` Core Driver: ${bv.the_core_driver || 'Not specified'}\n` +
+` Regional Accent: ${bv.the_regional_accent || 'Not specified'}\n` +
+` Recovery Protocol: ${bv.recovery_protocol || 'Not specified'}\n` +
+` Brand Personality: ${bv.tone_descriptors || 'Not specified'}\n` +
+` Formality Level: ${bv.formality_level || '3'}\n` +
+` Person Preference: ${bv.person_preference || 'our team'}\n` +
+` Guest Should Feel: ${bv.guest_feeling || 'Valued'}\n` +
+` Differentiator: ${bv.differentiator || 'Not specified'}\n` +
+` Brand Phrases To Include: ${bv.brand_phrases_include || 'None'}\n` +
+` Brand Phrases To Avoid: ${bv.brand_phrases_avoid || 'None'}\n` +
+` Negative Response Approach: ${bv.vocabulary_restrictions || 'Not specified'}\n` +
+` Commitments NEVER To Make: ${bv.commitment_restrictions || 'None'}\n\n` +
+`RESPONSE STRATEGY:\n` +
+` Emotional axis: ${inp.emotional_axis}\n` +
+` Pain axis: ${inp.pain_axis}\n` +
+` Stability axis: ${inp.stability_axis}\n` +
+` Signal-Based Consideration: ${inp.signal_based_consideration}\n` +
+` Solution type: ${inp.solution_type}\n\n` +
+`SIGNAL DETAIL:\n` +
+` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\n` +
+` Keywords: ${inp.keywords || 'Not available'}\n\n` +
+(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\n\n` : '') +
+`Complete the response. Return plain text only. Start with the opening sentence.`;
+
+const body_prompt_body = JSON.stringify({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 500,
+  temperature: 0.5,
+  system: body_system_prompt,
+  messages: [{ role: 'user', content: body_user_prompt }]
+});
+
+return [{ json: {
+  bra_record_id: inp.bra_record_id,
+  confirmed_response_tier: inp.confirmed_response_tier,
+  governance_flag: inp.governance_flag,
+  human_review_required: inp.human_review_required,
+  solution_type: inp.solution_type,
+  emotional_axis: inp.emotional_axis,
+  pain_axis: inp.pain_axis,
+  stability_axis: inp.stability_axis,
+  signal_based_consideration: inp.signal_based_consideration,
+  tone_style: inp.tone_style,
+  urgency_level: inp.urgency_level,
+  commercial_risk_flag: inp.commercial_risk_flag,
+  behavioral_interpretation: inp.behavioral_interpretation,
+  lang: inp.lang,
+  client_id: inp.client_id,
+  enriched_emotion_tag: inp.enriched_emotion_tag,
+  enriched_pain_point: inp.enriched_pain_point,
+  pain_point_sub_category: inp.pain_point_sub_category,
+  signal_type: inp.signal_type,
+  intensity_level: inp.intensity_level,
+  hsi_record_id: inp.hsi_record_id,
+  ess_record_id: inp.ess_record_id,
+  eip_record_id: inp.eip_record_id,
+  ala_record_id: inp.ala_record_id,
+  prior_run_id: inp.prior_run_id,
+  reviewer_handle: inp.reviewer_handle,
+  emotion_hypothesis: inp.emotion_hypothesis,
+  keywords: inp.keywords,
+  brand_voice: inp.brand_voice,
+  lang_resolved: inp.lang_resolved,
+  opening_sentence: opening_sentence,
+  body_prompt_body: body_prompt_body
+} }];
