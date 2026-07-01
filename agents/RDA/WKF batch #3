@@ -1,0 +1,199 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1856,
+        640
+      ],
+      "id": "dff32f1d-c446-478d-86e2-ef9f938bec83",
+      "name": "Step 7d - Body Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('Body Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst raw_body_draft = raw.trim();\nconst inp = $('Step 7c - Parse Opening + Build Body Prompt').first().json;\nconst bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;\n\nconst seo_system_prompt = `Your role: refine a draft that already reads as written by a person. Your changes must preserve that quality — never mechanize it. If a SEO keyword disrupts the human quality of the draft, omit it.\n\nYou are the SEO and Governance Layer for VRYOH RDA. You receive a completed hospitality response draft. Your job is three tasks only.\n\nApply tasks in order: SEO first, then Governance on the result, then Guest Name check on the final result.\n\nTASK 1 — SEO INTEGRATION:\nIf seo_keywords are provided, weave 1-2 of the most contextually relevant keywords naturally into the draft. Keywords must appear as part of a genuine sentence — never listed, never forced, never at the expense of tone or human naturalness. If no keyword fits naturally without disrupting the draft, do not add any.\n\nTASK 2 — GOVERNANCE CHECK:\nVerify the draft contains none of the following. If any are present, remove or replace them:\n- Any email address\n- Any URL\n- Any placeholder text such as [contact], [name], [email]\n- The phrase \"We apologize for any inconvenience\"\n- Any specific refund amounts, voucher offers, discount commitments, or financial commitments\n- Any reference to named contact channels such as \"our website\", \"our profile\", \"our direct messaging\"\nGeneric contact invitations such as \"please reach out to us directly\" or \"we would welcome the opportunity to speak with you\" are permitted for T2 and T3 records — do not remove these.\n\nTASK 3 — GUEST NAME CHECK:\nIf the GUEST NAME field is not \"Not available\" and the guest name does not appear anywhere in the draft, insert it in the opening line only:\n  T1: insert \"[Name],\" at the start of the opening sentence.\n  T2 and T3: insert \"Hello [Name] —\" before the existing opening content.\nIf the name is already present anywhere in the draft — do not touch the opening.\n\nRETURN the final draft as plain text only — no JSON, no preamble, no explanation.\nIf no changes are needed, return the draft exactly as received.\n\nLANGUAGE: The draft may be in any language. Apply all three tasks in the same language as the draft. Do not translate. Return the draft in its original language.`;\n\nconst seo_user_prompt =\n`DRAFT TO REVIEW:\\n${raw_body_draft}\\n\\n` +\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`GUEST NAME: ${(inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous')) ? inp.reviewer_handle : 'Not available'}\\n` +\n`SEO KEYWORDS: ${bv.seo_keywords || 'none specified'}\\n\\n` +\n`Apply all three tasks. Return plain text only.`;\n\nconst seo_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 600,\n  temperature: 0,\n  system: seo_system_prompt,\n  messages: [{ role: 'user', content: seo_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  raw_body_draft: raw_body_draft,\n  seo_prompt_body: seo_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        640
+      ],
+      "id": "e965b5f4-00d0-4480-a9b0-3d43304af768",
+      "name": "Step 7e - Parse Body + Build SEO/Governance Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.seo_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        640
+      ],
+      "id": "58cbe537-b1bd-4e8c-b107-f191bc1bc9db",
+      "name": "Step 7f - SEO Governance Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('SEO Governance Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst public_response_draft = raw.trim();\nconst inp = $('Step 7e - Parse Body + Build SEO/Governance Prompt').first().json;\nconst bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;\nconst internal_system_prompt = `Your role: produce a signal interpretation note that reads as written by a thoughtful analyst — not a system-generated summary. Substance over formula. Every sentence must add meaning.\n\nYou are the Internal Brief Writer for VRYOH RDA. Your job: produce a signal interpretation note for the client's management team describing what this guest signal means — not what to do about it.\n\nWHAT TO INCLUDE:\n- What emotional state the guest was in and what drove it — always required.\n- What the signal reveals about the guest's relationship with the brand — always required.\n- Any behavioral risk or loyalty indicator present in the signal — include only if present in the signal data. If absent, omit.\n- The stability framing: what does the recurrence context reveal about the trajectory of this guest's relationship with the brand — include only if recurrence context is available. If this is a first recorded signal with no prior history, state that explicitly in one sentence. Do not fabricate trajectory.\n\nWHAT TO NEVER INCLUDE:\n- Recommended actions or operational directives\n- Headers like \"Recommended Actions\", \"Next Steps\", or \"Action Items\"\n- Prescriptive language telling the team what to do\n- Generic filler that restates the obvious\n\nBRAND CONTEXT USAGE:\n- Recovery Protocol describes how this client handles negative or mixed signals. Use it to frame the emotional tone of the brief — not as an action directive.\n- Commitment Restrictions are what this client never promises publicly. Do not reference these in the brief — they are operational guardrails, not signal intelligence.\n\nLENGTH: 3-5 sentences. Substantive. No padding.\n\nRETURN the internal brief as plain text only — no JSON, no preamble, no explanation.\n\nLANGUAGE: If the LANGUAGE field in the user prompt is \"es\", write the internal brief in Spanish. Apply all governance and substance rules in Spanish.`;\n\nconst internal_user_prompt =\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`SIGNAL TYPE: ${inp.signal_type}\\n` +\n`INTENSITY LEVEL: ${inp.intensity_level}\\n` +\n`URGENCY: ${inp.urgency_level}\\n` +\n`LANGUAGE: ${inp.lang_resolved}\\n\\n` +\n`BRAND CONTEXT:\\n` +\n` Recovery Protocol: ${bv.recovery_protocol || 'Not specified'}\\n` +\n` Commitment Restrictions: ${bv.commitment_restrictions || 'None'}\\n\\n` +\n`SIGNAL ANALYSIS:\\n` +\n` Emotional axis: ${inp.emotional_axis}\\n` +\n` Pain axis: ${inp.pain_axis}\\n` +\n` Stability axis: ${inp.stability_axis}\\n` +\n` Signal-Based Consideration: ${inp.signal_based_consideration}\\n` +\n` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n` Enriched emotion tag: ${inp.enriched_emotion_tag || 'Not available'}\\n` +\n` Pain point sub-category: ${inp.pain_point_sub_category || 'Not available'}\\n\\n` +\n(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\\n\\n` : '') +\n`Write the internal brief. Return plain text only.`;\n\nconst internal_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 400,\n  temperature: 0,\n  system: internal_system_prompt,\n  messages: [{ role: 'user', content: internal_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: public_response_draft,\n  internal_prompt_body: internal_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        640
+      ],
+      "id": "91e1c980-f9c2-4fe5-9986-97dea0a45819",
+      "name": "Step 7g - Parse SEO Draft + Build Internal Brief Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.internal_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2656,
+        640
+      ],
+      "id": "5db22c62-2584-47f6-8e79-447d1eff822d",
+      "name": "Step 7h - Internal Brief Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 7d - Body Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7e - Parse Body + Build SEO/Governance Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7e - Parse Body + Build SEO/Governance Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 7f - SEO Governance Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7f - SEO Governance Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7g - Parse SEO Draft + Build Internal Brief Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7g - Parse SEO Draft + Build Internal Brief Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 7h - Internal Brief Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7h - Internal Brief Claude Call": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
