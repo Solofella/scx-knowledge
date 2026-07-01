@@ -1,0 +1,171 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3952,
+        1328
+      ],
+      "id": "f626df5b-5bdb-48a0-af09-a9e9c8bc31c5",
+      "name": "Step 9a - Fetch ALA Record",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,{{$('Step 2 - Payload Validation').first().json.client_id}})&limit=2&sort=-RDA%20Timestamp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4160,
+        1328
+      ],
+      "id": "61dacffb-bf3a-4d6d-9ef9-7c46f27951c0",
+      "name": "Step 9a-2 - Fetch Recent RDA Drafts",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('SEO Governance Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst public_response_draft = raw.trim();\nconst inp = $('Step 7e - Parse Body + Build SEO/Governance Prompt').first().json;\nconst bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;\nconst internal_system_prompt = `Your role: produce a signal interpretation note that reads as written by a thoughtful analyst — not a system-generated summary. Substance over formula. Every sentence must add meaning.\n\nYou are the Internal Brief Writer for VRYOH RDA. Your job: produce a signal interpretation note for the client's management team describing what this guest signal means — not what to do about it.\n\nWHAT TO INCLUDE:\n- What emotional state the guest was in and what drove it — always required.\n- What the signal reveals about the guest's relationship with the brand — always required.\n- Any behavioral risk or loyalty indicator present in the signal — include only if present in the signal data. If absent, omit.\n- The stability framing: what does the recurrence context reveal about the trajectory of this guest's relationship with the brand — include only if recurrence context is available. If this is a first recorded signal with no prior history, state that explicitly in one sentence. Do not fabricate trajectory.\n\nWHAT TO NEVER INCLUDE:\n- Recommended actions or operational directives\n- Headers like \"Recommended Actions\", \"Next Steps\", or \"Action Items\"\n- Prescriptive language telling the team what to do\n- Generic filler that restates the obvious\n\nBRAND CONTEXT USAGE:\n- Recovery Protocol describes how this client handles negative or mixed signals. Use it to frame the emotional tone of the brief — not as an action directive.\n- Commitment Restrictions are what this client never promises publicly. Do not reference these in the brief — they are operational guardrails, not signal intelligence.\n\nLENGTH: 3-5 sentences. Substantive. No padding.\n\nRETURN the internal brief as plain text only — no JSON, no preamble, no explanation.\n\nLANGUAGE: If the LANGUAGE field in the user prompt is \"es\", write the internal brief in Spanish. Apply all governance and substance rules in Spanish.`;\n\nconst internal_user_prompt =\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`SIGNAL TYPE: ${inp.signal_type}\\n` +\n`INTENSITY LEVEL: ${inp.intensity_level}\\n` +\n`URGENCY: ${inp.urgency_level}\\n` +\n`LANGUAGE: ${inp.lang_resolved}\\n\\n` +\n`BRAND CONTEXT:\\n` +\n` Recovery Protocol: ${bv.recovery_protocol || 'Not specified'}\\n` +\n` Commitment Restrictions: ${bv.commitment_restrictions || 'None'}\\n\\n` +\n`SIGNAL ANALYSIS:\\n` +\n` Emotional axis: ${inp.emotional_axis}\\n` +\n` Pain axis: ${inp.pain_axis}\\n` +\n` Stability axis: ${inp.stability_axis}\\n` +\n` Signal-Based Consideration: ${inp.signal_based_consideration}\\n` +\n` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n` Enriched emotion tag: ${inp.enriched_emotion_tag || 'Not available'}\\n` +\n` Pain point sub-category: ${inp.pain_point_sub_category || 'Not available'}\\n\\n` +\n(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\\n\\n` : '') +\n`Write the internal brief. Return plain text only.`;\n\nconst internal_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 400,\n  temperature: 0,\n  system: internal_system_prompt,\n  messages: [{ role: 'user', content: internal_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: public_response_draft,\n  internal_prompt_body: internal_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3296,
+        1024
+      ],
+      "id": "91e1c980-f9c2-4fe5-9986-97dea0a45819",
+      "name": "Step 7g - Parse SEO Draft + Build Internal Brief Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.internal_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3504,
+        1024
+      ],
+      "id": "5db22c62-2584-47f6-8e79-447d1eff822d",
+      "name": "Step 7h - Internal Brief Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 10)\n  throw new Error('Internal Brief Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst internal_followup_draft = raw.trim();\nconst inp = $('Step 7g - Parse SEO Draft + Build Internal Brief Prompt').first().json;\n\nif (!inp.public_response_draft || inp.public_response_draft.length < 20)\n  throw new Error('public_response_draft missing or too short at Step 7i. ala_record_id: ' + inp.ala_record_id);\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: inp.public_response_draft,\n  internal_followup_draft: internal_followup_draft\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        1328
+      ],
+      "id": "9077b27f-e899-4a7b-87a7-4986d60e9076",
+      "name": "Step 8 - Build Final Output"
+    }
+  ],
+  "connections": {
+    "Step 9a - Fetch ALA Record": {
+      "main": [
+        [
+          {
+            "node": "Step 9a-2 - Fetch Recent RDA Drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9a-2 - Fetch Recent RDA Drafts": {
+      "main": [
+        []
+      ]
+    },
+    "Step 7g - Parse SEO Draft + Build Internal Brief Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 7h - Internal Brief Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7h - Internal Brief Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Build Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Build Final Output": {
+      "main": [
+        [
+          {
+            "node": "Step 9a - Fetch ALA Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
