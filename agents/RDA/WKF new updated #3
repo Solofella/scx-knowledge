@@ -1,0 +1,125 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.opening_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2144,
+        1024
+      ],
+      "id": "85e29c5c-1071-48de-b57f-b7492ae61f6a",
+      "name": "Step 7b - Opening Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst opening_system_prompt =\n`You are the Opening Constructor for VRYOH RDA. Produce one opening sentence only. No preamble. No explanation. No JSON wrapper.\n\nTASK: A hospitality review names a specific staff member. Write the opening sentence of the public response using one of two fixed forms.\n\nFORM A — use when the guest's primary signal is a descriptive word or adjective about the staff member (friendly, excellent, great, amable, increíble, super):\n\"[Guest name], hearing that [staff name] was [guest's exact word] — that is something our team will carry.\"\n\nFORM B — use when the guest describes an action, outcome, or impact the staff member produced (made us feel comfortable, answered every question, logró que nos sintiéramos cómodos):\n\"[Guest name], what [staff name] did — [guest's exact phrase describing the action or outcome] — is exactly what we want every guest to walk away with.\"\n\nSLOT RULES — apply to both forms:\n- Fill every bracketed slot using the guest's own word or phrase from KEYWORDS FROM REVIEW or from the review text directly.\n- Do not infer a quality. Do not compose a description. Use only what the guest wrote.\n- The staff name must appear in the sentence.\n- If no guest name is available: remove [Guest name] and begin with the staff name or the form construction directly.\n\nLANGUAGE: If lang_resolved is \"es\", write in Spanish using the same two forms. Do not open with a \"que\" subordinate clause.\n\nFALLBACK: If no staff name is identifiable from KEYWORDS FROM REVIEW or EMOTION HYPOTHESIS, do not use Form A or Form B. Instead produce: \"Thank you for this, [Guest name] — it means more than a quick reply can say.\"\n\nOUTPUT: One sentence. Nothing else.`;\n\nconst opening_user_prompt =\n`GUEST NAME: ${inp.guest_name || 'Not available'}\\n` +\n`KEYWORDS FROM REVIEW: ${inp.keywords || 'Not available'}\\n` +\n`EMOTION HYPOTHESIS: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n`LANGUAGE: ${inp.lang_resolved}\\n` +\n`\\nProduce one opening sentence only. No preamble.`;\n\nconst opening_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 150,\n  temperature: 0,\n  system: opening_system_prompt,\n  messages: [{ role: 'user', content: opening_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id:              inp.bra_record_id,\n  confirmed_response_tier:    inp.confirmed_response_tier,\n  governance_flag:            inp.governance_flag,\n  human_review_required:      inp.human_review_required,\n  solution_type:              inp.solution_type,\n  emotional_axis:             inp.emotional_axis,\n  pain_axis:                  inp.pain_axis,\n  stability_axis:             inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style:                 inp.tone_style,\n  urgency_level:              inp.urgency_level,\n  commercial_risk_flag:       inp.commercial_risk_flag,\n  behavioral_interpretation:  inp.behavioral_interpretation,\n  lang:                       inp.lang,\n  lang_resolved:              inp.lang_resolved,\n  client_id:                  inp.client_id,\n  enriched_emotion_tag:       inp.enriched_emotion_tag,\n  enriched_pain_point:        inp.enriched_pain_point,\n  pain_point_sub_category:    inp.pain_point_sub_category,\n  signal_type:                inp.signal_type,\n  intensity_level:            inp.intensity_level,\n  hsi_record_id:              inp.hsi_record_id,\n  ess_record_id:              inp.ess_record_id,\n  eip_record_id:              inp.eip_record_id,\n  ala_record_id:              inp.ala_record_id,\n  prior_run_id:               inp.prior_run_id,\n  reviewer_handle:            inp.reviewer_handle,\n  emotion_hypothesis:         inp.emotion_hypothesis,\n  keywords:                   inp.keywords,\n  brand_voice:                inp.brand_voice,\n  guest_name:                 inp.guest_name,\n  has_staff:                  inp.has_staff,\n  opening_prompt_body:        opening_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        544
+      ],
+      "id": "8246632d-e8b6-4a74-8da3-7d1177509324",
+      "name": "Step 7a-staff · Priority 1 Prompt Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst tier = inp.confirmed_response_tier;\n\nconst opening_system_prompt =\n`You are the Opening Constructor for VRYOH RDA. Produce one opening sentence only. No preamble. No explanation. No JSON wrapper.\n\nTASK: Write the opening sentence of a public response to a hospitality review. Apply the rule for the response tier below.\n\nFOR T1 — no staff member named in the review:\nSelect the first matching construction:\n- GUEST WORD LEAD: guest emphasizes a specific word (\"best\", \"perfect\", \"impeccable\", \"recomendado\", \"increíble\"):\n  → \"[Guest name], that word '[their word]' is exactly what our team works to earn.\"\n- OCCASION LEAD: guest describes a special occasion (birthday, anniversary, celebration):\n  → \"[Guest name], a [occasion] that feels [their description] — that is what our team is here for.\"\n- SPECIFIC DETAIL LEAD: guest names a specific dish or drink:\n  → \"[Dish name] deserves that kind of praise, [Guest name] — our kitchen will hear this.\"\n- BELONGING LEAD: guest is new to area or discovering restaurant for first time:\n  → \"[Guest name], welcome to the neighborhood — we are glad you found us.\"\n- GRATITUDE LEAD (fallback):\n  → \"Thank you for this, [Guest name] — it means more than a quick reply can say.\"\nIf no guest name available: open with a specific detail from the review instead.\n\nFOR T2:\nOpen with \"Hi [Guest name] —\" or \"Hello [Guest name] —\" in English. \"Hola [Guest name] —\" in Spanish. What follows must reflect the specific signal — not a formula.\nIf no guest name available: open with a specific detail from the signal.\n\nFOR T3:\nOpen with \"Hello [Guest name] —\" in English. \"Hola [Guest name] —\" in Spanish. Tone is grave and human — not warm, not transactional.\nIf no guest name available: open with the specific nature of the harm described.\n\nCRITICAL RULES:\n- One sentence only. Nothing else.\n- Guest name must appear when available.\n- Never use \"Knowing\" as an opening word.\n- Never use \"landed\" as the primary acknowledgment verb.\n- Sentence ends with period, em dash continuation, or natural punctuation.\n\nLANGUAGE: If lang_resolved is \"es\", write in Spanish. Same quality standard applies.`;\n\nconst opening_user_prompt =\n`RESPONSE TIER: ${tier}\\n` +\n`GUEST NAME: ${inp.guest_name || 'Not available'}\\n` +\n`SIGNAL TYPE: ${inp.signal_type}\\n` +\n`TONE STYLE: ${inp.tone_style}\\n` +\n`EMOTION HYPOTHESIS: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n`KEYWORDS FROM REVIEW: ${inp.keywords || 'Not available'}\\n` +\n`ENRICHED EMOTION: ${inp.enriched_emotion_tag || 'Not available'}\\n` +\n(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\\n` : '') +\n`LANGUAGE: ${inp.lang_resolved}\\n` +\n`\\nProduce one opening sentence only. No preamble.`;\n\nconst opening_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 150,\n  temperature: 0,\n  system: opening_system_prompt,\n  messages: [{ role: 'user', content: opening_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id:              inp.bra_record_id,\n  confirmed_response_tier:    inp.confirmed_response_tier,\n  governance_flag:            inp.governance_flag,\n  human_review_required:      inp.human_review_required,\n  solution_type:              inp.solution_type,\n  emotional_axis:             inp.emotional_axis,\n  pain_axis:                  inp.pain_axis,\n  stability_axis:             inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style:                 inp.tone_style,\n  urgency_level:              inp.urgency_level,\n  commercial_risk_flag:       inp.commercial_risk_flag,\n  behavioral_interpretation:  inp.behavioral_interpretation,\n  lang:                       inp.lang,\n  lang_resolved:              inp.lang_resolved,\n  client_id:                  inp.client_id,\n  enriched_emotion_tag:       inp.enriched_emotion_tag,\n  enriched_pain_point:        inp.enriched_pain_point,\n  pain_point_sub_category:    inp.pain_point_sub_category,\n  signal_type:                inp.signal_type,\n  intensity_level:            inp.intensity_level,\n  hsi_record_id:              inp.hsi_record_id,\n  ess_record_id:              inp.ess_record_id,\n  eip_record_id:              inp.eip_record_id,\n  ala_record_id:              inp.ala_record_id,\n  prior_run_id:               inp.prior_run_id,\n  reviewer_handle:            inp.reviewer_handle,\n  emotion_hypothesis:         inp.emotion_hypothesis,\n  keywords:                   inp.keywords,\n  brand_voice:                inp.brand_voice,\n  guest_name:                 inp.guest_name,\n  has_staff:                  inp.has_staff,\n  opening_prompt_body:        opening_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        800
+      ],
+      "id": "f1ec21af-bfed-45ff-9061-031734a2359a",
+      "name": "Step 7a-general · Priorities 2–6 + T2/T3 Prompt Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nlet inp;\ntry {\n  inp = $('Step 7a-staff · Priority 1 Prompt Builder').first().json;\n} catch(e) {\n  inp = $('Step 7a-general · Priorities 2–6 + T2/T3 Prompt Builder').first().json;\n}\n\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 5)\n  throw new Error('Opening Claude call returned empty or too short.');\n\nreturn [{ json: {\n  bra_record_id:              inp.bra_record_id,\n  confirmed_response_tier:    inp.confirmed_response_tier,\n  governance_flag:            inp.governance_flag,\n  human_review_required:      inp.human_review_required,\n  solution_type:              inp.solution_type,\n  emotional_axis:             inp.emotional_axis,\n  pain_axis:                  inp.pain_axis,\n  stability_axis:             inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style:                 inp.tone_style,\n  urgency_level:              inp.urgency_level,\n  commercial_risk_flag:       inp.commercial_risk_flag,\n  behavioral_interpretation:  inp.behavioral_interpretation,\n  lang:                       inp.lang,\n  lang_resolved:              inp.lang_resolved,\n  client_id:                  inp.client_id,\n  enriched_emotion_tag:       inp.enriched_emotion_tag,\n  enriched_pain_point:        inp.enriched_pain_point,\n  pain_point_sub_category:    inp.pain_point_sub_category,\n  signal_type:                inp.signal_type,\n  intensity_level:            inp.intensity_level,\n  hsi_record_id:              inp.hsi_record_id,\n  ess_record_id:              inp.ess_record_id,\n  eip_record_id:              inp.eip_record_id,\n  ala_record_id:              inp.ala_record_id,\n  prior_run_id:               inp.prior_run_id,\n  reviewer_handle:            inp.reviewer_handle,\n  emotion_hypothesis:         inp.emotion_hypothesis,\n  keywords:                   inp.keywords,\n  brand_voice:                inp.brand_voice,\n  guest_name:                 inp.guest_name,\n  has_staff:                  inp.has_staff,\n  opening_sentence:           raw.trim()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        1024
+      ],
+      "id": "8a9a2bc4-0703-493c-8fe8-2ae596bdb0bb",
+      "name": "Step 7b-parse"
+    }
+  ],
+  "connections": {
+    "Step 7b - Opening Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7b-parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7a-staff · Priority 1 Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Step 7b - Opening Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7a-general · Priorities 2–6 + T2/T3 Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Step 7b - Opening Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7b-parse": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
