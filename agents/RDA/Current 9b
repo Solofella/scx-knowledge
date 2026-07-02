@@ -1,0 +1,179 @@
+const alaRecord = $('Step 9a - Fetch ALA Record').first().json;
+const rawText = alaRecord['Raw Tex'] || alaRecord['Raw Text'] || 'Not available';
+
+const recentRecords = $('Step 9a-2 - Fetch Recent RDA Drafts').first().json;
+const recentList = recentRecords.list || [];
+const recentOpenings = [];
+for (let i = 0; i < recentList.length; i++) {
+  const draft = recentList[i]['Public Response Draft'];
+  if (draft && draft.length > 10) {
+    const firstSentence = draft.split(/[.!—]/)[0].trim();
+    if (firstSentence.length > 5) recentOpenings.push(firstSentence);
+  }
+}
+
+const inp = $('Step 8 - Build Final Output').first().json;
+const bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;
+
+if (!inp.public_response_draft || inp.public_response_draft.length < 20)
+  throw new Error('public_response_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);
+if (!inp.internal_followup_draft || inp.internal_followup_draft.length < 10)
+  throw new Error('internal_followup_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);
+
+const audit_system_prompt =
+'Your role: evaluate and correct a draft that must read as written by a person. When correcting failures, preserve the human quality of the original. Never introduce language that sounds machine-generated.\n\n' +
+'You are an editorial auditor for VRYOH.\n\n' +
+'You receive: the original guest review and a proposed public response draft.\n\n' +
+'Your job: evaluate the draft against each checklist item. If ALL items pass, return the draft unchanged. If ANY item fails, rewrite ONLY the failing element. Never rewrite passing elements. Never introduce details not present in the original review.\n\n' +
+'────────────────────────────────────\n' +
+'COMPLIANCE CHECKLIST\n' +
+'────────────────────────────────────\n\n' +
+'1. NAMED STAFF\n' +
+'If the review names a specific staff member (server, host, bartender, chef), that exact name MUST appear in the draft.\n' +
+'FAIL: Staff name present in review but absent or replaced with "your server", "our team", or any generic substitute.\n' +
+'BODY REQUIREMENT: The staff name must appear at least once in the body sentences — not only in the opening sentence. If the name appears only in the opening, insert it naturally into one body sentence. Do not rewrite the opening.\n\n' +
+'2. REVIEW DEPTH MATCH\n' +
+'A review longer than 80 words must reference at least 2 specific elements the guest named — dish, person, occasion, or moment. A short review must not receive a padded response.\n' +
+'FAIL: Long detailed review receives a response with zero specific references to what the guest named.\n\n' +
+'3. CLOSING SPECIFICITY\n' +
+'FAIL if: the closing sentence contains no word or phrase drawn directly from ' +
+'the original review text — the occasion, a dish, a staff name, a guest\'s own ' +
+'word, or their described experience.\n' +
+'A closing that could be removed from this draft and placed unchanged into any ' +
+'other response is a FAIL regardless of what specific noun it contains.\n' +
+'FIX: rewrite the closing using one word or phrase taken directly from the ' +
+'original review text. One sentence only. Do not rewrite anything else.\n\n' +
+'4. LOYALTY SIGNAL\n' +
+'If the guest signals they are a regular or frequent visitor (words: always, every time, weekly, come back regularly, each visit, been here before), the response must acknowledge the ongoing relationship — not treat them as a first-time visitor.\n' +
+'FAIL: Regular guest receives a first-time-visitor closing or no acknowledgment of the pattern.\n\n' +
+'5. CONSTRUCTIVE SUGGESTION\n' +
+'If the guest makes a specific positive suggestion, acknowledge it by name.\n' +
+'FAIL: Specific suggestion deflected with generic language or ignored entirely.\n\n' +
+'6. PROHIBITED CONTENT\n' +
+'The draft must contain no email address, URL, any reference to contact methods or channels (including "our profile", "our website", "our direct messaging", "contact details"), placeholder text such as [contact] or [name], or the phrase "We apologize for any inconvenience."\n' +
+'FAIL: Any of the above present anywhere in the draft.\n\n' +
+'────────────────────────────────────\n' +
+'FORMULA CHECKLIST\n' +
+'────────────────────────────────────\n\n' +
+'7. OVERUSED VERBS\n' +
+'FAIL: The draft uses "landed" more than once, or uses "landed" as the primary verb of acknowledgment when a more specific verb fits better.\n' +
+'FIX: Replace with: resonated, came through, delivered, felt right, worked, made an impression, held up, came together.\n\n' +
+'8. OVERUSED PHRASES\n' +
+'FAIL: The draft contains any of the following:\n' +
+'- "means a great deal to our team" — replace with a specific acknowledgment tied to the guest\'s signal\n' +
+'- "our team works hard to" — replace with what the team specifically does in this context\n' +
+'- "all of it" — replace with the actual elements the guest named\n' +
+'- "that kind of evening" — replace with the specific occasion or experience the guest described\n' +
+'- "exactly what we work toward" — replace with what specifically was achieved in this visit\n' +
+'- "Knowing" as an opening word — replace with a structurally different construction\n' +
+'- "makes our day" — replace with a specific acknowledgment tied to what the guest described\n' +
+'- "more of the same" — replace with the specific elements the guest named\n\n' +
+'9. BRAND PHRASE COUNT\n' +
+'FAIL: More than one phrase from the BRAND PHRASES list provided in the user prompt appears in the same draft.\n' +
+'FIX: Remove all but the most contextually natural one. If none fits naturally, remove all.\n' +
+'If the draft is in Spanish, evaluate only Spanish-language equivalents of the brand phrases — English phrases in a Spanish draft pass automatically.\n\n' +
+'────────────────────────────────────\n' +
+'OPENING VARIATION\n' +
+'────────────────────────────────────\n\n' +
+'10. OPENING REPETITION\n' +
+'FAIL: The opening sentence of this draft uses the same grammatical structure or lead word as any of the recent openings listed below. If no recent openings are listed, this item passes automatically.\n' +
+'FIX: Rewrite the opening sentence only using a structurally different construction.\n\n' +
+'────────────────────────────────────\n' +
+'GUEST NAME\n' +
+'────────────────────────────────────\n\n' +
+'11. GUEST NAME PRESENT\n' +
+'If the GUEST NAME provided is not "Not available", that name MUST appear in the draft.\n' +
+'FAIL: Guest name is available but absent from the draft entirely.\n' +
+'FIX: For T1 records, insert "[Name]," at the start of the opening sentence. For T2 and T3 records, insert "Hello [Name] —" before the existing opening content. Do not rewrite anything else.';
+
+const recentOpeningsBlock = recentOpenings.length > 0
+  ? '\n\nRECENT OPENINGS USED — do not repeat these structures:\n' +
+    recentOpenings.map((o, i) => (i + 1) + '. "' + o + '"').join('\n')
+  : '';
+
+const closingBlock =
+'\n\n────────────────────────────────────\n' +
+'CORRECTION RULES\n' +
+'────────────────────────────────────\n' +
+'- Correct ONLY the specific element that failed. Do not rewrite the whole draft.\n' +
+'- Never introduce content, details, or references not present in the original guest review.\n' +
+'- Maintain the same tone_style, formality_level, and brand voice throughout.\n' +
+'- After correction the draft must still pass all other checklist items.\n\n' +
+'────────────────────────────────────\n' +
+'LANGUAGE\n' +
+'────────────────────────────────────\n\n' +
+'The draft may be in any language. Evaluate all checklist items in the language of the draft. ' +
+'Apply corrections in the same language as the draft. ' +
+'Phrase checks in items 8 and 9 reference English-specific formulas — if the draft is in Spanish, these items pass automatically unless equivalent Spanish formulaic language is present.\n\n' +
+'────────────────────────────────────\n' +
+'CRITICAL JSON RULES\n' +
+'────────────────────────────────────\n' +
+'- Return valid JSON only. No preamble. No explanation. No markdown fences.\n' +
+'- failed_items must contain checklist item NAMES as strings — never numbers.\n' +
+'  Correct: ["CLOSING SPECIFICITY", "OPENING REPETITION"]\n' +
+'  Wrong: [3, 10]\n' +
+'- All string values must use straight double quotes only.\n' +
+'- Do not truncate the draft field. It must be complete.\n\n' +
+'RETURN this exact structure:\n' +
+'{\n' +
+'  "audit_passed": true,\n' +
+'  "failed_items": [],\n' +
+'  "final_public_response_draft": "complete corrected or unchanged public draft here"\n' +
+'}';
+
+const audit_system_prompt_final = audit_system_prompt + recentOpeningsBlock + closingBlock;
+
+const audit_user_prompt =
+'ORIGINAL GUEST REVIEW:\n' + rawText + '\n\n' +
+'PROPOSED PUBLIC RESPONSE DRAFT:\n' + inp.public_response_draft + '\n\n' +
+'GUEST NAME: ' + ((inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous')) ? inp.reviewer_handle : 'Not available') + '\n' +
+'RESPONSE TIER: ' + inp.confirmed_response_tier + '\n' +
+'TONE STYLE: ' + inp.tone_style + '\n' +
+'BRAND PHRASES: ' + (bv.brand_phrases_include || 'None') + '\n\n' +
+'Run the audit checklist. Return JSON only.';
+
+const audit_request_body = JSON.stringify({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 1500,
+  temperature: 0,
+  system: audit_system_prompt_final,
+  messages: [{ role: 'user', content: audit_user_prompt }]
+});
+
+return [{ json: {
+  bra_record_id: inp.bra_record_id,
+  confirmed_response_tier: inp.confirmed_response_tier,
+  governance_flag: inp.governance_flag,
+  human_review_required: inp.human_review_required,
+  solution_type: inp.solution_type,
+  emotional_axis: inp.emotional_axis,
+  pain_axis: inp.pain_axis,
+  stability_axis: inp.stability_axis,
+  signal_based_consideration: inp.signal_based_consideration,
+  tone_style: inp.tone_style,
+  urgency_level: inp.urgency_level,
+  commercial_risk_flag: inp.commercial_risk_flag,
+  behavioral_interpretation: inp.behavioral_interpretation,
+  lang: inp.lang,
+  client_id: inp.client_id,
+  enriched_emotion_tag: inp.enriched_emotion_tag,
+  enriched_pain_point: inp.enriched_pain_point,
+  pain_point_sub_category: inp.pain_point_sub_category,
+  signal_type: inp.signal_type,
+  intensity_level: inp.intensity_level,
+  hsi_record_id: inp.hsi_record_id,
+  ess_record_id: inp.ess_record_id,
+  eip_record_id: inp.eip_record_id,
+  ala_record_id: inp.ala_record_id,
+  prior_run_id: inp.prior_run_id,
+  reviewer_handle: inp.reviewer_handle,
+  emotion_hypothesis: inp.emotion_hypothesis,
+  keywords: inp.keywords,
+  brand_voice: inp.brand_voice,
+  lang_resolved: inp.lang_resolved,
+  generation_draft: inp.public_response_draft,
+  generation_internal: inp.internal_followup_draft,
+  public_response_draft: inp.public_response_draft,
+  internal_followup_draft: inp.internal_followup_draft,
+  audit_request_body: audit_request_body
+} }];
