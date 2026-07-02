@@ -1,0 +1,97 @@
+const response = $input.first().json;
+const raw = response.content?.[0]?.text;
+if (!raw || raw.trim().length < 20)
+  throw new Error('SEO Governance Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));
+
+const public_response_draft = raw.trim();
+const inp = $('Step 7e - Parse Body + Build SEO/Governance Prompt').first().json;
+const bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;
+const internal_system_prompt = `Your role: produce a signal interpretation note that reads as written by a thoughtful analyst — not a system-generated summary. Substance over formula. Every sentence must add meaning.
+
+You are the Internal Brief Writer for VRYOH RDA. Your job: produce a signal interpretation note for the client's management team describing what this guest signal means — not what to do about it.
+
+WHAT TO INCLUDE:
+- What emotional state the guest was in and what drove it — always required.
+- What the signal reveals about the guest's relationship with the brand — always required.
+- Any behavioral risk or loyalty indicator present in the signal — include only if present in the signal data. If absent, omit.
+- The stability framing: what does the recurrence context reveal about the trajectory of this guest's relationship with the brand — include only if recurrence context is available. If this is a first recorded signal with no prior history, state that explicitly in one sentence. Do not fabricate trajectory.
+
+WHAT TO NEVER INCLUDE:
+- Recommended actions or operational directives
+- Headers like "Recommended Actions", "Next Steps", or "Action Items"
+- Prescriptive language telling the team what to do
+- Generic filler that restates the obvious
+
+BRAND CONTEXT USAGE:
+- Recovery Protocol describes how this client handles negative or mixed signals. Use it to frame the emotional tone of the brief — not as an action directive.
+- Commitment Restrictions are what this client never promises publicly. Do not reference these in the brief — they are operational guardrails, not signal intelligence.
+
+LENGTH: 3-5 sentences. Substantive. No padding.
+
+RETURN the internal brief as plain text only — no JSON, no preamble, no explanation.
+
+LANGUAGE: If the LANGUAGE field in the user prompt is "es", write the internal brief in Spanish. Apply all governance and substance rules in Spanish.`;
+
+const internal_user_prompt =
+`RESPONSE TIER: ${inp.confirmed_response_tier}\n` +
+`SIGNAL TYPE: ${inp.signal_type}\n` +
+`INTENSITY LEVEL: ${inp.intensity_level}\n` +
+`URGENCY: ${inp.urgency_level}\n` +
+`LANGUAGE: ${inp.lang_resolved}\n\n` +
+`BRAND CONTEXT:\n` +
+` Recovery Protocol: ${bv.recovery_protocol || 'Not specified'}\n` +
+` Commitment Restrictions: ${bv.commitment_restrictions || 'None'}\n\n` +
+`SIGNAL ANALYSIS:\n` +
+` Emotional axis: ${inp.emotional_axis}\n` +
+` Pain axis: ${inp.pain_axis}\n` +
+` Stability axis: ${inp.stability_axis}\n` +
+` Signal-Based Consideration: ${inp.signal_based_consideration}\n` +
+` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\n` +
+` Enriched emotion tag: ${inp.enriched_emotion_tag || 'Not available'}\n` +
+` Pain point sub-category: ${inp.pain_point_sub_category || 'Not available'}\n\n` +
+(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\n\n` : '') +
+`Write the internal brief. Return plain text only.`;
+
+const internal_prompt_body = JSON.stringify({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 400,
+  temperature: 0,
+  system: internal_system_prompt,
+  messages: [{ role: 'user', content: internal_user_prompt }]
+});
+
+return [{ json: {
+  bra_record_id: inp.bra_record_id,
+  confirmed_response_tier: inp.confirmed_response_tier,
+  governance_flag: inp.governance_flag,
+  human_review_required: inp.human_review_required,
+  solution_type: inp.solution_type,
+  emotional_axis: inp.emotional_axis,
+  pain_axis: inp.pain_axis,
+  stability_axis: inp.stability_axis,
+  signal_based_consideration: inp.signal_based_consideration,
+  tone_style: inp.tone_style,
+  urgency_level: inp.urgency_level,
+  commercial_risk_flag: inp.commercial_risk_flag,
+  behavioral_interpretation: inp.behavioral_interpretation,
+  lang: inp.lang,
+  client_id: inp.client_id,
+  enriched_emotion_tag: inp.enriched_emotion_tag,
+  enriched_pain_point: inp.enriched_pain_point,
+  pain_point_sub_category: inp.pain_point_sub_category,
+  signal_type: inp.signal_type,
+  intensity_level: inp.intensity_level,
+  hsi_record_id: inp.hsi_record_id,
+  ess_record_id: inp.ess_record_id,
+  eip_record_id: inp.eip_record_id,
+  ala_record_id: inp.ala_record_id,
+  prior_run_id: inp.prior_run_id,
+  reviewer_handle: inp.reviewer_handle,
+  emotion_hypothesis: inp.emotion_hypothesis,
+  keywords: inp.keywords,
+  brand_voice: inp.brand_voice,
+  lang_resolved: inp.lang_resolved,
+  opening_sentence: inp.opening_sentence,
+  public_response_draft: public_response_draft,
+  internal_prompt_body: internal_prompt_body
+} }];
