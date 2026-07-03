@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const rdaId = $input.first().json?.Id;\nif (!rdaId) throw new Error('NocoDB RDA write returned no Record ID. bra_record_id: ' + $('Step 14 - Build NocoDB POST Body').first().json.bra_record_id);\nconst inp = $('Step 14 - Build NocoDB POST Body').first().json;\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  lang_resolved: inp.lang_resolved,\n  reviewer_handle: inp.reviewer_handle,\n  audit_passed: inp.audit_passed,\n  audit_failed_items: inp.audit_failed_items,\n  public_response_draft: inp.public_response_draft,\n  internal_followup_draft: inp.internal_followup_draft,\n  commercial_commitment_flag: inp.commercial_commitment_flag,\n  flagged_terms: inp.flagged_terms,\n  approval_status: inp.approval_status,\n  elevation_reason: inp.elevation_reason,\n  rda_run_id: inp.rda_run_id,\n  rda_timestamp: inp.rda_timestamp,\n  rda_record_id: rdaId\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5904,
+        2000
+      ],
+      "id": "aedec433-8079-49c4-b835-add7b0f5ac08",
+      "name": "Step 16 - Capture RDA Record ID"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mwqejw7swhd2cf4/{{$json.bra_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"RDA Status\": \"Complete\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6112,
+        2000
+      ],
+      "id": "e093fed2-5a74-47ae-be87-2f1ae847b57e",
+      "name": "Step 17 - Patch BRA RDA Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $('Step 16 - Capture RDA Record ID').first().json;\n\nconst subject = inp.approval_status === 'Pending-Elevated'\n  ? '[ELEVATED — APPROVAL REQUIRED] ' + inp.confirmed_response_tier + ' Review Response --- ' + inp.rda_run_id\n  : '[APPROVAL REQUIRED] ' + inp.confirmed_response_tier + ' Review Response --- ' + inp.rda_run_id;\n\nconst emailBody =\n  'TIER: ' + inp.confirmed_response_tier + '\\n' +\n  'GUEST: ' + (inp.reviewer_handle || 'Anonymous') + '\\n' +\n  'APPROVAL STATUS: ' + inp.approval_status + '\\n' +\n  'AUDIT PASSED: ' + (inp.audit_passed ? 'Yes' : 'No — ' + (inp.audit_failed_items || 'unknown')) + '\\n' +\n  'URGENCY: ' + inp.urgency_level + '\\n' +\n  'EMOTIONAL AXIS: ' + inp.emotional_axis + '\\n' +\n  'PAIN AXIS: ' + inp.pain_axis + '\\n\\n' +\n  'PUBLIC RESPONSE DRAFT:\\n' + inp.public_response_draft + '\\n\\n' +\n  'INTERNAL FOLLOW-UP DRAFT:\\n' + inp.internal_followup_draft + '\\n\\n' +\n  'SIGNAL-BASED CONSIDERATION:\\n' + inp.signal_based_consideration + '\\n\\n' +\n  (inp.behavioral_interpretation ? 'BEHAVIORAL CONTEXT:\\n' + inp.behavioral_interpretation + '\\n\\n' : '') +\n  (inp.elevation_reason ? 'ELEVATION REASON: ' + inp.elevation_reason + '\\n\\n' : '') +\n  'APPROVAL INSTRUCTIONS: Update Approval Status directly in NocoDB RDA table.\\n' +\n  '48-HOUR SLA APPLIES.';\n\nreturn [{ json: {\n  rda_run_id:             inp.rda_run_id,\n  rda_record_id:          inp.rda_record_id,\n  bra_record_id:          inp.bra_record_id,\n  ala_record_id:          inp.ala_record_id,\n  reviewer_handle:        inp.reviewer_handle || null,\n  audit_passed:           inp.audit_passed,\n  audit_failed_items:     inp.audit_failed_items,\n  approval_status:        inp.approval_status,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  client_id:              inp.client_id,\n  approval_contact_email: (typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice)?.approval_contact_email || null,\n  email_subject:          subject,\n  email_body:             emailBody,\n  pipeline_complete:      true\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6320,
+        2000
+      ],
+      "id": "67e2aba5-738d-4295-ad1e-8075992c53aa",
+      "name": "Step 18 - Approval Notification"
+    }
+  ],
+  "connections": {
+    "Step 16 - Capture RDA Record ID": {
+      "main": [
+        [
+          {
+            "node": "Step 17 - Patch BRA RDA Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 17 - Patch BRA RDA Status": {
+      "main": [
+        [
+          {
+            "node": "Step 18 - Approval Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
