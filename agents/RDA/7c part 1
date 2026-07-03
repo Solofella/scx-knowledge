@@ -1,0 +1,23 @@
+const inp = $('Step 7a - Build Opening Prompt1').first().json;
+const raw = $input.first().json;
+const opening_sentence = raw.content?.[0]?.text?.trim();
+if (!opening_sentence || opening_sentence.length < 5)
+  throw new Error('opening_sentence missing at Step 7c. bra_record_id: ' + inp.bra_record_id);
+
+const bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;
+const tier = inp.confirmed_response_tier;
+
+const tierCeiling = tier === 'T1' ? 3 : tier === 'T2' ? 4 : 5;
+const tierRule = tier === 'T1'
+  ? 'Maximum 3 sentences total including the opening. Hard ceiling. Count to 3 — delete everything after.'
+  : tier === 'T2'
+  ? 'Maximum 4 sentences total including the opening. Hard ceiling. Count to 4 — delete everything after.'
+  : 'Maximum 5 sentences total including the opening. Hard ceiling. Count to 5 — delete everything after.';
+
+const tierCompletionRule = tier === 'T1'
+  ? `T1 COMPLETION:
+Write 1-2 sentences after the opening. ${tierCeiling} sentences total. Hard ceiling.
+Filters — apply only what the review demands:
+- Opening names a staff member: include that name naturally once in the body if room exists. Do not add a sentence just for this.
+- Review contains minor criticism alongside positive sentiment: acknowledge it by name in one sentence. Do not add this sentence if no criticism exists.
+- Final sentence: must reference something the guest actually said, described, or experienced. If nothing specific exists — one brief sincere sentence. Not a formula.`
