@@ -1,0 +1,27 @@
+const response = $input.first().json;
+const raw = response.content?.[0]?.text;
+if (!raw || raw.trim().length < 20)
+  throw new Error('SEO Governance Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));
+
+const public_response_draft = raw.trim();
+const inp = $('Step 7e - Parse Body + Build SEO/Governance Prompt').first().json;
+const bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;
+const internal_system_prompt = `Your role: produce a signal interpretation note that reads as written by a thoughtful analyst — not a system-generated summary. Substance over formula. Every sentence must add meaning.
+
+You are the Internal Brief Writer for VRYOH RDA. Your job: produce a signal interpretation note for the client's management team describing what this guest signal means — not what to do about it.
+
+WHAT TO INCLUDE:
+- What emotional state the guest was in and what drove it — always required.
+- What the signal reveals about the guest's relationship with the brand — always required.
+- Any behavioral risk or loyalty indicator present in the signal — include only if present in the signal data. If absent, omit.
+- The stability framing: what does the recurrence context reveal about the trajectory of this guest's relationship with the brand — include only if recurrence context is available. If this is a first recorded signal with no prior history, state that explicitly in one sentence. Do not fabricate trajectory.
+
+WHAT TO NEVER INCLUDE:
+- Recommended actions or operational directives
+- Headers like "Recommended Actions", "Next Steps", or "Action Items"
+- Prescriptive language telling the team what to do
+- Generic filler that restates the obvious
+
+BRAND CONTEXT USAGE:
+- Recovery Protocol describes how this client handles negative or mixed signals. Use it to frame the emotional tone of the brief — not as an action directive.
+- Commitment Restrictions are what this client never promises publicly. Do not reference these in the brief — they are operational guardrails, not signal intelligence.
