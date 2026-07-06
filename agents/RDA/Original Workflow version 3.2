@@ -1,0 +1,487 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3952,
+        1328
+      ],
+      "id": "f626df5b-5bdb-48a0-af09-a9e9c8bc31c5",
+      "name": "Step 9a - Fetch ALA Record",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.audit_request_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4544,
+        1328
+      ],
+      "id": "8ae6d7fe-8456-45dd-bab6-7eb8c4e360ac",
+      "name": "Step 9c - Audit Claude API Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,{{$('Step 2 - Payload Validation').first().json.client_id}})&limit=2&sort=-RDA%20Timestamp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4160,
+        1328
+      ],
+      "id": "61dacffb-bf3a-4d6d-9ef9-7c46f27951c0",
+      "name": "Step 9a-2 - Fetch Recent RDA Drafts",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.opening_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2256,
+        1024
+      ],
+      "id": "85e29c5c-1071-48de-b57f-b7492ae61f6a",
+      "name": "Step 7b - Opening Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2672,
+        1024
+      ],
+      "id": "dff32f1d-c446-478d-86e2-ef9f938bec83",
+      "name": "Step 7d - Body Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.seo_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3088,
+        1024
+      ],
+      "id": "58cbe537-b1bd-4e8c-b107-f191bc1bc9db",
+      "name": "Step 7f - SEO Governance Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.internal_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3504,
+        1024
+      ],
+      "id": "5db22c62-2584-47f6-8e79-447d1eff822d",
+      "name": "Step 7h - Internal Brief Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\nconst bv = rec.brand_voice;\nconst lang = rec.lang || bv.language || 'en';\n\nconst tier = rec.confirmed_response_tier;\nconst guestName = (rec.reviewer_handle &&\n  !rec.reviewer_handle.toLowerCase().includes('review') &&\n  !rec.reviewer_handle.toLowerCase().startsWith('anonymous'))\n  ? rec.reviewer_handle : null;\n\nconst opening_system_prompt = `Your role: produce a single opening sentence that feels written by a thoughtful person — not generated by a machine. Every word must earn its place.\n\nYou are the Opening Constructor for VRYOH RDA. Your only job is to produce the single opening sentence of a public response draft for a hospitality review.\n\nYou do not write the full response. You produce one sentence only.\n\nTIER RULES:\n\nFor T1 positive signals: select the opening construction based on what the review contains. Apply the priority order below when multiple conditions are present:\n  Priority 1 — NAMED STAFF: If the review names a specific staff member (server, host, bartender, chef):\n    → PLEASURE LEAD: \"[Name], What a pleasure it is to hear that [staff name] made this impression on your visit.\"\n  Priority 2 — GUEST WORD LEAD: If the guest quotes or emphasizes a specific word (e.g. \"always\", \"impeccable\", \"perfect\", \"world-class\", \"fantastic\"):\n    → GUEST WORD LEAD: \"[Name], that word '[their word]' is exactly what our team works to earn.\"\n  Priority 3 — OCCASION LEAD: If the review describes a special occasion (birthday, anniversary, celebration, date night):\n    → OCCASION LEAD: \"[Name], a [occasion] that feels [their description] — that is what our team is here for.\"\n  Priority 4 — SPECIFIC DETAIL LEAD: If the guest describes a specific dish or drink that stood out:\n    → SPECIFIC DETAIL LEAD: \"[Dish name] deserves that kind of praise, [Name] — our kitchen will hear this.\"\n  Priority 5 — BELONGING LEAD: If the guest signals they are new to the area or discovering the restaurant for the first time:\n    → BELONGING LEAD: \"[Name], welcome to the neighborhood — we are glad you found us.\"\n  Priority 6 — GRATITUDE LEAD (fallback): If the review is warm and positive but contains none of the above:\n    → GRATITUDE LEAD: \"Thank you for this, [Name] — it means more than a quick reply can say.\"\n  IF no guest name is available: open with a specific detail from the signal instead of a name.\n\nFor T2 signals: open with Hi or Hello followed by the guest name. What follows must reflect the specific signal — not a formula. Tone is measured and careful.\n  IF no guest name is available: open with a specific detail from the signal.\n\nFor T3 signals: open with Hello followed by the guest name. Tone is grave and human — not warm, not transactional. Acknowledge the weight of what the guest experienced.\n  IF no guest name is available: open with the specific nature of the harm described.\n\nCRITICAL RULES:\n- Return one sentence only. No preamble. No explanation. No JSON wrapper.\n- The guest name MUST appear in the opening sentence for all tiers when a name is available.\n- The sentence must end with a period, em dash continuation, or natural punctuation.\n- Never use \"Knowing\" as an opening word.\n- Never use \"landed\" as the primary acknowledgment verb.`;\n\nconst opening_user_prompt =\n`RESPONSE TIER: ${tier}\\n` +\n`GUEST NAME: ${guestName || 'Not available'}\\n` +\n`SIGNAL TYPE: ${rec.signal_type}\\n` +\n`TONE STYLE: ${rec.tone_style}\\n` +\n`EMOTION HYPOTHESIS: ${rec.emotion_hypothesis || 'Not available'}\\n` +\n`KEYWORDS FROM REVIEW: ${rec.keywords || 'Not available'}\\n` +\n`ENRICHED EMOTION: ${rec.enriched_emotion_tag || 'Not available'}\\n` +\n(rec.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${rec.behavioral_interpretation}\\n` : '') +\n`\\nProduce one opening sentence only. No preamble.`;\n\nconst opening_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 150,\n  temperature: 0,\n  system: opening_system_prompt,\n  messages: [{ role: 'user', content: opening_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: rec.bra_record_id,\n  confirmed_response_tier: rec.confirmed_response_tier,\n  governance_flag: rec.governance_flag,\n  human_review_required: rec.human_review_required,\n  solution_type: rec.solution_type,\n  emotional_axis: rec.emotional_axis,\n  pain_axis: rec.pain_axis,\n  stability_axis: rec.stability_axis,\n  signal_based_consideration: rec.signal_based_consideration,\n  tone_style: rec.tone_style,\n  urgency_level: rec.urgency_level,\n  commercial_risk_flag: rec.commercial_risk_flag,\n  behavioral_interpretation: rec.behavioral_interpretation,\n  lang: lang,\n  client_id: rec.client_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  hsi_record_id: rec.hsi_record_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  reviewer_handle: rec.reviewer_handle,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords,\n  brand_voice: rec.brand_voice,\n  brand_voice_brief: rec.brand_voice_brief,\n  lang_resolved: lang,\n  opening_prompt_body: opening_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1024
+      ],
+      "id": "0bbffe68-3fa5-4d5b-b25b-9b6b8d4168f4",
+      "name": "Step 7a - Build Opening Prompt1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 5)\n  throw new Error('Opening Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst opening_sentence = raw.trim();\nconst inp = $('Step 7a - Build Opening Prompt1').first().json;\n\nconst body_system_prompt = `Your role: complete a response draft that reads as written by a senior hospitality professional — not assembled from parts. The response must feel specific to this guest, this signal, and this moment.\n\nYou are the Draft Body Builder for VRYOH RDA. Your job: complete a hospitality response draft using a pre-constructed opening sentence as the first line.\n\nCRITICAL OPENING RULE — NON-NEGOTIABLE:\nYour response MUST begin with the opening sentence provided in the user prompt, copied exactly word for word. Do not paraphrase it. Do not improve it. Do not rewrite it. Your first word must be the first word of that opening sentence. Failure to use this sentence exactly will invalidate the entire draft.\n\nTIER COMPLETION RULES:\n  T1: Write exactly 1-2 sentences after the opening. Reinforce the specific detail from the review, acknowledge the team or occasion, and close with something specific to this guest's visit. Total draft including opening: 2-3 sentences. If you have said what needs to be said in 1 sentence, stop. Never add a sentence that restates what the opening already said.\n  If the review contains a minor criticism alongside overall positive sentiment, dedicate one sentence specifically to acknowledging it — name the issue directly. Do not generalize.\n  If the opening references a staff member by name, that name must appear at least once in the body sentences as well.\n\n  T2: Write exactly 1-3 sentences after the opening. Reference the specific signal — name what the guest experienced. Acknowledge without asserting full understanding. Preserve ambiguity. End with a direct invitation to contact using generic language only — no email address, URL, or named channel. This closing invitation is required for T2. Total draft including opening: 2-4 sentences. Each sentence must add a different dimension — do not restate.\n\n  T3: Write exactly 2-4 sentences after the opening. Restore dignity through specificity. Acknowledge the actual harm — not a category. No generic apology. Offer direct private contact using generic language only — no email address, URL, or named channel. Total draft including opening: 3-5 sentences. Each sentence must serve a distinct purpose: acknowledge the harm, acknowledge the scope, offer contact. Never restate.\n\nPADDING TEST: Before finalizing, read each sentence after the opening. Ask: does this sentence add something the previous sentence did not say? If no — delete it.\n\nTONE: Apply tone_style exactly.\n  Empathetic-Formal: Warm but structured. Formal register. No contractions.\n  Empathetic-Warm: Conversational, human, genuine. Contractions allowed.\n  Neutral-Professional: Measured, factual. Acknowledge without amplifying.\n  Dignity-Restorative: Specific, human, non-formulaic. Acknowledge the actual experience. Never generic.\n\nBRAND VOICE:\n  - Write in first-person plural using person_preference consistently throughout.\n  - Match formality_level: 1 = very casual, 5 = very polished.\n  - Include at most ONE phrase from brand_phrases_include per draft. ONE is absolute. Only when it emerges naturally — never as filler. If no phrase fits, omit entirely.\n  - Never use any word or phrase from brand_phrases_avoid.\n\nHUMAN NATURALNESS:\n  - Write as a thoughtful, senior hospitality professional would.\n  - Each response must feel written specifically for that guest.\n  - For T2 and T3: name what the guest experienced directly in the body — not just the opening.\n  - Short responses are better than padded responses. Say one thing well.\n\nCLOSING RULE:\n  The closing sentence must derive from something specific in this guest's review — the occasion, the dish, their frequency, their own words.\n  Never close with a generic formula. Never repeat a specific noun already used in the opening.\n\nEXAMPLES OF THE STANDARD YOU ARE WRITING TO:\n\n--- T1 EXAMPLE ---\nReview mentions: word \"impeccable\", New Year's Day dinner, Park Avenue Kitchen\nResponse:\n\"Katherine, that word 'impeccable' says everything. Your New Year's Day dinner coming together the way it did — from the food to the service — is what we genuinely aim for. Thank you for choosing Park Avenue Kitchen for the occasion, and we'll be ready when your next visit brings you back to the table.\"\n\n--- T2 EXAMPLE ---\nReview mentions: great drinks and atmosphere, but the tomahawk steak (a high-priced centerpiece dish) didn't deliver\nResponse:\n\"Hello Bradd — what you've shared here deserves a careful read, not a rehearsed reply. The smoked Old Fashioned, the Key Lime, the atmosphere — we are genuinely glad those came together the way they should. What we are sitting with is the tomahawk: at that price point, it carries a specific promise, and if it did not deliver that for you, that matters to us. We'd like the chance to make that right — please reach out to us directly so we can follow up on this properly.\"\n\n--- T3 EXAMPLE ---\nReview mentions: serious service failure, guest felt disrespected\nResponse:\n\"Hello Maria — what you experienced does not reflect how we want any guest to feel at our table. Being made to feel dismissed is not something we take lightly, and it should never have happened. This is not the standard we hold ourselves to, and we want the chance to understand exactly what went wrong. Please reach out to us directly so we can address this properly.\"\n\nWRITE IN THIS STYLE: natural, specific to the actual review, varied sentence structure, no repeated phrases across different guests. Do not copy these examples' exact wording — match their pattern, tone, and structure only.\n\nRETURN the complete draft as plain text only — no JSON, no preamble, no explanation.\nStart with the opening sentence exactly as provided, then continue the response.`;\n\nconst body_user_prompt =\n`OPENING SENTENCE — COPY THIS EXACTLY AS YOUR FIRST LINE:\\n\"${opening_sentence}\"\\n\\n` +\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`TONE STYLE: ${inp.tone_style}\\n` +\n`LANGUAGE: ${inp.lang_resolved}\\n\\n` +\n`BRAND VOICE BRIEF:\\n${inp.brand_voice_brief || ''}\\n\\n` +\n`RESPONSE STRATEGY:\\n` +\n` Emotional axis: ${inp.emotional_axis}\\n` +\n` Pain axis: ${inp.pain_axis}\\n` +\n` Stability axis: ${inp.stability_axis}\\n` +\n` Signal-Based Consideration: ${inp.signal_based_consideration}\\n` +\n` Solution type: ${inp.solution_type}\\n\\n` +\n`SIGNAL DETAIL:\\n` +\n` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n` Keywords: ${inp.keywords || 'Not available'}\\n\\n` +\n(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\\n\\n` : '') +\n`Complete the response. Return plain text only. Your first line must be the opening sentence above.`;\n\nconst body_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 500,\n  temperature: 0.3,\n  system: body_system_prompt,\n  messages: [{ role: 'user', content: body_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: opening_sentence,\n  body_prompt_body: body_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        1024
+      ],
+      "id": "9c3b92bf-da36-4259-8d02-d4aae4e6c9f9",
+      "name": "Step 7c - Parse Opening + Build Body Prompt2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('Body Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst raw_body_draft = raw.trim();\nconst inp = $('Step 7c - Parse Opening + Build Body Prompt2').first().json;\nconst bv = inp.brand_voice;\n\nconst seo_system_prompt = `Your role: refine a draft that already reads as written by a person. Your changes must preserve that quality — never mechanize it. If a SEO keyword disrupts the human quality of the draft, omit it.\n\nYou are the SEO and Governance Layer for VRYOH RDA. You receive a completed hospitality response draft. Your job is three tasks only:\n\nTASK 1 — SEO INTEGRATION:\nIf seo_keywords are provided, weave 1-2 of the most contextually relevant keywords naturally into the draft. Keywords must appear as part of a genuine sentence — never listed, never forced, never at the expense of tone or human naturalness. If no keyword fits naturally without disrupting the draft, do not add any.\n\nTASK 2 — GOVERNANCE CHECK:\nVerify the draft contains none of the following. If any are present, remove or replace them:\n- Any email address\n- Any URL\n- Any placeholder text such as [contact], [name], [email]\n- The phrase \"We apologize for any inconvenience\"\n- Any specific refund amounts, voucher offers, discount commitments, or financial commitments\n- Any reference to named contact channels such as \"our website\", \"our profile\", \"our direct messaging\"\nGeneric contact invitations such as \"please reach out to us directly\" or \"we would welcome the opportunity to speak with you\" are permitted for T2 and T3 records — do not remove these.\n\nTASK 3 — GUEST NAME CHECK:\nThe guest name is provided in the GUEST NAME field. If the guest name is available (not \"Not available\") and is absent from the draft entirely, insert it in the opening line. For T1 records: insert \"[Name],\" at the start of the opening sentence. For T2 and T3 records: insert \"Hello [Name] —\" before the existing opening content. Do not rewrite anything else.\n\nRETURN the final draft as plain text only — no JSON, no preamble, no explanation.\nIf no changes are needed, return the draft exactly as received.`;\n\nconst seo_user_prompt =\n`DRAFT TO REVIEW:\\n${raw_body_draft}\\n\\n` +\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`GUEST NAME: ${(inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous')) ? inp.reviewer_handle : 'Not available'}\\n` +\n`SEO KEYWORDS: ${bv.seo_keywords || 'none specified'}\\n\\n` +\n`Apply all three tasks. Return plain text only.`;\n\nconst seo_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 600,\n  temperature: 0,\n  system: seo_system_prompt,\n  messages: [{ role: 'user', content: seo_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  raw_body_draft: raw_body_draft,\n  seo_prompt_body: seo_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        1024
+      ],
+      "id": "165b69b1-0987-4110-b086-49c25c4e548c",
+      "name": "Step 7e - Parse Body + Build SEO/Governance Prompt3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('SEO Governance Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst public_response_draft = raw.trim();\nconst inp = $('Step 7e - Parse Body + Build SEO/Governance Prompt3').first().json;\n\nconst internal_system_prompt = `Your role: produce a signal interpretation note that reads as written by a thoughtful analyst — not a system-generated summary. Substance over formula. Every sentence must add meaning.\n\nYou are the Internal Brief Writer for VRYOH RDA. Your job: produce a signal interpretation note for the client's management team describing what this guest signal means — not what to do about it.\n\nWHAT TO INCLUDE:\n- What emotional state the guest was in and what drove it\n- What the signal reveals about the guest's relationship with the brand\n- The stability framing: what does the recurrence context (first visit, repeat guest, established pattern) reveal about the trajectory of this guest's relationship with the brand?\n- Any behavioral risk or loyalty indicator present in the signal\n\nWHAT TO NEVER INCLUDE:\n- Recommended actions or operational directives\n- Headers like \"Recommended Actions\", \"Next Steps\", or \"Action Items\"\n- Prescriptive language telling the team what to do\n- Generic filler that restates the obvious\n\nLENGTH: 3-5 sentences. Substantive. No padding.\n\nRETURN the internal brief as plain text only — no JSON, no preamble, no explanation.`;\n\nconst internal_user_prompt =\n`RESPONSE TIER: ${inp.confirmed_response_tier}\\n` +\n`SIGNAL TYPE: ${inp.signal_type}\\n` +\n`INTENSITY LEVEL: ${inp.intensity_level}\\n` +\n`URGENCY: ${inp.urgency_level}\\n` +\n`LANGUAGE: ${inp.lang_resolved}\\n\\n` +\n`SIGNAL ANALYSIS:\\n` +\n` Emotional axis: ${inp.emotional_axis}\\n` +\n` Pain axis: ${inp.pain_axis}\\n` +\n` Stability axis: ${inp.stability_axis}\\n` +\n` Signal-Based Consideration: ${inp.signal_based_consideration}\\n` +\n` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\\n` +\n` Enriched emotion tag: ${inp.enriched_emotion_tag || 'Not available'}\\n` +\n` Pain point sub-category: ${inp.pain_point_sub_category || 'Not available'}\\n\\n` +\n(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\\n\\n` : '') +\n`Write the internal brief. Return plain text only.`;\n\nconst internal_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 400,\n  temperature: 0,\n  system: internal_system_prompt,\n  messages: [{ role: 'user', content: internal_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: public_response_draft,\n  internal_prompt_body: internal_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3296,
+        1024
+      ],
+      "id": "4dcc85ba-0394-45ab-b165-85c67bdb5642",
+      "name": "Step 7g - Parse SEO Draft + Build Internal Brief Prompt4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 10)\n  throw new Error('Internal Brief Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst internal_followup_draft = raw.trim();\nconst inp = $('Step 7g - Parse SEO Draft + Build Internal Brief Prompt4').first().json;\n\nif (!inp.public_response_draft || inp.public_response_draft.length < 20)\n  throw new Error('public_response_draft missing or too short at Step 8. ala_record_id: ' + inp.ala_record_id);\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: inp.public_response_draft,\n  internal_followup_draft: internal_followup_draft\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        1328
+      ],
+      "id": "1e53ef36-40c8-430d-9492-97dd5e1284ca",
+      "name": "Step 8 - Build Final Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alaRecord = $('Step 9a - Fetch ALA Record').first().json;\nconst rawText = alaRecord['Raw Tex'] || alaRecord['Raw Text'] || 'Not available';\n\nconst recentRecords = $('Step 9a-2 - Fetch Recent RDA Drafts').first().json;\nconst recentList = recentRecords.list || [];\nconst recentOpenings = [];\nfor (let i = 0; i < recentList.length; i++) {\n  const draft = recentList[i]['Public Response Draft'];\n  if (draft && draft.length > 10) {\n    const firstSentence = draft.split(/[.!—]/)[0].trim();\n    if (firstSentence.length > 5) recentOpenings.push(firstSentence);\n  }\n}\n\nconst inp = $('Step 8 - Build Final Output').first().json;\n\nif (!inp.public_response_draft || inp.public_response_draft.length < 20)\n  throw new Error('public_response_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);\nif (!inp.internal_followup_draft || inp.internal_followup_draft.length < 10)\n  throw new Error('internal_followup_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);\n\nconst audit_system_prompt =\n'Your role: evaluate and correct a draft that must read as written by a person. When correcting failures, preserve the human quality of the original. Never introduce language that sounds machine-generated.\\n\\n' +\n'You are an editorial auditor for VRYOH.\\n\\n' +\n'You receive: the original guest review and a proposed public response draft.\\n\\n' +\n'Your job: evaluate the draft against each checklist item. If ALL items pass, return the draft unchanged. If ANY item fails, rewrite ONLY the failing element. Never rewrite passing elements. Never introduce details not present in the original review.\\n\\n' +\n'────────────────────────────────────\\n' +\n'COMPLIANCE CHECKLIST\\n' +\n'────────────────────────────────────\\n\\n' +\n'1. NAMED STAFF\\n' +\n'If the review names a specific staff member (server, host, bartender, chef), that exact name MUST appear in the draft.\\n' +\n'FAIL: Staff name present in review but absent or replaced with \"your server\", \"our team\", or any generic substitute.\\n\\n' +\n'2. REVIEW DEPTH MATCH\\n' +\n'A review longer than 80 words must reference at least 2 specific elements the guest named --- dish, person, occasion, or moment. A short review must not receive a padded response.\\n' +\n'FAIL: Long detailed review receives a response with zero specific references to what the guest named.\\n\\n' +\n'3. CLOSING SPECIFICITY\\n' +\n'The closing must derive from something specific in this guest\\'s review --- the occasion, the dish, the guest\\'s own words, or their visit frequency.\\n' +\n'FAIL conditions:\\n' +\n'- Closing is a generic formula such as \"We\\'d love to welcome you back\" or \"we hope to see you soon\"\\n' +\n'- Closing repeats any specific noun already used earlier in the same draft --- including dish names, item names, or person names\\n' +\n'- Closing contains vague language such as \"across both\", \"all of it\", \"that same experience\", \"that kind of evening\" with no specific referent\\n' +\n'If the review is very short, close with a brief sincere acknowledgment --- not a formula.\\n\\n' +\n'4. LOYALTY SIGNAL\\n' +\n'If the guest signals they are a regular or frequent visitor (words: always, every time, weekly, come back regularly, each visit, been here before), the response must acknowledge the ongoing relationship --- not treat them as a first-time visitor.\\n' +\n'FAIL: Regular guest receives a first-time-visitor closing or no acknowledgment of the pattern.\\n\\n' +\n'5. CONSTRUCTIVE SUGGESTION\\n' +\n'If the guest makes a specific positive suggestion, acknowledge it by name.\\n' +\n'FAIL: Specific suggestion deflected with generic language or ignored entirely.\\n\\n' +\n'6. PROHIBITED CONTENT\\n' +\n'The draft must contain no email address, URL, any reference to contact methods or channels (including \"our profile\", \"our website\", \"our direct messaging\", \"contact details\"), placeholder text such as [contact] or [name], or the phrase \"We apologize for any inconvenience.\"\\n' +\n'FAIL: Any of the above present anywhere in the draft.\\n\\n' +\n'────────────────────────────────────\\n' +\n'FORMULA CHECKLIST\\n' +\n'────────────────────────────────────\\n\\n' +\n'7. OVERUSED VERBS\\n' +\n'FAIL: The draft uses \"landed\" more than once, or uses \"landed\" as the primary verb of acknowledgment when a more specific verb fits better.\\n' +\n'FIX: Replace with: resonated, came through, delivered, felt right, worked, made an impression, held up, came together.\\n\\n' +\n'8. OVERUSED PHRASES\\n' +\n'FAIL: The draft contains any of the following:\\n' +\n'- \"means a great deal to our team\" --- replace with a specific acknowledgment tied to the guest\\'s signal\\n' +\n'- \"our team works hard to\" --- replace with what the team specifically does in this context\\n' +\n'- \"all of it\" --- replace with the actual elements the guest named\\n' +\n'- \"that kind of evening\" --- replace with the specific occasion or experience the guest described\\n' +\n'- \"exactly what we work toward\" --- replace with what specifically was achieved in this visit\\n' +\n'- \"Knowing\" as an opening word --- replace with a structurally different construction\\n\\n' +\n'9. BRAND PHRASE COUNT\\n' +\n'FAIL: More than one of these phrases appears in the same draft:\\n' +\n'- \"Thank you for dining with us\"\\n' +\n'- \"We\\'d love to welcome you back\"\\n' +\n'- \"We take great pride in every guest experience\"\\n' +\n'FIX: Remove all but the most contextually natural one. If none fits naturally, remove all.\\n\\n' +\n'────────────────────────────────────\\n' +\n'OPENING VARIATION\\n' +\n'────────────────────────────────────\\n\\n' +\n'10. OPENING REPETITION\\n' +\n'FAIL: The opening sentence of this draft uses the same grammatical structure or lead word as any of the recent openings listed below. If no recent openings are listed, this item passes automatically.\\n' +\n'FIX: Rewrite the opening sentence only using a structurally different construction.\\n\\n' +\n'────────────────────────────────────\\n' +\n'GUEST NAME\\n' +\n'────────────────────────────────────\\n\\n' +\n'11. GUEST NAME PRESENT\\n' +\n'If the GUEST NAME provided is not \"Not available\", that name MUST appear in the draft.\\n' +\n'FAIL: Guest name is available but absent from the draft entirely.\\n' +\n'FIX: For T1 records, insert \"[Name],\" at the start of the opening sentence. For T2 and T3 records, insert \"Hello [Name] ---\" before the existing opening content. Do not rewrite anything else.';\n\nconst recentOpeningsBlock = recentOpenings.length > 0\n  ? '\\n\\nRECENT OPENINGS USED — do not repeat these structures:\\n' +\n    recentOpenings.map((o, i) => (i + 1) + '. \"' + o + '\"').join('\\n')\n  : '';\n\nconst closingBlock =\n'\\n\\n────────────────────────────────────\\n' +\n'CORRECTION RULES\\n' +\n'────────────────────────────────────\\n' +\n'- Correct ONLY the specific element that failed. Do not rewrite the whole draft.\\n' +\n'- Never introduce content, details, or references not present in the original guest review.\\n' +\n'- Maintain the same tone_style, formality_level, and brand voice throughout.\\n' +\n'- After correction the draft must still pass all other checklist items.\\n\\n' +\n'────────────────────────────────────\\n' +\n'CRITICAL JSON RULES\\n' +\n'────────────────────────────────────\\n' +\n'- Return valid JSON only. No preamble. No explanation. No markdown fences.\\n' +\n'- failed_items must contain checklist item NAMES as strings --- never numbers.\\n' +\n'  Correct: [\"CLOSING SPECIFICITY\", \"OPENING REPETITION\"]\\n' +\n'  Wrong: [3, 10]\\n' +\n'- All string values must use straight double quotes only.\\n' +\n'- Do not truncate the draft field. It must be complete.\\n\\n' +\n'RETURN this exact structure:\\n' +\n'{\\n' +\n'  \"audit_passed\": true,\\n' +\n'  \"failed_items\": [],\\n' +\n'  \"final_public_response_draft\": \"complete corrected or unchanged public draft here\"\\n' +\n'}';\n\nconst audit_system_prompt_final = audit_system_prompt + recentOpeningsBlock + closingBlock;\n\nconst audit_user_prompt =\n'ORIGINAL GUEST REVIEW:\\n' + rawText + '\\n\\n' +\n'PROPOSED PUBLIC RESPONSE DRAFT:\\n' + inp.public_response_draft + '\\n\\n' +\n'GUEST NAME: ' + ((inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous')) ? inp.reviewer_handle : 'Not available') + '\\n' +\n'RESPONSE TIER: ' + inp.confirmed_response_tier + '\\n' +\n'TONE STYLE: ' + inp.tone_style + '\\n\\n' +\n'Run the audit checklist. Return JSON only.';\n\nconst audit_request_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 1500,\n  temperature: 0,\n  system: audit_system_prompt_final,\n  messages: [{ role: 'user', content: audit_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  generation_draft: inp.public_response_draft,\n  generation_internal: inp.internal_followup_draft,\n  audit_request_body: audit_request_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4368,
+        1328
+      ],
+      "id": "b148fd75-8751-4e31-98c1-a7ec5b2e66b4",
+      "name": "Step 9b - Build Audit Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nconst inp = $('Step 9b - Build Audit Prompt').first().json;\nlet auditPassed = false;\nlet auditFailedItems = null;\nlet publicDraft = inp.generation_draft;\nif (raw) {\n  let clean = raw.replace(/`{1,3}json/gi, '').replace(/`{1,3}/g, '').trim();\n  try {\n    const parsed = JSON.parse(clean);\n    if (parsed.final_public_response_draft && parsed.final_public_response_draft.length >= 20) {\n      publicDraft = parsed.final_public_response_draft;\n      auditPassed = parsed.audit_passed === true || parsed.audit_passed === 'true';\n      const failedCount = (parsed.failed_items || []).length;\n      auditFailedItems = failedCount >= 3\n        ? 'FULL REVIEW REQUIRED — ' + (parsed.failed_items || []).join(', ')\n        : (parsed.failed_items || []).join(', ') || null;\n    } else {\n      auditFailedItems = 'AUDIT PARSE ERROR — draft field missing';\n    }\n  } catch(e) {\n    auditFailedItems = 'AUDIT PARSE ERROR — invalid JSON from audit call';\n  }\n} else {\n  auditFailedItems = 'AUDIT PARSE ERROR — empty audit response';\n}\nif (!publicDraft || publicDraft.length < 20)\n  throw new Error('No valid public_response_draft available from generation or audit.');\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  audit_passed: auditPassed,\n  audit_failed_items: auditFailedItems,\n  public_response_draft: publicDraft,\n  internal_followup_draft: inp.generation_internal\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4720,
+        1328
+      ],
+      "id": "13fbba96-46cd-468c-93ea-949ebe53657d",
+      "name": "Step 9d - Parse Audit Output"
+    }
+  ],
+  "connections": {
+    "Step 9a - Fetch ALA Record": {
+      "main": [
+        [
+          {
+            "node": "Step 9a-2 - Fetch Recent RDA Drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9c - Audit Claude API Call": {
+      "main": [
+        [
+          {
+            "node": "Step 9d - Parse Audit Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9a-2 - Fetch Recent RDA Drafts": {
+      "main": [
+        [
+          {
+            "node": "Step 9b - Build Audit Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7b - Opening Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7c - Parse Opening + Build Body Prompt2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7d - Body Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7e - Parse Body + Build SEO/Governance Prompt3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7f - SEO Governance Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 7g - Parse SEO Draft + Build Internal Brief Prompt4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7h - Internal Brief Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Build Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7a - Build Opening Prompt1": {
+      "main": [
+        [
+          {
+            "node": "Step 7b - Opening Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7c - Parse Opening + Build Body Prompt2": {
+      "main": [
+        [
+          {
+            "node": "Step 7d - Body Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7e - Parse Body + Build SEO/Governance Prompt3": {
+      "main": [
+        [
+          {
+            "node": "Step 7f - SEO Governance Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7g - Parse SEO Draft + Build Internal Brief Prompt4": {
+      "main": [
+        [
+          {
+            "node": "Step 7h - Internal Brief Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Build Final Output": {
+      "main": [
+        [
+          {
+            "node": "Step 9a - Fetch ALA Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9b - Build Audit Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 9c - Audit Claude API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9d - Parse Audit Output": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
