@@ -1,0 +1,86 @@
+
+'FORMULA:\n' +
+'7. OVERUSED VERBS: Fail if "landed" appears more than once or is the primary acknowledgment verb. Replace with natural alternatives such as resonated, came through, delivered, felt right, worked, made an impression, held up, or came together.\n' +
+'8. OVERUSED PHRASES: Replace formulaic phrases with specific language: "means a great deal to our team", "our team works hard to", "all of it", "that kind of evening", "exactly what we work toward". Never open with "Knowing".\n' +
+'9. BRAND PHRASES: At most one may appear: "Thank you for dining with us", "We\\\'d love to welcome you back", "We take great pride in every guest experience". Keep only the most natural one or remove all.\n\n' +
+
+'OPENING:\n' +
+'10. REPETITION: If recent openings are provided, fail if this opening repeats their lead word or grammatical structure. Rewrite the opening only.\n\n' +
+
+'GUEST NAME:\n' +
+'11. If GUEST NAME is not "Not available", it must appear in the draft. If missing, insert only in the opening. T1: "[Name]," at the start. T2/T3: "Hello [Name] ---" before the existing opening.\n\n' +
+
+'Correction Rules: Correct only failed elements. Preserve tone_style, formality_level, and brand voice. The final draft must pass all checklist items.\n';
+
+const recentOpeningsBlock = recentOpenings.length > 0
+  ? '\n\nRECENT OPENINGS USED — do not repeat these structures:\n' +
+    recentOpenings.map((o, i) => (i + 1) + '. "' + o + '"').join('\n')
+  : '';
+
+const closingBlock =
+'\n\nJSON RULES:\n' +
+'- Return valid JSON only. No preamble, explanation, or markdown fences.\n' +
+'- failed_items must contain checklist item NAMES as strings, never numbers.\n' +
+'- Use straight double quotes only.\n' +
+'- Do not truncate final_public_response_draft.\n\n' +
+'RETURN exactly:\n' +
+'{\n' +
+'  "audit_passed": true,\n' +
+'  "failed_items": [],\n' +
+'  "final_public_response_draft": "complete corrected or unchanged public draft here"\n' +
+'}';
+
+const audit_system_prompt_final = audit_system_prompt + recentOpeningsBlock + closingBlock;
+
+const audit_user_prompt =
+'ORIGINAL GUEST REVIEW:\n' + rawText + '\n\n' +
+'PROPOSED PUBLIC RESPONSE DRAFT:\n' + inp.public_response_draft + '\n\n' +
+'GUEST NAME: ' + ((inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous')) ? inp.reviewer_handle : 'Not available') + '\n' +
+'RESPONSE TIER: ' + inp.confirmed_response_tier + '\n' +
+'TONE STYLE: ' + inp.tone_style + '\n\n' +
+'Run the audit checklist. Return JSON only.';
+
+const audit_request_body = JSON.stringify({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 1500,
+  temperature: 0,
+  system: audit_system_prompt_final,
+  messages: [{ role: 'user', content: audit_user_prompt }]
+});
+
+return [{ json: {
+  bra_record_id: inp.bra_record_id,
+  confirmed_response_tier: inp.confirmed_response_tier,
+  governance_flag: inp.governance_flag,
+  human_review_required: inp.human_review_required,
+  solution_type: inp.solution_type,
+  emotional_axis: inp.emotional_axis,
+  pain_axis: inp.pain_axis,
+  stability_axis: inp.stability_axis,
+  signal_based_consideration: inp.signal_based_consideration,
+  tone_style: inp.tone_style,
+  urgency_level: inp.urgency_level,
+  commercial_risk_flag: inp.commercial_risk_flag,
+  behavioral_interpretation: inp.behavioral_interpretation,
+  lang: inp.lang,
+  client_id: inp.client_id,
+  enriched_emotion_tag: inp.enriched_emotion_tag,
+  enriched_pain_point: inp.enriched_pain_point,
+  pain_point_sub_category: inp.pain_point_sub_category,
+  signal_type: inp.signal_type,
+  intensity_level: inp.intensity_level,
+  hsi_record_id: inp.hsi_record_id,
+  ess_record_id: inp.ess_record_id,
+  eip_record_id: inp.eip_record_id,
+  ala_record_id: inp.ala_record_id,
+  prior_run_id: inp.prior_run_id,
+  reviewer_handle: inp.reviewer_handle,
+  emotion_hypothesis: inp.emotion_hypothesis,
+  keywords: inp.keywords,
+  brand_voice: inp.brand_voice,
+  brand_voice_brief: inp.brand_voice_brief,
+  lang_resolved: inp.lang_resolved,
+  generation_draft: inp.public_response_draft,
+  generation_internal: inp.internal_followup_draft,
+  audit_request_body: audit_request_body
+} }];
