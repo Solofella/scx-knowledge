@@ -1,0 +1,39 @@
+Phase 3 (Signal Enrichment, Steps 6a-6e): built and deployed. Consolidates EIP's Cognitive Driver/Need State (fetched fresh from EIP table, not pass-through) + Emotion Dictionary's Common Expressions + Pain Point Master's Operational/Emotional Signal/Sample Expression into signal_enrichment_brief, injected into 7a and 7c prompts. Real bug found and fixed: 6c/6d originally referenced stale pass-through values instead of 6b's live EIP fetch, causing 0-row lookup failures despite valid dictionary data existing. Fix confirmed deployed. signal_enrichment_brief deliberately ends at 7g — no downstream consumer, not carried to Step 8+.
+Step 9e (Deterministic Compliance Check): new node between 9d and 10. Auto-corrects "landed"/"landing" (safe single-word swap). Flags (does NOT auto-insert) missing T2 contact-invitation and near-miss banned phrases — sets human_review_required=true, appends to audit_failed_items. Design principle: auto-templating a fixed correction sentence was avoided to prevent reintroducing the sameness problem already solved by removing Priority 1-6 fixed templates from 7a. User-confirmed deployed; not independently field-verified (no live NocoDB values shown to confirm the flag fires).
+Step 7a: Priority 1-6 fixed sentence templates removed — replaced with signal-checklist ("what to notice") + Brand Voice instruction ("how to write it"). Tier-based greeting confirmed correct (T1=no greeting word, direct name; T2/T3="Hi/Hello"+name). Confirmed dead instruction, unresolved: "Detect Occasion and Belonging for use in the body only" — 7a returns one plain-text sentence, no structured output channel exists to pass detected values to 7c.
+Step 7c: "Quality Rules" section added — Commercial Reference prohibition, Timeless Closing Anchor priority, Occasion/Belonging detection. CONFIRMED UNRESOLVED BUG: missing + concatenation operator between the Quality Rules block and 'Style Standard:\n' — Style Standard and Output sections likely never reach Claude. Leading hypothesis for observed cross-guest phrase repetition. Confirmed real failure: Commercial Reference rule lost to competing positive instruction ("reinforce guest wording") in live test — "$60 menu" appeared in a closing despite explicit prohibition. Confirmed conceptual gap: Occasion detection doesn't distinguish personal occasion from commercial event (Restaurant Week triggered false-positive).
+Governance vs. Style principle (locked Chat #96, from 5 real PAK-001 Google reviews written by Eddy, F&B Director):
+
+Universal governance (never client-configurable): no financial commitments, no temporal/commercial hallucination, tier-severity-matched apology language.
+Client-configurable: opening/closing formula tolerance, contact-channel specificity for T2/T3 (tied to Recovery Protocol content + tier severity, NEVER star rating), Closing Anchor Priority (proposed, no Client Config field exists yet).
+Real finding: PAK's authentic voice consistently uses thanks-formula openings and repeated appreciation phrases — conflicts with RDA's generic anti-formula rules. Eddy's real T3 behavior (personal email exposure for severe cases) is deliberate Recovery Protocol execution, not a governance leak.
+This directly justifies implementation item #11 (client-specific approved-example aggregation) — use each client's real approved drafts as that client's few-shot examples, not generic hypothetical ones.
+
+11-item implementation list, build order (item 1 complete):
+
+✅ Phase 3 field injection into 7a/7c
+Step 7c full rewrite (partial — Quality Rules added, concat-bug unresolved)
+Step 7a full rewrite (partial — templates removed, dead instruction unresolved)
+New deterministic post-generation code node — ✅ built as Step 9e (T2 contact + landed/landing only; opening-repetition and Commercial Reference checks NOT yet added)
+Targeted re-ask mechanism (not silent auto-template) — not built
+Step 7e simplification — not done
+Step 7g — unchanged, no action needed
+Step 9b audit reduction — not done (12 items currently, up from 11)
+Instruction-position test — not done
+Human-review routing — partially covered by Step 9e
+Client-specific approved-example aggregation — not built, strongly justified by Section 12 findings
+
+RDA Strategic priority (locked): RDA is the most critical agent — quality target approach 90%. Cost is not a blocking constraint if it improves quality — can be priced into a new cost model.
+OPEN ITEMS REQUIRING ATTENTION NEXT SESSION:
+
+Fix 7c's missing + operator (highest-priority technical fix — likely explains repetition failures)
+Resolve T2 missing contact-invitation at the prompt level (Step 9e only flags, doesn't fix root cause)
+Resolve Occasion/Belonging dead instruction in 7a (structured output or move detection to 7c)
+Resolve Commercial Reference vs. positive-instruction conflict (procedural rewrite or code-based entity classification — neither tested yet)
+Distinguish Occasion vs. Commercial Event conceptually
+Decide Closing Anchor Priority implementation (new Client Config field vs. derived from existing field)
+Add rule #10/#35 (cross-record repetition) to Step 9e's deterministic checks
+Verify 7a/7c mutual consistency after latest edits (thanks-formula reversal)
+Field-verify Step 9e actually fires (need live NocoDB human_review_required/audit_failed_items values, not just draft text)
+
+FIRST ACTION IN NEXT CHAT: confirm which open item to address first, or continue testing with real data before further code changes.
