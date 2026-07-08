@@ -1,0 +1,103 @@
+9. SPANISH DEPLOYMENT — COMPLETE HISTORY (Chat #86-89, deactivated Chat #96)
+(Per explicit instruction, full historical record preserved for Phase 4 reference.)
+Deployment (Chat #86-89): ALA Step 6 language detection activated — CSV lang column drives lang field, English default. EIP Step 5 Dictionary Load Check added emotion_table_id/pain_table_id routing: ES = mhot4w62tupht71/mwmiyyoucuhsms8, EN = mrrscb955j1d2i7/meavqh37mdqgl4d. EIP INIT nodes made dynamic (URL selection, lang-conditional field mapping). EIP domain validation bypassed for lang=es records. ESS Step 7 language instruction added. RDA Step 6 mapped Client Name field. RDA Step 9d built lang-conditional closing rotation (ES: Atentamente/Cordialmente/Hasta pronto/Con gusto) with generic brand signature via Client Name. RDA Step 7a: lang_resolved fix ((inp.lang || 'en').toLowerCase().trim() — never derived from bv.language, since that field returns comma-joined bilingual values like "En, Es" for some clients, which would break routing). Anti-repetition rule and CARRY LEAD RESTRICTION added to reduce cross-record "hearing that" overuse. Client Config required 3 new fields at the time (Recovery Protocol, Brand Voice Anchors, Commitment Restrictions — later confirmed the actual live field names differ slightly: RECOVERY PROTOCOL, Guest Feeling, Commitments NEVER, etc.).
+HSI/BRA/SIA/MRA required no changes for Spanish support.
+Live quality benchmarks established at deployment (Chat #89): Luis (AJI-001, ES, T1) — Spanish T1 benchmark. Arlette Acosta (AJI-001, EN, T1). John Diaz (PAK-001, EN, T1). Barkev (PAK-001, EN, T1).
+Deactivation (Chat #96): a live test batch, run after the Phase 1/2 optimization work this session, showed two Spanish-primary records with genuine language-mixing within single drafts (opening in one language, body switching to the other mid-draft) and at least one instance of the banned pipeline-term "señal" leaking into output despite an explicit prohibition. Root-cause reasoning discussed: Claude's language output is an emergent, token-level, probabilistic property — not a hard-enforced switch — and competing instructions (content-shaping rules stated alongside a late-positioned LANGUAGE instruction) can cause the language constraint to lose priority under certain conditions, especially for phrases whose English-language completion is more statistically dominant in the model's training distribution than a natural Spanish equivalent.
+Decision: revert the full 7a→9d chain to the original, pre-Spanish, English-only source code (confirmed 85-96% historically effective per user-provided figures, two different numbers given at different points, not independently reconciled), then retrofit brand_voice_brief and Phase 3 signal enrichment on top of that restored baseline — rather than attempting to patch the Spanish-era build further.
+Phase 4 status: deferred, not abandoned. Re-activation trigger, per the original locked roadmap: "only if Phase 2 test shows Spanish still AI-detectable... decision based on evidence not prediction." That evidence now exists (the language-mixing failures) but no re-activation attempt has been made this session — Phase 4 remains a distinct, deferred future item, with three architectural options discussed but not selected: (a) fully separate EN/ES system prompts per node (reduces competing-instruction risk, since the model would never hold an English rule-set while producing Spanish tokens), (b) post-generation deterministic language-detection + regenerate-on-mismatch (a safety net, not a prevention method), (c) few-shot examples shown natively in the target language rather than described abstractly in English (documented as more reliable for format/language adherence than prose instruction alone).
+
+10. NODE MAP
+[01] Webhook (POST /webhook/scx-rda)
+[02] Code Node — Payload Validation
+[03] NocoDB GET — Idempotency
+[04] IF Node — Already processed?
+[05] NocoDB GET — Brand Voice Load (Client Config)
+[06] Code Node — Build Brand Voice Object
+[06a] Code Node — Brand Voice Consolidation → brand_voice_brief          ← NEW Chat #96
+[06b] HTTP GET — Fetch EIP Signal Data (Cognitive Driver, Need State)    ← NEW Chat #96
+[06c] HTTP GET — Fetch Emotion Dictionary Row (Common Expressions)       ← NEW Chat #96, bug-fixed
+[06d] HTTP GET — Fetch Pain Point Master Row (Operational/Emotional/Sample) ← NEW Chat #96, bug-fixed
+[06e] Code Node — Build Signal Enrichment Brief                          ← NEW Chat #96
+[07a] Code Node — Build Opening Prompt (Priority templates removed, English-only, revert baseline)
+[07b] HTTP POST — Opening Claude Call
+[07c] Code Node — Parse Opening + Build Body Prompt (Quality Rules added; concat-operator bug unresolved)
+[07d] HTTP POST — Body Claude Call
+[07e] Code Node — Parse Body + Build SEO/Gov Prompt (Embedded Criticism rule added)
+[07f] HTTP POST — SEO/Gov Claude Call
+[07g] Code Node — Parse SEO Draft + Build Internal Brief Prompt
+[07h] HTTP POST — Internal Brief Claude Call
+[08]  Code Node — Build Final Output
+[09a] NocoDB GET — Fetch ALA Record
+[09a-2] NocoDB GET — Fetch Recent RDA Drafts
+[09b] Code Node — Build 12-Item Audit Prompt (item 12 added; Spanish block inert)
+[09c] HTTP POST — Audit Claude Call
+[09d] Code Node — Parse Audit + Append Closing Signature (re-added, English-only, Chat #96)
+[09e] Code Node — Deterministic Compliance Check                        ← NEW Chat #96
+[10]  Code Node — Output Validation
+[11]  Code Node — Commercial Commitment Scan (English-only, Spanish array removed Chat #96)
+[12]  Code Node — Approval Status Assignment
+[13]  Code Node — RDA Run ID + Timestamp
+[14]  Code Node — Build NocoDB POST Body
+[15]  NocoDB POST — Write RDA Record
+[16]  Code Node — Capture RDA Record ID
+[17]  NocoDB PATCH — BRA RDA Status → Complete
+[18]  Code Node — Build Approval Notification + Email Node
+
+TOTAL: 28 main nodes (23 v4.0 baseline + 5 new: 6a/6b/6c/6d/6e + 9e)
+Claude fires at [07b], [07d], [07f], [07h], [09c] only — 5 calls per record, unchanged count
+
+11. APPROVAL STATUS LIFECYCLE
+Unchanged from v4.0.
+
+12. GOVERNANCE vs. STYLE — ARCHITECTURAL PRINCIPLE (NEW, Chat #96)
+Established through direct analysis of 5 real PAK-001 responses, all published on Google, all written by Eddy (F&B Director) — not hypothetical examples.
+Confirmed pattern across all 5 real responses: thanks-formula opener (5/5), a repeated appreciation phrase ("we greatly appreciate...") (4/5), generic sign-off (5/5), low specificity on most (4/5). This is the client's authentic, consistently demonstrated voice — not an anomaly, and directly conflicts with several of RDA's generic style rules (which were built to eliminate exactly this pattern as "generic AI-sounding" output).
+One example (a genuine 1-star, severe-harm review) showed Eddy personally identifying himself and sharing a real work email — initially assessed as a governance violation, then re-diagnosed: this is Eddy's deliberate, configured recovery approach for severe cases, consistent with PAK's own Recovery Protocol field value ("The Transparent Owner — Direct accountability, zero defensive language"), not an accidental leak.
+Resulting principle, locked:
+Universal governance (never client-configurable, identical for every brand):
+
+No financial commitments (refunds, discounts, vouchers, specific compensation).
+No temporal/commercial hallucination (implying current availability of an expired promotion).
+Tier-severity matching (apology language must match the severity of harm described — confirmed real violation in the calibration data: a generic apology given for a review describing food being aggressively thrown and a simple accommodation request being refused).
+
+Client-configurable (per brand, driven by Client Config + real historical approved drafts):
+
+Opening/closing formula tolerance and specificity level.
+Contact-channel specificity for T2/T3 (generic vs. personal identification + email) — trigger is signal severity (tier), never star rating — using star count as the trigger would defeat the product's core masked-emotion-detection differentiator, since star rating and true signal severity are confirmed to diverge (a 5-star review can carry a real embedded complaint; a 1-star review's actual severity should be judged by HSI's signal analysis, not the number alone).
+Closing Anchor Priority (which detail a brand emphasizes first — occasion, relationship, food, guest wording) — proposed, no implementation decided. No corresponding Client Config field currently exists for this; would require either a new Client Config column (a different table from RDA's frozen schema, so not blocked by the RDA-specific freeze rule) or derivation from an existing field (e.g., inferring priority from Core Driver's value).
+
+Direct connection to the implementation roadmap: this finding is the concrete justification for implementation item #11 (client-specific approved-example aggregation, already on the locked 11-item list) — rather than writing generic hypothetical examples, each client's own real approved/edited historical drafts should become that client's actual few-shot reference material.
+
+13. NOCODB RDA TABLE — 20 FIELDS, SCHEMA FROZEN
+Field list unchanged from v4.0. New rule, locked Chat #96: no additional columns will be added to this table going forward. All new data (Phase 3 signal fields, deterministic-check results, brand_voice_brief, guest_name) travels in-pipeline only, never persisted as a new column.
+
+14. ACTIVE CLIENT CONFIGURATION
+Unchanged from v4.0 — 6 active clients (PAK-001, AJI-001 through AJI-005). Language column now practically always "en" for all clients — AJI's EN+ES designation in v4.0's table reflects the deactivated Spanish capability, not current live behavior.
+
+15. CREDENTIALS + CONFIGURATION
+Unchanged from v4.0.
+
+16. STANDING PROCESS RULES (LOCKED Chat #96)
+
+DIAGNOSE-ONLY RULE: when identifying a problem, gap, or issue, state the diagnosis only. Do not propose, write, or suggest a fix/solution/code unless explicitly requested. Applies every time, not just once.
+web_fetch DISTRUST: web_fetch on this repo repeatedly returned only the bare URL instead of real file content across many attempts this session; do not treat web_fetch results as verified without explicitly checking the raw returned content in the same response before commenting on it. Direct user-pasted code remains the primary source of truth.
+RDA table schema FROZEN (Section 13).
+Every response begins Chat #[N] · [Date].
+Quality target: RDA output should approach 90%. Cost is not a blocking constraint if additional calls/complexity are needed to reach that target — can be absorbed into pricing.
+
+
+17. QUALITY BASELINE + OPEN ITEMS — Chat #96
+What is working:
+
+Signal Enrichment layer (6a-6e) deployed, real bug found and fixed (stale-reference lookup failure), confirmed producing real dictionary content in live tests ✅
+Tier-based greeting differentiation (T1 direct-name vs. T2/T3 Hello/Hi) confirmed correct across multiple batches ✅
+Closing-signature rotation restored after being lost in the revert, confirmed tier-aware in live output ✅
+Embedded Criticism Confirmation rule confirmed working — no further instances of confirming a guest's negative characterization as fact, after the fix ✅
+Differentiator instruction fix confirmed reducing (not eliminating) literal slogan-insertion ✅
+"landed"/"landing" no longer observed in the most recent test batch (post Step 9e deployment — though causal link not isolated from other simultaneous changes) ✅
+
+Known, unresolved gaps as of this document:
+ItemStatusStep 7c missing + operator (Style Standard/Output likely unreachable)Diagnosed, not fixedT2 missing contact-invitationRecurring 6+ batches; Step 9e flags but doesn't correct; root prompt cause unresolvedOccasion/Belonging dead instruction in 7aNo structured output channel existsCommercial Reference vs. positive-instruction conflictDiagnosed; procedural rewrite and code-classification alternatives proposed, neither builtOccasion vs. Commercial Event conflationNo distinguishing logic existsClosing Anchor Priority as client-configurableNo Client Config field exists yet; implementation undecidedRule #10/#35 (cross-record repetition)Audit-only; no deterministic/generation-time equivalent7a/7c mutual consistency after latest editsNot independently re-verifiedStep 9e field-level verificationUser-confirmed deployed; not independently confirmed via live NocoDB field values
+
+VRYOH Intelligence · SCX_RDA_HOW_v4.1 · Chat #96 · July 3, 2026 · Solofella LLC
