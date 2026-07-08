@@ -1,0 +1,74 @@
+Chat #96 · July 3, 2026
+
+**COLD START PROMPT FOR NEXT CHAT — paste this at the start of the new conversation:**
+
+---
+
+This is Chat #97, July 2026. VRYOH Intelligence / Solofella LLC. RDA Agent continuity session.
+
+**PROJECT IDENTITY**
+VRYOH Intelligence — B2B governed review response and guest signal detection platform for hospitality and F&B operators. Sole founder: Miguel Arellano, not a coding specialist, first agent-building project. Core principle: DETECT and INTERPRET only — never prescribe operational actions. All response drafts require human approval before reaching the public. Pipeline: ALA→EIP→ESS→HSI→SIA→BRA→RDA→MRA. Active pilots: AJI-001–005 (Aji Ceviche Bar, 5 Florida locations), PAK-001 (Park Avenue Kitchen by David Burke, NYC, F&B Director = Eddy).
+
+**INFRASTRUCTURE**
+n8n 2.4.6 self-hosted: 161.35.133.49:5678. NocoDB self-hosted: 161.35.133.49:8080 (internal: http://nocodb:8080). Base ID: pq249fix22t3ofv. Claude model: claude-sonnet-4-6. Credentials: xc-token (NocoDB), Subtext-CX-Anthropic (Header Auth, x-api-key).
+
+**TABLE IDs / SCHEMAS CONFIRMED REAL (Chat #96):**
+- Client Config: m95cmabjfyb94ps (25 real columns — Brand Personality, Response for Negative Experience, Formality Level, Person Preference, Brand Phrases Include/Avoid, Language, Approval Contact Email, SEO Keywords, Client Name, RECOVERY PROTOCOL, Guest Feeling, Commitments NEVER, Differentiator, REGISTER, CORE DRIVER, REGIONAL ACCENT, Sheet ID/Tab Name)
+- RDA: mr1v67cszcklwns (20 fields — **SCHEMA FROZEN, no new columns ever**)
+- EIP: mhicpnrahaesxmy (Enriched Emotion Tag/Enriched Pain Point = SingleSelect, confirmed 1:1 match to dictionary key fields; Cognitive Driver + Need State stored directly here, confirmed NOT surviving ESS→HSI→BRA pass-through into RDA)
+- Emotion Dictionary EN: mrrscb955j1d2i7 (Core Emotion, Common Expressions, Need_State, Negative Cognitive Driver, etc.)
+- Pain Point Master: meavqh37mdqgl4d (Enriched Pain Point, Operational Signal, Emotional Signal, Sample User Expression)
+
+**COMMUNICATION PROTOCOL — PERMANENT**
+Every response begins: `Chat #[N] · [Date]`. Straightforward, precise, short, no filler. No praise unless explicitly/objectively justified — default withhold. Treat user capabilities with strict factual neutrality. **DIAGNOSE-ONLY RULE: when identifying a problem, state the diagnosis only — do not propose, write, or suggest a fix unless explicitly asked.**
+
+**VERIFICATION PROTOCOL — PERMANENT**
+State source before any claim (direct observation / user-provided / training data / educated guess / unknown). Confidence markers: ✅HIGH/⚠️MEDIUM/❌LOW/🚫DO NOT CLAIM. Show work: CLAIM→EVIDENCE FOR→EVIDENCE AGAINST→CONCLUSION. Assume-failure default for unverified tool access. **`web_fetch` on github.com/Solofella/scx-knowledge is unreliable — repeatedly returned bare URL instead of real content across this session. Do not trust web_fetch results as source of truth without showing raw output in the same response before commenting. Direct user-pasted code is the primary source of truth.**
+
+**CURRENT RDA PIPELINE STATE (v4.1, as of Chat #96)**
+
+Node sequence: 1→2→3→4→5→6→**6a→6b→6c→6d→6e**(new, Phase 3 signal enrichment)→7a→7b→7c→7d→7e→7f→7g→7h→8→9a→9a-2→9b→9c→9d→**9e**(new, deterministic checker)→10→11→12→13→14→15→16→17→18.
+
+**Language status: reverted to English-only** (Spanish deployed Chat #86-89, deactivated Chat #96 after live test showed language-mixing/coherence failures within single drafts and a banned-term leak). Full Spanish history preserved in memory for Phase 4 reference. Phase 4 reactivation not yet attempted — deferred, evidence for reactivation trigger now exists but unused.
+
+**Phase 3 (Signal Enrichment, Steps 6a-6e):** built and deployed. Consolidates EIP's Cognitive Driver/Need State (fetched fresh from EIP table, not pass-through) + Emotion Dictionary's Common Expressions + Pain Point Master's Operational/Emotional Signal/Sample Expression into `signal_enrichment_brief`, injected into 7a and 7c prompts. Real bug found and fixed: 6c/6d originally referenced stale pass-through values instead of 6b's live EIP fetch, causing 0-row lookup failures despite valid dictionary data existing. Fix confirmed deployed. `signal_enrichment_brief` deliberately ends at 7g — no downstream consumer, not carried to Step 8+.
+
+**Step 9e (Deterministic Compliance Check):** new node between 9d and 10. Auto-corrects "landed"/"landing" (safe single-word swap). Flags (does NOT auto-insert) missing T2 contact-invitation and near-miss banned phrases — sets `human_review_required=true`, appends to `audit_failed_items`. Design principle: auto-templating a fixed correction sentence was avoided to prevent reintroducing the sameness problem already solved by removing Priority 1-6 fixed templates from 7a. User-confirmed deployed; not independently field-verified (no live NocoDB values shown to confirm the flag fires).
+
+**Step 7a:** Priority 1-6 fixed sentence templates removed — replaced with signal-checklist ("what to notice") + Brand Voice instruction ("how to write it"). Tier-based greeting confirmed correct (T1=no greeting word, direct name; T2/T3="Hi/Hello"+name). **Confirmed dead instruction, unresolved:** "Detect Occasion and Belonging for use in the body only" — 7a returns one plain-text sentence, no structured output channel exists to pass detected values to 7c.
+
+**Step 7c:** "Quality Rules" section added — Commercial Reference prohibition, Timeless Closing Anchor priority, Occasion/Belonging detection. **CONFIRMED UNRESOLVED BUG:** missing `+` concatenation operator between the Quality Rules block and `'Style Standard:\n'` — Style Standard and Output sections likely never reach Claude. Leading hypothesis for observed cross-guest phrase repetition. **Confirmed real failure:** Commercial Reference rule lost to competing positive instruction ("reinforce guest wording") in live test — "$60 menu" appeared in a closing despite explicit prohibition. **Confirmed conceptual gap:** Occasion detection doesn't distinguish personal occasion from commercial event (Restaurant Week triggered false-positive).
+
+**Governance vs. Style principle (locked Chat #96, from 5 real PAK-001 Google reviews written by Eddy, F&B Director):**
+- Universal governance (never client-configurable): no financial commitments, no temporal/commercial hallucination, tier-severity-matched apology language.
+- Client-configurable: opening/closing formula tolerance, contact-channel specificity for T2/T3 (tied to Recovery Protocol content + tier severity, NEVER star rating), Closing Anchor Priority (proposed, no Client Config field exists yet).
+- Real finding: PAK's authentic voice consistently uses thanks-formula openings and repeated appreciation phrases — conflicts with RDA's generic anti-formula rules. Eddy's real T3 behavior (personal email exposure for severe cases) is deliberate Recovery Protocol execution, not a governance leak.
+- This directly justifies implementation item #11 (client-specific approved-example aggregation) — use each client's real approved drafts as that client's few-shot examples, not generic hypothetical ones.
+
+**11-item implementation list, build order (item 1 complete):**
+1. ✅ Phase 3 field injection into 7a/7c
+2. Step 7c full rewrite (partial — Quality Rules added, concat-bug unresolved)
+3. Step 7a full rewrite (partial — templates removed, dead instruction unresolved)
+4. New deterministic post-generation code node — ✅ built as Step 9e (T2 contact + landed/landing only; opening-repetition and Commercial Reference checks NOT yet added)
+5. Targeted re-ask mechanism (not silent auto-template) — not built
+6. Step 7e simplification — not done
+7. Step 7g — unchanged, no action needed
+8. Step 9b audit reduction — not done (12 items currently, up from 11)
+9. Instruction-position test — not done
+10. Human-review routing — partially covered by Step 9e
+11. Client-specific approved-example aggregation — not built, strongly justified by Section 12 findings
+
+**RDA Strategic priority (locked):** RDA is the most critical agent — quality target approach 90%. Cost is not a blocking constraint if it improves quality — can be priced into a new cost model.
+
+**OPEN ITEMS REQUIRING ATTENTION NEXT SESSION:**
+1. Fix 7c's missing `+` operator (highest-priority technical fix — likely explains repetition failures)
+2. Resolve T2 missing contact-invitation at the prompt level (Step 9e only flags, doesn't fix root cause)
+3. Resolve Occasion/Belonging dead instruction in 7a (structured output or move detection to 7c)
+4. Resolve Commercial Reference vs. positive-instruction conflict (procedural rewrite or code-based entity classification — neither tested yet)
+5. Distinguish Occasion vs. Commercial Event conceptually
+6. Decide Closing Anchor Priority implementation (new Client Config field vs. derived from existing field)
+7. Add rule #10/#35 (cross-record repetition) to Step 9e's deterministic checks
+8. Verify 7a/7c mutual consistency after latest edits (thanks-formula reversal)
+9. Field-verify Step 9e actually fires (need live NocoDB `human_review_required`/`audit_failed_items` values, not just draft text)
+
+**FIRST ACTION IN NEXT CHAT:** confirm which open item to address first, or continue testing with real data before further code changes.
