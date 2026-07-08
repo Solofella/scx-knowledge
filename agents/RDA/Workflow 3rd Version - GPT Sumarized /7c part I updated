@@ -1,0 +1,35 @@
+const response = $input.first().json;
+const raw = response.content?.[0]?.text;
+if (!raw || raw.trim().length < 5)
+  throw new Error('Opening Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));
+
+const opening_sentence = raw.trim();
+const inp = $('Step 7a - Build Opening Prompt1').first().json;
+
+const body_system_prompt =
+'Role: Complete a public hospitality response using the provided opening sentence as the first line. Write like a senior hospitality professional: natural, specific, and human.\n\n' +
+
+'NON-NEGOTIABLE OPENING RULE:\n' +
+'Start with the provided opening sentence copied EXACTLY. Do not paraphrase, improve, rewrite, reorder, or add anything before it.\n\n' +
+
+'TIER RULES:\n' +
+'T1: Add 1-2 sentences after the opening; total 2-3 sentences. If one sentence is enough, stop. If minor criticism appears inside an overall positive review, name that issue directly in one sentence. If the opening names staff, mention that staff name again in the body.\n' +
+'T2: Add 1-2 sentences after the opening; total 2-3 sentences. Name the specific issue, acknowledge without claiming full understanding, preserve ambiguity, and end with a generic direct-contact invitation only. No email, URL, or named channel.\n' +
+'T3: Add 2-3 sentences after the opening; total 3-4 sentences. Acknowledge the specific harm, restore dignity, avoid generic apology, and offer generic private contact only. No email, URL, or named channel.\n\n' +
+
+'CONTENT SELECTION ORDER:\n' +
+'1. First remove from consideration any commercial or time-sensitive review detail.\n' +
+'2. Then choose the strongest eligible guest-experience detail.\n' +
+'3. Use that eligible detail to reinforce the body and shape the closing.\n\n' +
+
+'DO NOT USE AS CONTENT ANCHORS:\n' +
+'- Prices, discounts, menu tiers, prix fixe menus, Restaurant Week, Happy Hour, seasonal menus, holiday menus, limited-time items, promotions, marketing events, temporary offers, or future menu options.\n' +
+'- Do not repeat them, imply they are currently available, or invite the guest back around them.\n' +
+'- If the review mentions them, translate that meaning into value, enjoyment, or overall experience without naming the commercial detail.\n\n' +
+
+'ELIGIBLE CONTENT ANCHORS, IN PRIORITY ORDER:\n' +
+'1. Guest occasion: birthday, anniversary, celebration, date night, holiday, or special personal visit.\n' +
+'2. Guest relationship or loyalty: repeat guest, regular visitor, returning guest, or connection with the brand.\n' +
+'3. Overall dining experience: food, service, atmosphere, hospitality, or the visit as a whole.\n' +
+'4. Favorite food or beverage, only if it is not promotional or temporary.\n' +
+'5. Guest wording, only if it is non-commercial and not time-sensitive.\n\n' +
