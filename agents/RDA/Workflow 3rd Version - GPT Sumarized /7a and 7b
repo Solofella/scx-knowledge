@@ -1,0 +1,77 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.opening_prompt_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2288,
+        1328
+      ],
+      "id": "85e29c5c-1071-48de-b57f-b7492ae61f6a",
+      "name": "Step 7b - Opening Claude Call",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\nconst bv = rec.brand_voice;\nconst lang = rec.lang || bv.language || 'en';\n\nconst tier = rec.confirmed_response_tier;\nconst guestName = (rec.reviewer_handle &&\n  !rec.reviewer_handle.toLowerCase().includes('review') &&\n  !rec.reviewer_handle.toLowerCase().startsWith('anonymous'))\n  ? rec.reviewer_handle : null;\n\nconst opening_system_prompt =\n'Role: Generate ONE opening sentence only for a public hospitality review response. Do not write the body.\\n\\n' +\n\n'Brand Voice: Use Register, Core Driver, Regional Accent, Personality, Differentiator, and target Guest Feeling to shape tone, rhythm, and wording. Write naturally as the brand, never generically. Express the intended feeling through specific language rather than naming it.\\n\\n' +\n\n'Guest Name: If available, always include the guest name in the opening.\\n\\n' +\n\n'Signal Logic: Identify the first applicable signal and stop.\\n\\n' +\n\n'T1 (Positive): If a guest name exists, begin with \"Thank you very much\" or \"We appreciate\" + guest name.\\n' +\n'Priority: Named Staff → Specific Detail → Gratitude.\\n' +\n'- Named Staff: If the review names a staff member, use the exact name and acknowledge what the guest appreciated about that person.\\n' +\n'- Specific Detail: If no staff is named, reference the standout dish, drink, or experience.\\n' +\n'- Gratitude: If neither applies, write a sincere, guest-specific appreciation.\\n' +\n'- If no guest name exists, open with the strongest anchor detail.\\n\\n' +\n\n'T2 (Mixed): If a guest name exists, begin with \"Hi\" or \"Hello\" + guest name. Use a measured, thoughtful tone that reflects the specific signal.\\n' +\n'- If staff is named, use the exact name and connect it to the guest\\'s experience.\\n' +\n'- If no guest name exists, open with the strongest signal detail.\\n\\n' +\n\n'T3 (Negative): If a guest name exists, begin with \"Hello\" + guest name. Use a serious, human tone that acknowledges the specific harm without sounding transactional.\\n' +\n'- If staff is named, mention the exact name only when it helps acknowledge the guest\\'s experience appropriately.\\n' +\n'- If no guest name exists, open with the nature of the harm.\\n\\n' +\n\n'Rules:\\n' +\n'- Return one sentence only.\\n' +\n'- No JSON, preamble, or explanation.\\n' +\n'- End with natural punctuation.\\n' +\n'- Never begin with \"Knowing\".\\n' +\n'- Never use \"landed\" as the primary acknowledgment verb.\\n' +\n'- Vary sentence structure naturally; avoid formulaic openings.';\n\nconst opening_user_prompt =\n`RESPONSE TIER: ${tier}\\n` +\n`GUEST NAME: ${guestName || 'Not available'}\\n` +\n`SIGNAL TYPE: ${rec.signal_type}\\n` +\n`TONE STYLE: ${rec.tone_style}\\n` +\n`EMOTION HYPOTHESIS: ${rec.emotion_hypothesis || 'Not available'}\\n` +\n`KEYWORDS FROM REVIEW: ${rec.keywords || 'Not available'}\\n` +\n`ENRICHED EMOTION: ${rec.enriched_emotion_tag || 'Not available'}\\n` +\n`SIGNAL ENRICHMENT: ${rec.signal_enrichment_brief || 'Not available'}\\n` +\n(rec.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${rec.behavioral_interpretation}\\n` : '') +\n`\\nBRAND VOICE BRIEF:\\n${rec.brand_voice_brief || ''}\\n` +\n`\\nProduce one opening sentence only. No preamble.`;\n\nconst opening_prompt_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 150,\n  temperature: 0,\n  system: opening_system_prompt,\n  messages: [{ role: 'user', content: opening_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: rec.bra_record_id,\n  confirmed_response_tier: rec.confirmed_response_tier,\n  governance_flag: rec.governance_flag,\n  human_review_required: rec.human_review_required,\n  solution_type: rec.solution_type,\n  emotional_axis: rec.emotional_axis,\n  pain_axis: rec.pain_axis,\n  stability_axis: rec.stability_axis,\n  signal_based_consideration: rec.signal_based_consideration,\n  tone_style: rec.tone_style,\n  urgency_level: rec.urgency_level,\n  commercial_risk_flag: rec.commercial_risk_flag,\n  behavioral_interpretation: rec.behavioral_interpretation,\n  lang: lang,\n  client_id: rec.client_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  hsi_record_id: rec.hsi_record_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  reviewer_handle: rec.reviewer_handle,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords,\n  brand_voice: rec.brand_voice,\n  brand_voice_brief: rec.brand_voice_brief,\n  signal_enrichment_brief: rec.signal_enrichment_brief,\n  lang_resolved: lang,\n  opening_prompt_body: opening_prompt_body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        1328
+      ],
+      "id": "0bbffe68-3fa5-4d5b-b25b-9b6b8d4168f4",
+      "name": "Step 7a - Build Opening Prompt1"
+    }
+  ],
+  "connections": {
+    "Step 7b - Opening Claude Call": {
+      "main": [
+        []
+      ]
+    },
+    "Step 7a - Build Opening Prompt1": {
+      "main": [
+        [
+          {
+            "node": "Step 7b - Opening Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
