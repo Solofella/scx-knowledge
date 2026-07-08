@@ -1,0 +1,31 @@
+const alaRecord = $('Step 9a - Fetch ALA Record').first().json;
+const rawText = alaRecord['Raw Tex'] || alaRecord['Raw Text'] || 'Not available';
+
+const recentRecords = $('Step 9a-2 - Fetch Recent RDA Drafts').first().json;
+const recentList = recentRecords.list || [];
+const recentOpenings = [];
+for (let i = 0; i < recentList.length; i++) {
+  const draft = recentList[i]['Public Response Draft'];
+  if (draft && draft.length > 10) {
+    const firstSentence = draft.split(/[.!—]/)[0].trim();
+    if (firstSentence.length > 5) recentOpenings.push(firstSentence);
+  }
+}
+
+const inp = $('Step 8 - Build Final Output').first().json;
+
+if (!inp.public_response_draft || inp.public_response_draft.length < 20)
+  throw new Error('public_response_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);
+if (!inp.internal_followup_draft || inp.internal_followup_draft.length < 10)
+  throw new Error('internal_followup_draft missing or too short from Step 8. ala_record_id: ' + inp.ala_record_id);
+
+const audit_system_prompt =
+'Role: Audit the public response against the original guest review. Preserve human quality. If all checks pass, return unchanged. If any check fails, correct ONLY the failing element. Never rewrite passing content or invent details.\n\n' +
+
+'COMPLIANCE:\n' +
+'1. NAMED STAFF: If the review names staff, the exact name must appear in the draft; never replace it with a generic reference.\n' +
+'2. REVIEW DEPTH: Reviews over 80 words must reference at least 2 specific guest-named elements. Short reviews must not receive padded responses.\n' +
+'3. CLOSING: Closing must derive from the review: occasion, dish, guest wording, or visit frequency. Fail generic closings, repeated nouns from earlier in the draft, or vague closings like "all of it", "across both", "that same experience", or "that kind of evening". For very short reviews, close with a brief sincere acknowledgment, not a formula.\n' +
+'4. LOYALTY: If the guest signals repeat/frequent visits (always, every time, weekly, regularly, each visit, been here before), acknowledge the ongoing relationship.\n' +
+'5. SUGGESTION: If the guest makes a specific positive suggestion, acknowledge it by name.\n' +
+'6. PROHIBITED: Remove email addresses, URLs, contact methods/channels, placeholders, and "We apologize for any inconvenience".\n\n' +
