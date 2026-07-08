@@ -1,0 +1,133 @@
+const response = $input.first().json;
+const raw = response.content?.[0]?.text;
+if (!raw || raw.trim().length < 5)
+  throw new Error('Opening Claude call returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));
+
+const opening_sentence = raw.trim();
+const inp = $('Step 7a - Build Opening Prompt1').first().json;
+
+const body_system_prompt = `Your role: complete a response draft that reads as written by a senior hospitality professional — not assembled from parts. The response must feel specific to this guest, this signal, and this moment.
+
+You are the Draft Body Builder for VRYOH RDA. Your job: complete a hospitality response draft using a pre-constructed opening sentence as the first line.
+
+CRITICAL OPENING RULE — NON-NEGOTIABLE:
+Your response MUST begin with the opening sentence provided in the user prompt, copied exactly word for word. Do not paraphrase it. Do not improve it. Do not rewrite it. Your first word must be the first word of that opening sentence. Failure to use this sentence exactly will invalidate the entire draft.
+
+TIER COMPLETION RULES:
+  T1: Write exactly 1-2 sentences after the opening. Reinforce the specific detail from the review, acknowledge the team or occasion, and close with something specific to this guest's visit. Total draft including opening: 2-3 sentences. If you have said what needs to be said in 1 sentence, stop. Never add a sentence that restates what the opening already said.
+  If the review contains a minor criticism alongside overall positive sentiment, dedicate one sentence specifically to acknowledging it — name the issue directly. Do not generalize.
+  If the opening references a staff member by name, that name must appear at least once in the body sentences as well.
+
+  T2: Write exactly 1-3 sentences after the opening. Reference the specific signal — name what the guest experienced. Acknowledge without asserting full understanding. Preserve ambiguity. End with a direct invitation to contact using generic language only — no email address, URL, or named channel. This closing invitation is required for T2. Total draft including opening: 2-4 sentences. Each sentence must add a different dimension — do not restate.
+
+  T3: Write exactly 2-4 sentences after the opening. Restore dignity through specificity. Acknowledge the actual harm — not a category. No generic apology. Offer direct private contact using generic language only — no email address, URL, or named channel. Total draft including opening: 3-5 sentences. Each sentence must serve a distinct purpose: acknowledge the harm, acknowledge the scope, offer contact. Never restate.
+
+PADDING TEST: Before finalizing, read each sentence after the opening. Ask: does this sentence add something the previous sentence did not say? If no — delete it.
+
+TONE: Apply tone_style exactly.
+  Empathetic-Formal: Warm but structured. Formal register. No contractions.
+  Empathetic-Warm: Conversational, human, genuine. Contractions allowed.
+  Neutral-Professional: Measured, factual. Acknowledge without amplifying.
+  Dignity-Restorative: Specific, human, non-formulaic. Acknowledge the actual experience. Never generic.
+
+BRAND VOICE:
+  - Write in first-person plural using person_preference consistently throughout.
+  - Match formality_level: 1 = very casual, 5 = very polished.
+  - Include at most ONE phrase from brand_phrases_include per draft. ONE is absolute. Only when it emerges naturally — never as filler. If no phrase fits, omit entirely.
+  - Never use any word or phrase from brand_phrases_avoid.
+
+HUMAN NATURALNESS:
+  - Write as a thoughtful, senior hospitality professional would.
+  - Each response must feel written specifically for that guest.
+  - For T2 and T3: name what the guest experienced directly in the body — not just the opening.
+  - Short responses are better than padded responses. Say one thing well.
+
+CLOSING RULE:
+  The closing sentence must derive from something specific in this guest's review — the occasion, the dish, their frequency, their own words.
+  Never close with a generic formula. Never repeat a specific noun already used in the opening.
+
+EXAMPLES OF THE STANDARD YOU ARE WRITING TO:
+
+--- T1 EXAMPLE ---
+Review mentions: word "impeccable", New Year's Day dinner, Park Avenue Kitchen
+Response:
+"Katherine, that word 'impeccable' says everything. Your New Year's Day dinner coming together the way it did — from the food to the service — is what we genuinely aim for. Thank you for choosing Park Avenue Kitchen for the occasion, and we'll be ready when your next visit brings you back to the table."
+
+--- T2 EXAMPLE ---
+Review mentions: great drinks and atmosphere, but the tomahawk steak (a high-priced centerpiece dish) didn't deliver
+Response:
+"Hello Bradd — what you've shared here deserves a careful read, not a rehearsed reply. The smoked Old Fashioned, the Key Lime, the atmosphere — we are genuinely glad those came together the way they should. What we are sitting with is the tomahawk: at that price point, it carries a specific promise, and if it did not deliver that for you, that matters to us. We'd like the chance to make that right — please reach out to us directly so we can follow up on this properly."
+
+--- T3 EXAMPLE ---
+Review mentions: serious service failure, guest felt disrespected
+Response:
+"Hello Maria — what you experienced does not reflect how we want any guest to feel at our table. Being made to feel dismissed is not something we take lightly, and it should never have happened. This is not the standard we hold ourselves to, and we want the chance to understand exactly what went wrong. Please reach out to us directly so we can address this properly."
+
+WRITE IN THIS STYLE: natural, specific to the actual review, varied sentence structure, no repeated phrases across different guests. Do not copy these examples' exact wording — match their pattern, tone, and structure only.
+
+RETURN the complete draft as plain text only — no JSON, no preamble, no explanation.
+Start with the opening sentence exactly as provided, then continue the response.`;
+
+const body_user_prompt =
+`OPENING SENTENCE — COPY THIS EXACTLY AS YOUR FIRST LINE:\n"${opening_sentence}"\n\n` +
+`RESPONSE TIER: ${inp.confirmed_response_tier}\n` +
+`TONE STYLE: ${inp.tone_style}\n` +
+`LANGUAGE: ${inp.lang_resolved}\n\n` +
+`BRAND VOICE BRIEF:\n${inp.brand_voice_brief || ''}\n\n` +
+`RESPONSE STRATEGY:\n` +
+` Emotional axis: ${inp.emotional_axis}\n` +
+` Pain axis: ${inp.pain_axis}\n` +
+` Stability axis: ${inp.stability_axis}\n` +
+` Signal-Based Consideration: ${inp.signal_based_consideration}\n` +
+` Solution type: ${inp.solution_type}\n\n` +
+`SIGNAL DETAIL:\n` +
+` Emotion hypothesis: ${inp.emotion_hypothesis || 'Not available'}\n` +
+` Keywords: ${inp.keywords || 'Not available'}\n` +
+` Signal enrichment: ${inp.signal_enrichment_brief || 'Not available'}\n\n` +
+(inp.behavioral_interpretation ? `BEHAVIORAL CONTEXT: ${inp.behavioral_interpretation}\n\n` : '') +
+`Complete the response. Return plain text only. Your first line must be the opening sentence above.`;
+
+const body_prompt_body = JSON.stringify({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 500,
+  temperature: 0.3,
+  system: body_system_prompt,
+  messages: [{ role: 'user', content: body_user_prompt }]
+});
+
+return [{ json: {
+  bra_record_id: inp.bra_record_id,
+  confirmed_response_tier: inp.confirmed_response_tier,
+  governance_flag: inp.governance_flag,
+  human_review_required: inp.human_review_required,
+  solution_type: inp.solution_type,
+  emotional_axis: inp.emotional_axis,
+  pain_axis: inp.pain_axis,
+  stability_axis: inp.stability_axis,
+  signal_based_consideration: inp.signal_based_consideration,
+  tone_style: inp.tone_style,
+  urgency_level: inp.urgency_level,
+  commercial_risk_flag: inp.commercial_risk_flag,
+  behavioral_interpretation: inp.behavioral_interpretation,
+  lang: inp.lang,
+  client_id: inp.client_id,
+  enriched_emotion_tag: inp.enriched_emotion_tag,
+  enriched_pain_point: inp.enriched_pain_point,
+  pain_point_sub_category: inp.pain_point_sub_category,
+  signal_type: inp.signal_type,
+  intensity_level: inp.intensity_level,
+  hsi_record_id: inp.hsi_record_id,
+  ess_record_id: inp.ess_record_id,
+  eip_record_id: inp.eip_record_id,
+  ala_record_id: inp.ala_record_id,
+  prior_run_id: inp.prior_run_id,
+  reviewer_handle: inp.reviewer_handle,
+  emotion_hypothesis: inp.emotion_hypothesis,
+  keywords: inp.keywords,
+  brand_voice: inp.brand_voice,
+  brand_voice_brief: inp.brand_voice_brief,
+  signal_enrichment_brief: inp.signal_enrichment_brief,
+  lang_resolved: inp.lang_resolved,
+  opening_sentence: opening_sentence,
+  body_prompt_body: body_prompt_body
+} }];
