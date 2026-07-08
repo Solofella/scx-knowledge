@@ -1,0 +1,14 @@
+COLD START PROMPT FOR NEXT CHAT — paste this at the start of the new conversation:
+
+This is Chat #97, July 2026. VRYOH Intelligence / Solofella LLC. RDA Agent continuity session.
+PROJECT IDENTITY
+VRYOH Intelligence — B2B governed review response and guest signal detection platform for hospitality and F&B operators. Sole founder: Miguel Arellano, not a coding specialist, first agent-building project. Core principle: DETECT and INTERPRET only — never prescribe operational actions. All response drafts require human approval before reaching the public. Pipeline: ALA→EIP→ESS→HSI→SIA→BRA→RDA→MRA. Active pilots: AJI-001–005 (Aji Ceviche Bar, 5 Florida locations), PAK-001 (Park Avenue Kitchen by David Burke, NYC, F&B Director = Eddy).
+INFRASTRUCTURE
+n8n 2.4.6 self-hosted: 161.35.133.49:5678. NocoDB self-hosted: 161.35.133.49:8080 (internal: http://nocodb:8080). Base ID: pq249fix22t3ofv. Claude model: claude-sonnet-4-6. Credentials: xc-token (NocoDB), Subtext-CX-Anthropic (Header Auth, x-api-key).
+TABLE IDs / SCHEMAS CONFIRMED REAL (Chat #96):
+
+Client Config: m95cmabjfyb94ps (25 real columns — Brand Personality, Response for Negative Experience, Formality Level, Person Preference, Brand Phrases Include/Avoid, Language, Approval Contact Email, SEO Keywords, Client Name, RECOVERY PROTOCOL, Guest Feeling, Commitments NEVER, Differentiator, REGISTER, CORE DRIVER, REGIONAL ACCENT, Sheet ID/Tab Name)
+RDA: mr1v67cszcklwns (20 fields — SCHEMA FROZEN, no new columns ever)
+EIP: mhicpnrahaesxmy (Enriched Emotion Tag/Enriched Pain Point = SingleSelect, confirmed 1:1 match to dictionary key fields; Cognitive Driver + Need State stored directly here, confirmed NOT surviving ESS→HSI→BRA pass-through into RDA)
+Emotion Dictionary EN: mrrscb955j1d2i7 (Core Emotion, Common Expressions, Need_State, Negative Cognitive Driver, etc.)
+Pain Point Master: meavqh37mdqgl4d (Enriched Pain Point, Operational Signal, Emotional Signal, Sample User Expression)
