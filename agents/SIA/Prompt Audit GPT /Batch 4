@@ -1,0 +1,129 @@
+# 4. Prompt 9b-ES: audit
+
+## What works
+
+The overall philosophy is correct:
+
+- Correct only what fails.
+- Do not rewrite approved content.
+- Do not invent details.
+- Check for mentioned staff members.
+- Avoid inflating short reviews.
+- Recognize loyalty and suggestions.
+- Control formulaic phrases.
+- Maintain structured JSON.
+
+It is a good control layer.
+
+## What does not work
+
+### A. It again contradicts the opening and name-handling rules
+
+The audit states:
+
+> “T1: `[Nombre],` al inicio.”
+
+That contradicts both 7a and 7e.
+
+You currently have three different rules:
+
+- 7a: “Muchas gracias, [Nombre],” or “Le agradecemos mucho, [Nombre],”
+- 7e: “Hola, [Nombre],”
+- 9b: “[Nombre],”
+
+You need a single authority for name handling. I recommend:
+
+- **7a generates the name and opening.**
+- **7c preserves the opening.**
+- **7e only verifies it.**
+- **9b identifies the failure but does not invent a new structure.**
+
+In 9b:
+
+```text
+Si el nombre está disponible y falta, marca NOMBRE DEL HUÉSPED como fallido. Corrige la apertura respetando exactamente las reglas de apertura correspondientes al nivel; no uses una fórmula distinta.
+```
+
+---
+
+### B. The overused-verbs rule can produce unnatural Spanish
+
+The proposed alternatives include:
+
+- resonó
+- se sintió genuino
+- funcionó
+- dejó huella
+- se logró
+
+Not all of them are interchangeable with “nos alegra,” “agradecemos,” or “valoramos.” Claude could generate unnatural phrases such as:
+
+> “Nos resonó que la comida estuviera rica.”
+
+or:
+
+> “El ceviche dejó huella.”
+
+The audit should detect repetition, not impose semantically incompatible substitutions.
+
+A better rule would be:
+
+```text
+Reprueba la repetición innecesaria de un mismo verbo de reconocimiento. Sustitúyelo únicamente por una alternativa idiomática que conserve el significado de la oración. No uses una lista fija de sinónimos fuera de contexto.
+```
+
+---
+
+### C. The recent-openings audit can ruin a good response
+
+The rule says that if the opening repeats the same initial word or grammatical structure, it must be rewritten. But in hospitality, openings such as:
+
+> “Muchas gracias por compartir…”
+
+are normal. Prohibiting repeated initial words can create artificial variety.
+
+For example, to avoid “Muchas,” the model could generate:
+
+> “Leer que la comida…”
+
+even though gratitude would have been the better opening.
+
+I recommend comparing the full structure, not the first word:
+
+```text
+Reprueba únicamente aperturas sustancialmente idénticas en fórmula, ritmo y contenido. Compartir una palabra inicial común, como “Muchas”, “Gracias” o “Nos”, no constituye por sí solo una repetición.
+```
+
+---
+
+### D. The closing rule prohibits repeating any noun
+
+Your target draft repeats “ceviche” because that repetition is useful:
+
+> “Esperamos… servirle ese ceviche exactamente como lo pidió.”
+
+The current audit could reject it because it says:
+
+> “sustantivos repetidos de antes en el borrador”
+
+That rule is too aggressive. Repeating the central noun can create a more specific and human closing.
+
+Change it to:
+
+```text
+Permite repetir el plato o detalle central cuando la repetición haga el cierre más específico, restaurativo o conectado con la solicitud del huésped. Reprueba únicamente repeticiones que no agreguen significado.
+```
+
+---
+
+### E. The prohibited phrases are too broad
+
+For example:
+
+> “Esperamos volver a verle”
+
+appears in the list of brand phrases that may be used only once. It is reasonable to control its use, but it should not automatically fail if it is the most natural option.
+
+The audit should look for an accumulation of formulas, not prohibit them individually.
+
+---
