@@ -1,1 +1,110 @@
+# The best combination for achieving a similar result
 
+I would use this sequence:
+
+## 1. Preliminary classifier
+
+Before 7a, determine:
+
+```json
+{
+  "tier": "T1",
+  "has_minor_criticism": true,
+  "dominant_positive_details": [
+    "comida muy rica",
+    "servicio excelente"
+  ],
+  "specific_problem": "el ceviche fue servido picante pese a solicitarlo sin picante",
+  "private_contact_needed": false
+}
+```
+
+Do not allow 7a to freely determine the level again. It should receive the classification as an already resolved input.
+
+---
+
+## 2. Prompt 7a for the opening
+
+It should generate something similar to:
+
+> Muchas gracias por compartir su experiencia; nos alegra saber que disfrutó de la comida y que el servicio fue excelente.
+
+It should not begin with the problem because the overall experience was positive.
+
+---
+
+## 3. Prompt 7c for developing T1 with a minor criticism
+
+It should contain specific instructions for this subcategory:
+
+```text
+T1 CON CRÍTICA MENOR:
+
+Después de la apertura:
+
+1. Nombra directamente la solicitud que no fue respetada.
+2. Establece brevemente el estándar esperado.
+3. Agradece que el huésped haya señalado el problema.
+4. Cierra conectando con el plato o detalle afectado.
+
+Total: 4-5 oraciones.
+
+No solicites contacto privado salvo que la entrada indique que se necesitan detalles adicionales.
+No minimices el problema mediante palabras como “solo”, “pequeño detalle” o “inconveniente”.
+No conviertas el error puntual en una falla general del servicio.
+```
+
+---
+
+## 4. Prompt 7e only for cleanup
+
+It should not insert names or alter the structure. It should only:
+
+- remove prohibited elements;
+- integrate SEO only when it already fits;
+- preserve the human quality of the text.
+
+---
+
+## 5. Prompt 9b as a conservative auditor
+
+It should specifically verify:
+
+- Did it acknowledge the food and service?
+- Did it state that the ceviche should have been served without spice?
+- Did it avoid minimizing the failure?
+- Did it establish the correct standard?
+- Did it avoid unnecessary private-contact language?
+- Is the closing derived from the ceviche?
+- Did it avoid inventing compensation or internal actions?
+
+---
+
+# Result your system should produce
+
+With the corrections above, a reasonably consistent output would be:
+
+Muchas gracias por compartir su experiencia. Nos alegra saber que disfrutó de la comida y que el servicio fue excelente.
+
+Lamentamos que el ceviche llegara con bastante picante después de haberlo solicitado sin picante. Si lo pidió de esa manera, así debió haber sido servido. Agradecemos que nos lo haya señalado, ya que este tipo de comentarios nos ayuda a reforzar la atención a las solicitudes de cada huésped.
+
+Esperamos tener el gusto de recibirle nuevamente y servirle ese ceviche exactamente como lo pidió.
+
+Un cordial saludo,
+
+Aji Ceviche Bar – Orlando
+
+## Verdict
+
+The best foundation is **7a + 7c + 9b**, but with these essential changes:
+
+1. Clearly define **T1 with a minor criticism**.
+2. Increase positive T1 with a minor criticism to **4–5 sentences**.
+3. Extend feedback acknowledgment to T1 reviews containing criticism.
+4. Do not require private contact for minor issues.
+5. Give 7a exclusive authority over guest-name placement.
+6. Prevent 7e and 9b from reconstructing the opening using contradictory formulas.
+7. Allow repetition of the central dish in a specific closing.
+8. Use 7e as a cleanup stage, not as a second writing stage.
+
+The biggest problem is not the quality of the individual prompts, but that **the different stages do not share one consistent definition of tier, opening, name handling, and closing**. That inconsistency allows the final agent to undo what the first agent did correctly.
