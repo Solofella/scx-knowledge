@@ -1,0 +1,143 @@
+# 2. Prompt 7c-ES: body
+
+## What works
+
+This prompt contains good rules:
+
+- Copy the opening exactly.
+- Directly name a minor criticism in T1.
+- Do not inflate short responses.
+- Avoid repeating information.
+- Use first-person plural.
+- Maintain native-quality Spanish.
+- Prefer idiomatic expressions over clinical language.
+- Avoid generic apologies.
+- Treat commercial details as historical.
+- Do not invent promotions or future availability.
+
+The instruction:
+
+> “Si aparece una crítica menor dentro de una reseña mayormente positiva, nómbrala directamente en una oración”
+
+is exactly the logic this review needs.
+
+## What does not work
+
+### A. The 2–3 sentence limit prevents the previous draft from being reproduced
+
+The previous draft essentially contains five moves:
+
+1. Gratitude and positive acknowledgment.
+2. Recognition of the problem.
+3. The expected standard.
+4. The value of the feedback.
+5. A specific closing.
+
+With a maximum total of three sentences, Claude will have to compress too much and will probably create long sentences.
+
+Your target result was more developed and had better breathing room. For T1 responses with a minor criticism, change the length to:
+
+```text
+T1 positiva sin crítica: total de 2-3 oraciones.
+T1 positiva con crítica menor: total de 4-5 oraciones.
+```
+
+---
+
+### B. The feedback acknowledgment rule applies only to T2/T3
+
+You currently say:
+
+> “AGRADECIMIENTO POR LA RETROALIMENTACIÓN (T2/T3)”
+
+But the target draft contains:
+
+> “Agradecemos que nos lo haya señalado.”
+
+This review is T1 with a minor criticism, so your current system is not required to include that sentence.
+
+You should broaden the rule:
+
+```text
+AGRADECIMIENTO POR LA RETROALIMENTACIÓN:
+
+Cuando T1 contenga una crítica menor, o para cualquier T2/T3, incluye una oración breve que reconozca el valor de que el huésped haya señalado el problema.
+```
+
+---
+
+### C. T2 requires an invitation to make direct contact
+
+The rule says:
+
+> “termina con una invitación genérica a contacto directo únicamente.”
+
+This would prevent a result like the previous one. The target draft does not request private contact because the failure is concrete, limited, and does not require further public investigation.
+
+Even if the review were classified as T2, the system would end with something like:
+
+> “Le invitamos a contactarnos directamente.”
+
+That would be unnecessary and too formulaic for a preparation error.
+
+The invitation to make contact should be conditional:
+
+```text
+Para T2, ofrece contacto privado únicamente cuando sea necesario conocer más detalles, identificar una visita, gestionar un asunto no resuelto o evitar discutir información sensible públicamente. No ofrezcas contacto por una falla menor que puede reconocerse completamente en la respuesta.
+```
+
+For T3, it can remain common, but it should not always be mandatory either.
+
+---
+
+### D. “Preserva la ambigüedad” does not fit every T2 case
+
+The phrase:
+
+> “preserva la ambigüedad”
+
+is useful only when the review is genuinely ambiguous. It does not work for a clear issue such as:
+
+> “Pedí sin picante y llegó picante.”
+
+The problem is completely explicit. Preserving ambiguity could weaken the acknowledgment.
+
+A better version would be:
+
+```text
+No atribuyas emociones, intenciones ni consecuencias que el huésped no expresó. Cuando el problema sea explícito, nómbralo con claridad. Cuando la experiencia sea ambigua, no la interpretes más allá de lo escrito.
+```
+
+---
+
+### E. “Nunca uses un cierre genérico” is correct, but it needs an operational exception
+
+The rule is good, although too absolute. Short reviews may not contain enough material for a highly developed closing.
+
+You could define it as:
+
+```text
+El cierre debe relacionarse con el plato, la experiencia o el estándar afectado. Cuando no exista suficiente detalle, usa un cierre breve y sincero, sin agregar una promesa inventada.
+```
+
+For this case, the ideal closing can indeed be derived from the ceviche:
+
+> Esperamos tener el gusto de recibirle nuevamente y servirle ese ceviche exactamente como lo pidió.
+
+---
+
+### F. A rule about the expected standard is missing
+
+One of the most effective parts of the previous draft is:
+
+> “Si lo solicitó sin picante, así debió haber sido servido.”
+
+That is not a generic apology. It establishes a clear operational standard without promising an investigation or inventing a correction.
+
+I would add:
+
+```text
+Cuando el huésped describa una solicitud clara que no fue respetada, establece brevemente el estándar esperado: lo solicitado debía haberse servido o ejecutado de esa manera. No culpes al huésped ni justifiques la falla.
+```
+
+---
