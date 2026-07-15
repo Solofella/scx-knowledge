@@ -1,0 +1,154 @@
+## Main diagnosis
+
+To reproduce a response like the previous one, this review should be classified as:
+
+**T1 positive with a minor criticism**, not as T2.
+
+The review contains:
+
+- 4 stars.
+- A positive assessment of the food.
+- A very positive assessment of the service.
+- One specific and concrete issue: the ceviche was served spicy even though it was requested without spice.
+
+The guest does not express emotional ambiguity, overall disappointment, or loss of trust. Therefore, the correct response should follow this sequence:
+
+1. Express gratitude.
+2. Acknowledge the food and service.
+3. Directly name the ceviche error.
+4. Establish the expected standard.
+5. Thank the guest for pointing it out.
+6. Close in a specific and restorative way.
+
+Your prompts contain much of this logic, but several rules prevent them from producing a result similar to the previous draft.
+
+---
+
+# 1. Prompt 7a-ES: opening
+
+## What works
+
+These instructions are solid:
+
+- Require only one sentence.
+- Write like a native speaker rather than as a translation.
+- Use a specific detail from the review.
+- Differentiate the tone according to T1, T2, and T3.
+- Avoid generic openings.
+- Begin with gratitude when a name is available in T1.
+
+The naturalness rule is especially important for avoiding phrases such as:
+
+> “Estamos felices de escuchar que…”
+
+which often reveal a direct translation from English.
+
+## What does not work
+
+### A. “Identifica la primera señal aplicable” is too ambiguous
+
+The model does not know what “first” means:
+
+- The first signal that appears in the text?
+- The signal with the greatest severity?
+- The overall classification?
+- Does one criticism automatically turn the review into T2?
+
+In this case, Claude could identify the positive signal first and use T1, or detect the spicy-food failure and use T2. The result will be inconsistent.
+
+You should explicitly define the classification:
+
+```text
+CLASIFICACIÓN DEL NIVEL:
+
+- T1: Reseña predominantemente positiva. También incluye reseñas positivas con una crítica menor, puntual y recuperable que no invalida la experiencia general.
+- T2: Reseña verdaderamente mixta, ambigua o equilibrada, donde el problema tiene un peso similar al aspecto positivo o deja incierta la satisfacción general.
+- T3: Reseña predominantemente negativa, con daño importante, pérdida de confianza, trato indigno, riesgo, discriminación o una falla grave.
+
+Una crítica menor dentro de una reseña claramente positiva NO convierte la respuesta en T2.
+```
+
+This is probably the most important correction in the entire system.
+
+---
+
+### B. In T1 without a name, you force the opening to begin with the strongest detail
+
+The current rule says:
+
+> “Si no hay nombre de huésped disponible, comienza con el detalle más fuerte de la reseña.”
+
+That could produce:
+
+> “Que la comida haya sido muy rica y el servicio excelente…”
+
+It sounds natural, but it does not reproduce your target draft, which begins with gratitude:
+
+> “Muchas gracias por compartir su experiencia y por otorgarnos 4 estrellas.”
+
+To get closer to that result, change the instruction to:
+
+```text
+Si no hay nombre disponible, comienza con un agradecimiento natural y conecta en la misma oración uno o dos aspectos positivos específicos de la visita.
+```
+
+Expected example:
+
+> Muchas gracias por compartir su experiencia; nos alegra saber que disfrutó de la comida y que el servicio fue excelente.
+
+---
+
+### C. The two mandatory formulas with a name are too rigid
+
+You currently allow only:
+
+- “Muchas gracias, [Nombre],”
+- “Le agradecemos mucho, [Nombre],”
+
+This guarantees consistency, but it can create repetition across responses. Also, “Le agradecemos mucho, Juan,” does not always sound as natural as:
+
+> Juan, muchas gracias por compartir su experiencia.
+
+A better restriction would be:
+
+```text
+Si hay nombre, inclúyelo naturalmente dentro de la primera oración, preferentemente junto a una expresión de agradecimiento. No uses el nombre como una línea de saludo independiente.
+```
+
+However, if your governance requires strict formats, you can keep the existing formulas. They do not directly affect this case because no guest name was provided.
+
+---
+
+### D. The comment about “Agradecimiento” does not refer to a closing
+
+Your annotation says:
+
+> “esto suena más a un cierre no a la primera línea”
+
+In reality, gratitude works perfectly well as an opening in public responses. The problem is not that it expresses gratitude, but that the rule:
+
+> “escribe un agradecimiento sincero y específico para ese huésped”
+
+is too abstract.
+
+You should specify what the response should thank the guest for:
+
+```text
+Agradece que el huésped haya compartido la experiencia y conecta el agradecimiento con el aspecto positivo más relevante de la reseña.
+```
+
+---
+
+### E. “Sentimiento mediante lenguaje específico” needs a definition
+
+Your own annotation asks:
+
+> “¿cuál es el lenguaje específico?”
+
+The instruction should explain it:
+
+```text
+Expresa el sentimiento mediante observaciones concretas tomadas de la reseña. En lugar de nombrar emociones como “alegría”, “orgullo” o “empatía”, demuestra el tono reconociendo qué disfrutó el huésped, qué falló y cuál era el estándar esperado.
+```
+
+---
