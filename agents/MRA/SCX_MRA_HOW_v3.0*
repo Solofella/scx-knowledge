@@ -1,0 +1,509 @@
+**SCX_MRA_HOW_v3.0**
+Agent Name: MRA (Metrics & Reporting Agent)
+Version: 3.0
+Last Updated: Chat #89 · May 18, 2026
+Model: Pure JavaScript (zero LLM calls)
+Status: Production-ready — 30 nodes complete — Multi-client loop architecture
+
+**Purpose**
+
+MRA generates scheduled intelligence reports for ALL active clients on three cadences:
+- 24-hour review summary (daily 8am UTC delivery)
+- Weekly intelligence brief (Monday 9am UTC delivery)
+- Monthly comprehensive report (1st of month 10am UTC delivery)
+
+MRA uses pure JavaScript — zero AI calls, zero token cost. All computation is deterministic aggregation and formatting.
+
+**CRITICAL ARCHITECTURE PRINCIPLE #1:** Reports filter by guest review posting date (ALA Date field), NOT by pipeline processing date (RDA Timestamp). This ensures reports reflect when guests actually posted reviews, not when VRYOH processed them.
+
+**CRITICAL ARCHITECTURE PRINCIPLE #2 (NEW v3.0):** MRA processes ALL clients in Client Config in a single scheduled run via a Loop Over Items architecture. One schedule trigger fires once; the workflow internally loops once per client, generating and sending that client's report before moving to the next. No per-client schedule duplication. No manual re-trigger required as clients are added.
+
+---
+
+**What changed since v2.1 (Chat #82)**
+
+v2.1 assumed single-client processing. Step 5 read `records[0]` from the Client Config fetch and discarded every other row. Adding a new client (EDO-001, AJI-001, etc.) required no code change to be picked up by the fetch, but only the FIRST row returned by NocoDB was ever processed — silently. This was not caught until Chat #88's audit because Client Config had only one active row (PAK-001) at the time.
+
+v3.0 fixes this by exploding the Client Config array into individual items and looping over them with n8n's Loop Over Items node, processing each client's full pipeline (Steps 5→20) before the loop advances to the next client.
+
+---
+
+**Input Sources**
+
+MRA does NOT receive webhooks. Runs on n8n schedule triggers, queries NocoDB tables directly, once per client per run.
+
+Tables queried:
+
+*ALA table (m57efwbtrvwohhr)*
+- Date field (M/D/YY format) — PRIMARY date filter for all reports
+- Platform (Google, OpenTable, Yelp, TripAdvisor)
+- Star Rating
+- Client ID
+
+*RDA table (mr1v67cszcklwns)*
+- ALA Record ID (FK to ALA for date matching)
+- Confirmed Response Tier (T1/T2/T3)
+- Approval Status (Pending/Pending-Elevated/Approved/Edited-Approved/Published)
+- RDA Timestamp (draft generation time)
+- Published Timestamp (approval time — for SLA calculation)
+- Public Response Draft (for SEO keyword detection)
+
+*SIA table (mdn68l4lm609fve)*
+- Report Window Type (daily/weekly/monthly)
+- Client ID
+- Domain (pain point category)
+- Signal Tier (T-NEGATIVE/T-AMBIGUOUS/T-POSITIVE)
+- N (signal count)
+- Prior N (prior period count for trend direction)
+- Trend Direction (UP/DOWN/STABLE/null for new clusters)
+- Is Singleton (exclude from trend signals)
+
+*EIP table (mhicpnrahaesxmy)*
+- ALA Record ID (FK to ALA)
+- Signal Type (Positive Signal/Negative Signal/Mixed Signal/Ambiguous Signal)
+- Domain (pain point category)
+- Used for daily reports only
+
+*ESS table (m5yektnbtxf8evk)*
+- ALA Record ID (FK to ALA)
+- Expression Mode (Explicit/Implicit/Masked/Performative/Conflicted/Absent)
+- Used for expression mode breakdowns
+
+*Client Config table (m95cmabjfyb94ps)*
+- Client ID
+- Client Name (display name for email)
+- Approval Contact Email (comma-separated recipients supported)
+- SEO Keywords (array for SEO performance tracking)
+- **NOTE (v3.0):** This table is now fetched in FULL (all rows, no client filter) at Step 4, then exploded and looped — every active row is processed every run.
+
+---
+
+**Architecture Overview — 30 Nodes (was 28 in v2.1)**
+
+Three Schedule Triggers (Node 1a/1b/1c):
+- Daily: Every day 8am UTC → report_type = 'daily'
+- Weekly: Every Monday 9am UTC → report_type = 'weekly'
+- Monthly: 1st of month 10am UTC → report_type = 'monthly'
+
+**Steps 1-5: Session initialization + multi-client loop entry (NEW in v3.0)**
+
+- Step 1a/1b/1c: Trigger on schedule
+- Step 2a/2b/2c: Set report_type (daily/weekly/monthly)
+- Step 3: Calculate period window (2-day/7-day/30-day) and generate MRA Run ID
+- Step 4: Fetch Client Config from NocoDB — ALL rows, no client filter, limit=100
+- **Step 4a (NEW): Explode Client Array** — Code Node. Converts the single input item `{ list: [config1, config2, ...] }` into N separate n8n items, one per client config row. Required because Loop Over Items only iterates correctly across multiple items, not across an array nested inside one item.
+- **Step 4b (NEW): Loop Over Items** (n8n's SplitInBatches equivalent in 2.4.6) — batchSize 1. Receives the N exploded items from Step 4a. Emits one client config at a time down output index 1 to Step 5. Output index 0 fires only when the loop is exhausted (unused in this workflow — no downstream node wired to it).
+- Step 5: Extract client config + SEO keywords. Rewritten in v3.0 to accept a single config object directly from Step 4b (no longer indexes into a `.list` array under normal operation). Retains defensive handling for the case where `.list` is still present (legacy/manual test runs).
+
+**Steps 6-10: Fetch data sources (per client, once per loop iteration)**
+
+- Step 6: Fetch ALL ALA records for the current client (client_id from Step 5, no date filter in URL — filtering happens in Step 9)
+- Step 7: Filter ALA by window (stores ala_records array for downstream use)
+- Step 7b: Build RDA query URL (dynamic client_id)
+- Step 8: Fetch ALL RDA records for the current client
+- Step 9: CRITICAL DATE FILTERING NODE — Filter RDA by ALA Date matching, calculate star rating, platform counts, tier breakdown, all-time pending. Builds `filtered_ala_record_ids` array.
+- Step 10a: Build SIA query URL by report_type + dynamic client_id
+- Step 10b: Fetch SIA clusters (weekly/monthly window, current client only)
+- Step 10c: Fetch ESS records (current client only, for expression modes)
+- Step 10d: Fetch EIP records (current client only, for daily signal aggregation)
+
+**Step 11: CONDITIONAL PROCESSING NODE**
+
+- Daily branch: Aggregate from EIP records filtered by `filtered_ala_record_ids` from Step 9
+- Weekly/Monthly branch: Aggregate from SIA clusters (latest run from Step 10b, explicit node reference — not `$input`)
+- Both paths: Calculate expression modes from ESS, SEO keyword hits, domain totals
+
+**Steps 12-16: Build report data**
+
+- Step 12: Generate magic link token + expiration (72 hours)
+- Step 13: Check report type (sets skip_nocodb flag for daily)
+- Step 14: Route daily reports (IF node)
+- Step 14b: Catch daily reports (FALSE branch gate)
+- Step 15: NocoDB POST (weekly/monthly only)
+- Step 16a: Extract NocoDB record ID
+- Step 16b: Route to daily email builder (IF node)
+- Step 16c: Route to weekly email builder (IF node)
+- Step 16d: Route to monthly email builder (IF node)
+
+**Steps 17+: Email generation & delivery**
+
+- Step 17a: Build daily HTML email
+- Step 17b: Build weekly HTML email (includes trend signals, SEO metrics)
+- Step 17c: Build monthly HTML email (30-day patterns)
+- Step 17d: Prepare for Send — merge point. Receives output from whichever of 17a/17b/17c fired, passes clean single payload to Step 18. Exists so Step 19 has one consistent upstream reference regardless of report type.
+- Step 18: Send email via Brevo API
+- Step 19: Update Delivery Status (in-memory field set)
+- Step 19b: Gate Daily PATCH — FALSE branch gate. Daily reports do not write to NocoDB (no record was created at Step 15), so this gate prevents Step 20 from firing a PATCH against a non-existent record ID when report_type = daily.
+- Step 20: NocoDB PATCH Delivery Status (weekly/monthly only)
+
+**LOOP CLOSURE (NEW v3.0):** Step 20's output wires back to Step 4b (Loop Over Items), NOT to a workflow end. This tells the loop to advance to the next client config item. When Step 4b has no items left, the branch terminates naturally (output index 0, unwired).
+
+Error Handler: 3 nodes (trigger, log, email notification) — unchanged from v2.1, operates outside the loop.
+
+---
+
+**Step 4a / Step 4b — Multi-Client Loop Architecture (NEW v3.0, built Chat #88)**
+
+*Why this was needed:*
+
+Step 4 (Fetch Client Config) returns ALL rows from the Client Config table in a single NocoDB response: one n8n item containing `{ list: [config1, config2, config3, ...] }`. Prior to v3.0, Step 5 read `records[0]` directly — every client after the first row in the table was silently never processed. No error was thrown because `records[0]` always exists as long as at least one config row exists.
+
+This bug was invisible during the PAK-001-only pilot period because Client Config had exactly one row. It would have surfaced silently the moment a second client (EDO-001 or AJI-001) was added to Client Config — reports would have continued to look correct for PAK-001, and EDO-001/AJI-001 would simply never receive anything, with no error logged.
+
+**Step 4a — Explode Client Array**
+Type: Code Node
+Position: Between Step 4 and Step 4b
+
+```javascript
+const input = $input.first().json;
+const records = input.list || [];
+
+if (records.length === 0) {
+  throw new Error('MRA: No Client Config found in database');
+}
+
+const items = [];
+for (let i = 0; i < records.length; i++) {
+  items.push({ json: records[i] });
+}
+
+return items;
+```
+
+Input: 1 item, `{ list: [config1, config2, config3] }`
+Output: N items, one per client config row.
+
+This step exists because n8n's Loop Over Items node iterates over the ITEMS array it receives, not over a JS array nested inside a single item's json payload.
+
+**Step 4b — Loop Over Items** (n8n 2.4.6 name for SplitInBatches)
+Type: n8n-nodes-base.splitInBatches (internal type; UI label "Loop Over Items")
+Batch Size: 1 (matches project-wide SplitInBatches=1 convention used in ALA)
+Position: Between Step 4a and Step 5
+
+Output wiring:
+- Output index 0 ("done"): fires once, when all items have been processed. Unwired — no further action needed.
+- Output index 1 ("loop"): fires once per item, sends the current client config to Step 5. Only this output is wired downstream.
+
+**Loop-back connection:** Step 20 (NocoDB PATCH Delivery Status) → Step 4b. After a client's full report is built and sent, execution returns to Step 4b, which emits the next client config down output index 1. When no items remain, output index 0 fires (unwired) and that execution branch ends.
+
+**Step 5 — Extract Client Config (updated v3.0)**
+
+```javascript
+const input = $input.first().json;
+const s3 = $('Step 3 - Set Window Parameters').first().json;
+
+let config;
+
+if (input.list && Array.isArray(input.list)) {
+  if (input.list.length === 0) {
+    throw new Error('MRA: No Client Config found in database');
+  }
+  config = input.list[0];
+} else {
+  config = input;
+}
+
+const seo_raw = config['SEO Keywords'] || '';
+const seo_keywords = seo_raw
+  .split(',')
+  .map(k => k.trim().toLowerCase())
+  .filter(k => k.length > 0);
+
+const result = {};
+result.mra_run_id = s3.mra_run_id;
+result.report_type = s3.report_type;
+result.period_start = s3.period_start;
+result.period_end = s3.period_end;
+result.window_days = s3.window_days;
+result.run_timestamp = s3.run_timestamp;
+result.client_id = config['Client ID'] || 'UNKNOWN';
+result.client_name = config['Client Name'] || 'Unknown Client';
+result.approval_email = config['Approval Contact Email'] || '';
+result.seo_keywords = seo_keywords;
+
+return [{ json: result }];
+```
+
+Changes from v2.1:
+1. Error message is now generic ("No Client Config found in database") — v2.1 hardcoded "for PAK-001", which was misleading once multi-client processing began.
+2. Defensive branch retained for `input.list` — should not fire under normal scheduled operation once Step 4b is correctly wired, but protects against a manual test that bypasses Step 4a/4b.
+3. Default fallbacks changed from a specific client string to generic `'UNKNOWN'` / `'Unknown Client'`.
+
+Downstream impact: Steps 6-20 already read client_id dynamically from Step 5 — fixed in Chat #86/87 prior to the loop work. The loop architecture required no changes to Steps 6-20; the only gap was Step 5's single-row extraction and the missing loop mechanism.
+
+---
+
+**Full Corrected Flow Diagram (v3.0)**
+
+```
+Step 1a/1b/1c (schedule trigger)
+  → Step 2a/2b/2c (set report_type)
+  → Step 3 (window parameters, MRA Run ID)
+  → Step 4 (fetch ALL Client Config rows)
+  → Step 4a (explode array → N items)
+  → Step 4b (Loop Over Items, batch=1)
+      → [output 1, per iteration] Step 5 (extract single client config)
+        → Step 6 (fetch ALA for this client)
+        → Step 7 (filter by window)
+        → Step 7b (build RDA URL)
+        → Step 8 (fetch RDA for this client)
+        → Step 9 (date filter, tier breakdown, filtered_ala_record_ids)
+        → Step 10a (build SIA URL)
+        → Step 10b (fetch SIA clusters)
+        → Step 10c (fetch ESS)
+        → Step 10d (fetch EIP)
+        → Step 11 (conditional aggregation: daily=EIP, weekly/monthly=SIA)
+        → Step 12 (magic link token)
+        → Step 13 (check report type, set skip_nocodb)
+        → Step 14 / Step 14b (route daily vs weekly/monthly)
+        → Step 15 (NocoDB POST — skipped for daily)
+        → Step 16a (extract record ID)
+        → Step 16b/16c/16d (route to email builder by report_type)
+        → Step 17a / 17b / 17c (build HTML email)
+        → Step 17d (merge point, prepare for send)
+        → Step 18 (send via Brevo)
+        → Step 19 (update delivery status in-memory)
+        → Step 19b (gate: only weekly/monthly proceed to PATCH)
+        → Step 20 (NocoDB PATCH delivery status)
+        → LOOP BACK to Step 4b
+      → [output 0, on exhaustion] (unwired — execution ends)
+```
+
+---
+
+**Step 11 Architecture — Conditional Processing (Chat #82 Fix, unchanged in v3.0)**
+
+Problem (Chat #82): Step 11 was reading from `$input` (Step 10d — EIP) for ALL report types, causing weekly/monthly reports to show 0 signal counts.
+
+Solution: explicit conditional branching on `report_type`. Unaffected by v3.0 loop architecture — operates identically per-client, once per loop iteration.
+
+*Daily branch (EIP records, filtered by `filtered_ala_record_ids`):*
+```javascript
+if (report_type === 'daily') {
+  const eip_records = s10d.list || [];
+  const filtered_ids = s9.filtered_ala_record_ids || [];
+
+  const id_set = {};
+  for (let i = 0; i < filtered_ids.length; i++) {
+    id_set[String(filtered_ids[i])] = true;
+  }
+
+  for (let i = 0; i < eip_records.length; i++) {
+    let rec = eip_records[i];
+    let ala_id = String(rec['ALA Record ID'] || '');
+    if (!id_set[ala_id]) continue;
+
+    let signal_type = (rec['Signal Type'] || '').trim();
+    let domain = (rec['Domain'] || '').trim();
+
+    if (signal_type === 'Positive Signal') t_positive_count++;
+    else if (signal_type === 'Negative Signal') t_negative_count++;
+    else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') t_ambiguous_count++;
+
+    if (!domain_map[domain]) {
+      domain_map[domain] = { domain: domain, neg: 0, amb: 0, pos: 0, total: 0 };
+    }
+    domain_map[domain].total++;
+  }
+  trend_signals_top5 = [];
+}
+```
+
+*Weekly/Monthly branch (SIA clusters via explicit node reference):*
+```javascript
+} else {
+  const sia_input = $('Step 10b - Fetch SIA Clusters').first().json;
+  const allClusters = sia_input.list || [];
+  const latestRunTs = allClusters.length > 0 ? allClusters[0]['Run Timestamp'] : null;
+
+  const clusters = [];
+  for (let i = 0; i < allClusters.length; i++) {
+    if (allClusters[i]['Run Timestamp'] === latestRunTs) {
+      clusters.push(allClusters[i]);
+    }
+  }
+
+  for (let i = 0; i < clusters.length; i++) {
+    let cl = clusters[i];
+    let tier = (cl['Signal Tier'] || '').trim();
+    let domain = (cl['Domain'] || '').trim();
+    let n = parseInt(cl['N'] || 0);
+
+    if (tier === 'T-NEGATIVE') t_negative_count += n;
+    else if (tier === 'T-AMBIGUOUS') t_ambiguous_count += n;
+    else if (tier === 'T-POSITIVE') t_positive_count += n;
+
+    domain_map[domain].total += n;
+  }
+
+  for (let i = 0; i < clusters.length; i++) {
+    if (!clusters[i]['Is Singleton']) {
+      trend_signals.push({
+        domain: clusters[i]['Domain'],
+        tier: clusters[i]['Signal Tier'],
+        n: clusters[i]['N'],
+        prior_n: clusters[i]['Prior N'],
+        trend_direction: clusters[i]['Trend Direction']
+      });
+    }
+  }
+}
+```
+
+*Expression Mode Aggregation (shared by both branches):*
+```javascript
+const ess_records = s10c.list || [];
+const filtered_ala_ids = s9.filtered_ala_record_ids || [];
+
+const ess_map = {};
+for (let i = 0; i < ess_records.length; i++) {
+  let alaId = String(ess_records[i]['ALA Record ID'] || '');
+  let expr = (ess_records[i]['Expression Mode'] || 'Absent').trim();
+  ess_map[alaId] = expr;
+}
+
+const expression_modes = {
+  'Explicit': 0, 'Implicit': 0, 'Masked': 0,
+  'Performative': 0, 'Conflicted': 0, 'Absent': 0
+};
+
+for (let i = 0; i < filtered_ala_ids.length; i++) {
+  let alaId = filtered_ala_ids[i];
+  if (ess_map[alaId]) {
+    expression_modes[ess_map[alaId]]++;
+  } else {
+    expression_modes['Absent']++;
+  }
+}
+```
+
+Output schema (identical for both paths, per client, per loop iteration): `t_negative_count`, `t_ambiguous_count`, `t_positive_count`, `top_domains`, `trend_signals`, `expression_modes`, `seo_keyword_hits`, `seo_top_keyword`, `seo_coverage_rate`.
+
+---
+
+**Date Filtering Architecture (unchanged from v2.1, operates per-client)**
+
+Problem (Chat #78): MRA was filtering by RDA Timestamp instead of ALA Date.
+
+Step 6 (dynamic client_id, corrected from v2.1's hardcoded example):
+```javascript
+const url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000&sort=ALA%20Timestamp';
+```
+
+Step 9 (ALA Date matching):
+```javascript
+const alaDateMap = {};
+for (let i = 0; i < alaRecords.length; i++) {
+  let alaId = String(alaRecords[i]['Id']);
+  let alaDateRaw = alaRecords[i]['Date'] || '';
+
+  let parts = alaDateRaw.split('/');
+  let month = parseInt(parts[0]);
+  let day = parseInt(parts[1]);
+  let year = 2000 + parseInt(parts[2]);
+  let alaTs = new Date(year, month - 1, day).getTime();
+
+  alaDateMap[alaId] = { ala_record: alaRecords[i], ala_timestamp: alaTs };
+}
+
+for (let i = 0; i < allRda.length; i++) {
+  let alaId = String(rec['ALA Record ID'] || '');
+  if (alaDateMap[alaId]) {
+    let alaTs = alaDateMap[alaId].ala_timestamp;
+    if (alaTs >= periodStartTs && alaTs < periodEndTs) {
+      filteredRda.push(rec);
+      filtered_ala_ids.push(alaId);
+    }
+  }
+}
+```
+
+Runs fresh for each client on each loop iteration — no cross-client data leakage since Steps 6-10d all re-fetch scoped to the current client_id from Step 5.
+
+---
+
+**Email Design & Branding (unchanged from v2.1/Chat #82)**
+
+Format: HTML email, inline CSS.
+
+VRYOH Brand Colors:
+- #64B8CE (Cyan) — Header, CTA, positive signals
+- #2E304E (Navy) — Primary text
+- #C7E0E7 (Light Cyan) — Card backgrounds, footer
+- #C3643D (Burnt Orange) — Negative signals, alerts
+- #E9CFC9 (Light Peach) — Ambiguous signals
+- #384653 (Dark Gray) — Body text
+- #A8A9AD (Medium Gray) — Labels
+- #F6F6F6 (Off White) — Page background
+
+Sender: VRYOH Intelligence, intelligence@vryoh.com
+
+Multi-Recipient Support: per-client — each loop iteration builds its own `brevo_to_arr` from that client's own Approval Contact Email, so recipients never mix across clients.
+
+Governance Note (locked, every email footer): "VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can't see in raw reviews."
+
+---
+
+**Report Types & Content (unchanged from v2.1, generated per-client per loop iteration)**
+
+1. **24-Hour Review Summary (Daily)** — 8am UTC. New reviews, platform breakdown, avg star rating, drafts by tier, signal direction, expression mode, pain point domains, all-time pending, approval sheet link. Sources: ALA, RDA, EIP, ESS. Skips NocoDB write.
+
+2. **Weekly Intelligence Brief** — Monday 9am UTC. Review volume, platforms, draft count, avg rating, signal direction, expression mode, top domains, three priority signals, trend analysis (top 5 non-singleton), SLA metrics, SEO impact, dashboard link (72hr token). Sources: ALA, RDA, SIA, ESS.
+
+3. **Monthly Pattern Report** — 1st of month 10am UTC. 30-day summary, top 5 domains, T3 dignity-risk count, platform performance, response metrics, trend analysis, SEO performance, dashboard link. Sources: ALA, RDA, SIA, ESS.
+
+---
+
+**NocoDB Schema (unchanged from v2.1)**
+
+Table ID: mybieof2em75t6e — 26 fields: Id, MRA Run ID, Report Type, Client ID, Period Start, Period End, Total Records, Avg Star Rating, SLA Compliance Rate, T Negative/Ambiguous/Positive Count, Top Domains JSON, Tier Breakdown JSON, Trend Signals JSON, SEO Keyword Hits, SEO Top Keyword, SEO Coverage Rate, SEO Response Rate, SEO Avg Velocity Hrs, Platform Counts JSON, Magic Link Token, Token Expires At, Delivery Status, Delivery Timestamp, Error Log.
+
+Daily reports skip NocoDB write. Each loop iteration reaching Step 15 (weekly/monthly) creates ONE MRA record per client per run — a 3-client weekly run produces 3 distinct MRA rows, correctly attributed via Client ID.
+
+---
+
+**Key Locked Lessons (Chat #78-88, consolidated)**
+
+1. **Date Filtering by Source Timestamp** — filter by ALA Date, never RDA Timestamp.
+2. **Step 11 Conditional Data Source** — daily=Step 10d(EIP), weekly/monthly=Step 10b(SIA) via explicit node reference, never `$input`.
+3. **SIA Window Type Alignment** — Step 10a filters by both Client ID and Report Window Type.
+4. **all_time_pending Field Chain** — calculated separately in Step 9 from ALL RDA records for current client, carried through Steps 9→10a→11→12→13→16.
+5. **filtered_ala_record_ids Array** — built in Step 9, used by Step 11's daily branch to filter EIP records by date window.
+6. **HTML Email Client Compatibility** — inline styles required on CTA/links.
+7. **M/D/YY Date Parsing** — ALA Date is never ISO 8601; parse manually.
+8. **Type Safety (String vs Integer)** — always wrap ALA Record ID in `String()` for comparisons.
+9. **Multi-Recipient Email Support** — Brevo parses comma-separated Approval Contact Email automatically; per-client.
+10. **NEW v3.0 — Array-in-Single-Item vs Multi-Item Loop Requirement:** Loop Over Items iterates over the items array it receives, not a JS array nested inside one item's json. An explode Code Node (Step 4a) is required before Loop Over Items will iterate per-record.
+11. **NEW v3.0 — Silent Truncation Risk of `records[0]` Patterns:** This pattern against a "get all" NocoDB response works with zero errors as long as there's exactly one row, and silently drops every row after the first once a second row exists. Confirmed and fixed in MRA Step 5 (Chat #88). Recommend auditing BRA, RDA, and any other agent that bulk-fetches Client Config or similar shared/reference tables.
+12. **NEW v3.0 — Loop-Back Wiring Convention:** The node terminating one client's chain (Step 20) must wire back to Loop Over Items (Step 4b) — not to a dead end or duplicate end node. Loop Over Items tracks iteration state internally.
+
+---
+
+**Known Issues / Not Yet Verified**
+
+⚠️ MEDIUM CONFIDENCE — Multi-client loop has NOT yet been executed end-to-end against real multi-client data as of this document's writing (Chat #89). Wiring was visually confirmed correct across 4 shared workflow-JSON blocks (Chat #87) plus one wiring-verification block (Chat #88), and you confirmed the Step 20→Step 4b wire manually. A live test with a second client (e.g. TEST-001) was proposed but not yet run.
+
+❌ LOW CONFIDENCE — Brand name casing inconsistency: Step 17a/17b use "VRYOH intelligence" (lowercase i), Step 17c uses "VRYOH Intelligence" (capital I). Not yet flagged as a fix request — noting for completeness only.
+
+🚫 DO NOT CLAIM the multi-client loop is production-verified until a real execution log with 2+ clients has been observed and confirmed.
+
+---
+
+**Token Budget**
+
+Zero tokens per report, regardless of client count. NocoDB queries + JavaScript aggregation + one Brevo call per client per run — no AI calls in the loop.
+
+---
+
+**Change Log (v2.1 → v3.0)**
+Chat #87-89 · May 17-18, 2026
+
+- NEW Step 4a (Explode Client Array)
+- NEW Step 4b (Loop Over Items, batch=1)
+- Step 5 rewritten: generic error message, dual-path input handling, generic fallback defaults
+- Step 6 confirmed dynamic client_id (v2.1 doc example incorrectly showed hardcoded PAK-001)
+- NEW loop-back wire: Step 20 → Step 4b
+- Node count: 30 (was 28)
+- New lessons 10, 11, 12
+- Known Issues section added
+- Full audit trail: 4-block workflow JSON review confirmed all other client_id filters already dynamic prior to loop build — only Step 5 and the missing loop mechanism required fixing
