@@ -1,0 +1,79 @@
+Output
+Done Branch
+Loop Branch (1 item)
+rda_record
+ala_map
+existing_rda_ids
+client_id
+sheet_id
+tab_name
+summary_stats
+Id:900
+CreatedAt:2026-07-15 17:23:58+00:00
+UpdatedAt:null
+RDA Run ID:RDA-20260715-172358-001
+BRA Record ID:1106
+ALA Record ID:5348
+RDA Timestamp:2026-07-15 17:23:58+00:00
+Confirmed Response Tier:T1
+Public Response Draft:Walter,\n\nThank you — the yogurt appetizer and pancakes are two things we put real care into, and it's great to hear both hit the mark for your brunch. We'd love to welcome you back soon.\n\nCheers!,\nPark Avenue Kitchen by David Burke
+Internal Follow-Up Draft:This guest is expressing moderate satisfaction rooted in genuine culinary pleasure, with the pancakes and an unexpectedly strong yogurt appetizer serving as the primary emotional drivers — the latter suggesting a pleasant surprise that elevated the overall experience beyond baseline expectations. The signal indicates a guest-brand relationship in its earliest stage, where positive sentiment exists but has not yet deepened into loyalty or emotional anchoring, leaving the connection fragile and contingent on future consistency. As a first recorded interaction, there is no recurrence pattern to draw from, placing this guest in a behaviorally neutral posture — satisfied enough to consider returning, but without the reinforcement history that would reduce churn risk. The guest's tendency to avoid detailed feedback introduces a layer of interpretive opacity, meaning the positive signal may be understating the full experience, or alternatively, masking minor frictions that did not surface in this exchange. The latent churn risk here is not driven by dissatisfaction but by the absence of a compelling reason to return with intention rather than convenience.
+Approval Status:Pending
+Commercial Commitment Flag:false
+Elevation Reason:null
+Flagged Terms:null
+Client ID:PAK-001
+lang:en
+Published Timestamp:null
+Approval Notes:null
+Error Log:null
+Reviewer Handle:Walter
+SEO Keywords:Park Avenue Kitchen, David Burke, East Midtown dining, contemporary American cuisine, New York restaurant, chef-driven dining, Midtown Manhattan restaurant, special occasion dining New York
+Audit Passed:false
+Audit Failed Items:FULL REVIEW REQUIRED — REVIEW DEPTH, OVERUSED PHRASES, OPENING, PROHIBITED
+5347
+review_text:[5★]  We enjoyed our New Year's Day dinner at Park Ave Kitchen. The food was delicious and the service was impeccable! We can't wait to come back for dinner on our next visit to Manhattan.
+platform:Yelp
+star_rating:5
+reviewer_handle:Katherine B
+review_date:7/14/26
+5348
+review_text:[5★] Good brunch spot. Pancakes were good and yogurt appetizer was awesome
+platform:OpenTable
+star_rating:5
+reviewer_handle:Walter
+review_date:7/14/26
+5349
+review_text:[5★] I am always happy when I eat at a David Burke restaurant, and this was no different. Food was nicely presented and delicious. Service was attentive and cordial. Restaurant was nicely decorated. Great location too!
+platform:OpenTable
+star_rating:5
+reviewer_handle:Sharon
+review_date:7/14/26
+5350
+review_text:[5★]  Food was solid, soups, apps, sushi, desserts, sides, all excellent. Best smoked Old Fashioned I've ever had, truly amazing. Steak was meh...I hate to say it but we had the 42oz Tomohawk and it was really good but not great and for that price, we expected great. The presentation was amazing, service was excellent, Key Lime was amazing, Choc cake was solid. Really liked the atmosphere and we had a great time as a group.
+platform:OpenTable
+star_rating:5
+reviewer_handle:Erick
+review_date:7/14/26
+5351
+review_text:[4★] My sister and i came here for restaurant week and really enjoyed very much ourselves. We had the salad & soup for appetizers, salmon as entrees, and chocolate mousse cake as dessert, all of which were delicious. I appreciate that they had two menu options ($45 & $60), and look forward to returning to try the other.
+platform:OpenTable
+star_rating:4
+reviewer_handle:Jose
+review_date:7/14/26
+5352
+review_text:[4★] Una experiencia buenisima, muy rica la comida y el servicio es excelente, solo una cosa que mencionar pedi un ceviche sin picante y me lo trajeron bastante picante. 
+platform:Google
+star_rating:4
+reviewer_handle:JL Martines
+review_date:7/14/26
+5353
+review_text:[5★] La comida es excelente y el ambiente es muy familiar, un lugar muy recomendable.
+platform:Google
+star_rating:5
+reviewer_handle:Luis
+review_date:7/14/26
+900:true
+901:true
+902:true
+904:true
