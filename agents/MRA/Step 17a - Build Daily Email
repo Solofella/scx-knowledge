@@ -1,0 +1,245 @@
+const s16 = $input.first().json;
+
+const client_name = s16.client_name || s16.client_id || 'Client';
+const period_end = s16.period_end ? s16.period_end.slice(0, 10) : '';
+const client_id_str = s16.client_id || '';
+
+const platform_counts = s16.platform_counts || {};
+const top_domains = s16.top_domains || [];
+const expression_modes = s16.expression_modes || {};
+const tier_breakdown = s16.tier_breakdown || [];
+const avg_star_rating = s16.avg_star_rating || 0;
+const total_records = s16.total_records || 0;
+const all_time_pending = s16.all_time_pending || 0;
+
+const emailStyles = `
+  body { 
+    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+    line-height: 1.6; 
+    color: #384653; 
+    background-color: #F6F6F6; 
+    margin: 0; 
+    padding: 0; 
+  }
+  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  .header { 
+    background-color: #64B8CE;
+    color: #2E304E; 
+    padding: 32px 24px; 
+    text-align: center; 
+  }
+  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }
+  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }
+  .content { padding: 24px; }
+  .section { margin-bottom: 24px; }
+  .section-title { 
+    font-size: 16px; 
+    font-weight: 600; 
+    color: #2E304E; 
+    margin: 0 0 12px 0; 
+  }
+  .metric-card { 
+    background-color: #C7E0E7; 
+    border-left: 4px solid #64B8CE; 
+    padding: 16px; 
+    border-radius: 6px; 
+    margin-bottom: 12px; 
+  }
+  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .metric-row:last-child { margin-bottom: 0; }
+  .metric-label { font-size: 14px; color: #384653; font-weight: 500; }
+  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }
+  .metric-large { font-size: 32px; font-weight: 700; color: #2E304E; margin: 8px 0; line-height: 1; }
+  .domain-list { margin: 0; padding: 0; list-style: none; }
+  .domain-list li { 
+    background-color: #C7E0E7; 
+    padding: 10px 14px; 
+    border-radius: 6px; 
+    margin-bottom: 6px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+  }
+  .domain-name { font-size: 13px; color: #2E304E; font-weight: 500; }
+  .domain-count { 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: #2E304E; 
+    background-color: rgba(100,184,206,0.2); 
+    padding: 3px 10px; 
+    border-radius: 10px; 
+  }
+  .cta-button { 
+    display: inline-block; 
+    background-color: #64B8CE;
+    color: #FFFFFF !important; 
+    padding: 14px 28px; 
+    text-decoration: none; 
+    border-bottom: none; 
+    border-radius: 6px; 
+    font-weight: 600; 
+    font-size: 14px; 
+    margin: 16px 0 8px 0; 
+    box-shadow: 0 2px 4px rgba(100,184,206,0.3); 
+  }
+  .footer { 
+    background-color: #C7E0E7; 
+    padding: 20px 24px; 
+    text-align: center; 
+    font-size: 12px; 
+    color: #A8A9AD; 
+    border-top: 1px solid #64B8CE; 
+  }
+  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }
+  a { color: #3A6B7E; text-decoration: none; }
+`;
+
+const email_subject = '24-Hour Review Summary — ' + period_end + ' (' + total_records + ' reviews)';
+
+const total_sig = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);
+const neg_pct = total_sig > 0 ? Math.round(((s16.t_negative_count || 0) / total_sig) * 100) : 0;
+const amb_pct = total_sig > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_sig) * 100) : 0;
+const pos_pct = total_sig > 0 ? Math.round(((s16.t_positive_count || 0) / total_sig) * 100) : 0;
+
+const total_expr = (expression_modes.Explicit || 0) + (expression_modes.Implicit || 0) + (expression_modes.Masked || 0) + (expression_modes.Performative || 0) + (expression_modes.Conflicted || 0) + (expression_modes.Absent || 0);
+
+const expr_pct = {};
+expr_pct.Explicit = total_expr > 0 ? Math.round(((expression_modes.Explicit || 0) / total_expr) * 100) : 0;
+expr_pct.Implicit = total_expr > 0 ? Math.round(((expression_modes.Implicit || 0) / total_expr) * 100) : 0;
+expr_pct.Masked = total_expr > 0 ? Math.round(((expression_modes.Masked || 0) / total_expr) * 100) : 0;
+expr_pct.Performative = total_expr > 0 ? Math.round(((expression_modes.Performative || 0) / total_expr) * 100) : 0;
+expr_pct.Conflicted = total_expr > 0 ? Math.round(((expression_modes.Conflicted || 0) / total_expr) * 100) : 0;
+expr_pct.Absent = total_expr > 0 ? Math.round(((expression_modes.Absent || 0) / total_expr) * 100) : 0;
+
+let email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';
+email_body += '<div class="container">';
+email_body += '<div class="header"><h1>24-Hour Review Summary</h1><p>' + client_id_str + ' • ' + period_end + '</p></div>';
+email_body += '<div class="content">';
+
+email_body += '<h2 style="font-size: 18px; color: #2E304E; margin: 0 0 16px 0; font-weight: 600;">LAST 24 HOURS SNAPSHOT</h2>';
+
+email_body += '<div class="section"><h3 class="section-title">NEW REVIEWS</h3><div class="metric-card">';
+email_body += '<div class="metric-large">' + total_records + '</div>';
+email_body += '<div class="metric-label">Total reviews received from last 24 hours</div>';
+email_body += '</div></div>';
+
+email_body += '<div class="section"><h3 class="section-title">PLATFORMS</h3><div class="metric-card">';
+email_body += '<div class="metric-row"><span class="metric-label">Google</span><span class="metric-value">' + (platform_counts.Google || 0) + ' reviews</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">OpenTable</span><span class="metric-value">' + (platform_counts.OpenTable || 0) + ' reviews</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">Yelp</span><span class="metric-value">' + (platform_counts.Yelp || 0) + ' reviews</span></div>';
+email_body += '<div class="metric-row"><span class="metric-label">TripAdvisor</span><span class="metric-value">' + (platform_counts.TripAdvisor || 0) + ' reviews</span></div>';
+email_body += '</div></div>';
+
+email_body += '<div class="section"><h3 class="section-title">AVERAGE STAR RATING</h3><div class="metric-card">';
+email_body += '<div class="metric-row"><span class="metric-label">Last 24 hours average</span><span class="metric-value">' + avg_star_rating.toFixed(1) + ' stars</span></div>';
+email_body += '</div></div>';
+
+const tier_items = [];
+for (let i = 0; i < tier_breakdown.length; i++) {
+  let tb = tier_breakdown[i];
+  if (tb.total > 0) {
+    let short_label = tb.tier.replace(' Standard', '').replace(' Calibrated', '').replace(' Dignity-restoration', '');
+    tier_items.push('<div class="metric-row"><span class="metric-label">' + short_label + '</span><span class="metric-value">' + tb.total + ' draft(s)</span></div>');
+  }
+}
+if (tier_items.length > 0) {
+  email_body += '<div class="section"><h3 class="section-title">NEW DRAFTS GENERATED</h3><div class="metric-card">' + tier_items.join('') + '</div></div>';
+}
+
+const sig_items = [];
+if ((s16.t_positive_count || 0) > 0) {
+  sig_items.push('<div class="metric-row"><span class="metric-label">Positive</span><span class="metric-value" style="color: #64B8CE;">' + s16.t_positive_count + ' reviews (' + pos_pct + '%)</span></div>');
+}
+if ((s16.t_ambiguous_count || 0) > 0) {
+  sig_items.push('<div class="metric-row"><span class="metric-label">Ambiguous</span><span class="metric-value" style="color: #E9CFC9;">' + s16.t_ambiguous_count + ' reviews (' + amb_pct + '%)</span></div>');
+}
+if ((s16.t_negative_count || 0) > 0) {
+  sig_items.push('<div class="metric-row"><span class="metric-label">Negative</span><span class="metric-value" style="color: #C3643D;">' + s16.t_negative_count + ' reviews (' + neg_pct + '%)</span></div>');
+}
+if (sig_items.length > 0) {
+  email_body += '<div class="section"><h3 class="section-title">SIGNAL DIRECTION (What guests felt)</h3><div class="metric-card">' + sig_items.join('') + '</div></div>';
+}
+
+const expr_items = [];
+if ((expression_modes.Explicit || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Explicit</span><span class="metric-value">' + expression_modes.Explicit + ' reviews (' + expr_pct.Explicit + '%)</span></div>');
+}
+if ((expression_modes.Implicit || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Implicit</span><span class="metric-value">' + expression_modes.Implicit + ' reviews (' + expr_pct.Implicit + '%)</span></div>');
+}
+if ((expression_modes.Masked || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Masked</span><span class="metric-value">' + expression_modes.Masked + ' reviews (' + expr_pct.Masked + '%)</span></div>');
+}
+if ((expression_modes.Performative || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Performative</span><span class="metric-value">' + expression_modes.Performative + ' reviews (' + expr_pct.Performative + '%)</span></div>');
+}
+if ((expression_modes.Conflicted || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Conflicted</span><span class="metric-value">' + expression_modes.Conflicted + ' reviews (' + expr_pct.Conflicted + '%)</span></div>');
+}
+if ((expression_modes.Absent || 0) > 0) {
+  expr_items.push('<div class="metric-row"><span class="metric-label">Absent</span><span class="metric-value">' + expression_modes.Absent + ' reviews (' + expr_pct.Absent + '%)</span></div>');
+}
+if (expr_items.length > 0) {
+  email_body += '<div class="section"><h3 class="section-title">EXPRESSION MODE (How emotions communicated)</h3><div class="metric-card">' + expr_items.join('') + '</div></div>';
+}
+
+if (top_domains && top_domains.length > 0) {
+  email_body += '<div class="section"><h3 class="section-title">PAIN POINT DOMAINS (Where signals pointed)</h3>';
+  email_body += '<ul class="domain-list">';
+  for (let i = 0; i < top_domains.length; i++) {
+    let dom = top_domains[i];
+    email_body += '<li><span class="domain-name">' + dom.domain + '</span><span class="domain-count">' + dom.total + ' signals</span></li>';
+  }
+  email_body += '</ul></div>';
+}
+
+email_body += '<div class="section"><h3 class="section-title">PENDING APPROVAL</h3><div class="metric-card">';
+email_body += '<div class="metric-large">' + all_time_pending + '</div>';
+email_body += '<div class="metric-label">Draft(s) awaiting your review (all time)</div>';
+email_body += '</div>';
+email_body += '<a href="https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w" class="cta-button" style="color: #FFFFFF; text-decoration: none;">View & Approve Drafts →</a>';
+email_body += '</div>';
+
+email_body += '</div>';
+email_body += '<div class="footer">' +
+  '<div style="margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;">VRYOH</div>' +
+  '<div style="margin-bottom: 12px; font-size: 11px; color: #94A3B8;">Governed Review Responses & Guest Signal Intelligence</div>' +
+  '<div class="footer-note" style="margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;">' +
+    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\'t see in raw reviews.' +
+  '</div>' +
+  '<div style="margin-top: 12px; font-size: 10px; color: #94A3B8;">' +
+    '<a href="https://vryoh.com" style="color: #3A6B7E; text-decoration: none;">vryoh.com</a> | ' +
+    '<a href="https://vryoh.com/archive" style="color: #3A6B7E; text-decoration: none;">Archive</a><br/>' +
+    '© 2026 VRYOH. All rights reserved.<br/>' +
+    'This is an automated message. Please do not reply to this email.' +
+  '</div>' +
+'</div>';
+email_body += '</div></body></html>';
+
+const brevo_to = {};
+brevo_to['email'] = s16.approval_email || 'miguel@solofella.com';
+brevo_to['name'] = client_name;
+const brevo_to_arr = [];
+brevo_to_arr.push(brevo_to);
+
+const brevo_sender = {};
+brevo_sender['name'] = 'VRYOH intelligence';
+brevo_sender['email'] = 'intelligence@vryoh.com';
+
+const brevo_obj = {};
+brevo_obj['sender'] = brevo_sender;
+brevo_obj['to'] = brevo_to_arr;
+brevo_obj['subject'] = email_subject;
+brevo_obj['htmlContent'] = email_body;
+
+return [{ json: {
+  mra_run_id: s16.mra_run_id,
+  report_type: 'daily',
+  client_id: client_id_str,
+  approval_email: s16.approval_email,
+  nocodb_record_id: null,
+  email_subject: email_subject,
+  email_body: email_body,
+  magic_token: s16.magic_token,
+  brevo_body: JSON.stringify(brevo_obj)
+} }];
