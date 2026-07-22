@@ -1,0 +1,333 @@
+# SCX_ALA_HOW · v5.0
+**Agent:** ALA — Audience Listener Agent
+**Last Updated:** Chat #88 · June 29, 2026
+**Model:** GPT gpt-5.2 (LOCKED)
+**Node Count:** 23 nodes
+**Status:** VERIFIED — Spanish language active · AJI-001–005 live · PAK-001 live
+
+---
+
+## PURPOSE
+
+ALA is the pipeline entry point. It ingests guest reviews via CSV upload, normalizes text, detects language, classifies a preliminary emotion and pain point domain via GPT, deduplicates, writes to NocoDB, and triggers EIP per record.
+
+---
+
+## INPUT CONTRACT — CSV SCHEMA (7 columns)
+
+| Column | Name | Required | Notes |
+|--------|------|----------|-------|
+| 1 | Date | YES | Review publication date |
+| 2 | Platform | YES | Google / Yelp / OpenTable / TripAdvisor / Manual |
+| 3 | Stars rating | YES | Integer 1–5. Column name is `Stars rating` — exact match required |
+| 4 | Raw Text | YES | Full guest review text. Blank permitted (star-only reviews) |
+| 5 | Reviewer Name | NO | Guest name or handle. Null permitted |
+| 6 | Lang | YES | `en` or `Es` / `es`. Case-insensitive — Step 4 lowercases. Leave blank to default to `en` |
+| 7 | Client ID | YES | PAK-001, AJI-001, etc. Cannot be introduced mid-pipeline |
+
+**Critical rules:**
+- Column names must match exactly — trailing spaces cause null values
+- `Client ID` cannot be duplicated in the header
+- Save source file as UTF-8 before upload — Windows-1252 encoding produces garbled characters in NocoDB
+- Blank `Raw Text` is valid — GPT handles star-only records with placeholder text
+
+---
+
+## NODE MAP — 23 NODES
+
+### INTAKE (Steps 1–3)
+**Step 1 - Form Upload** — Form trigger. Accepts CSV file upload. Entry point for all manual batch ingestion.
+
+**Step 2 - Binary Handler** — Extracts binary file reference from form upload output. Passes binary key to Step 3.
+
+**Step 3 - Extract CSV** — n8n Extract from File node. Parses CSV into individual row items. Outputs one item per row with column names as keys. Column names preserved exactly as written in header — no trimming.
+
+---
+
+### NORMALIZATION (Steps 4–9)
+
+**Step 4 - CSV Parse**
+Maps CSV columns to pipeline fields. Runs once for all items before SplitInBatches.
+
+```javascript
+const items = $input.all();
+const batchId = `BATCH-${Date.now()}`;
+const batchStartTime = new Date().toISOString();
+const expectedCount = items.length;
+return items.map(item => ({
+  json: {
+    date: item.json['Date'] || item.json['\uFEFFDate'] || '',
+    platform: item.json['Platform'] || '',
+    raw_text: item.json['Raw Text'] || '',
+    reviewer_name: item.json['Reviewer Name'] || null,
+    lang_csv: (item.json['Lang'] || item.json['lang'] || '').toLowerCase() || null,
+    star_rating: item.json['Stars rating'] ? Number(item.json['Stars rating']) : null,
+    client_id: item.json['Client ID'] || null,
+    batch_id: batchId,
+    batch_start_time: batchStartTime,
+    expected_count: expectedCount
+  }
+}));
+```
+
+**Key rules:**
+- `Stars rating` — exact column name including space and lowercase r
+- `lang_csv` reads both `Lang` and `lang` defensively — handles either casing
+- `star_rating` cast to Number — null if absent
+- BOM character (`\uFEFF`) handled on Date field
+
+---
+
+**Step 5 - SplitInBatches**
+Batch size: **1 (LOCKED)**. Processes one record at a time. Prevents simultaneous GPT calls and record loss at scale. Last processing node (Step 19) wires back to this node to advance to the next record.
+
+Two outputs:
+- Output 0 (done) → Step 20 Batch Integrity GET
+- Output 1 (item) → Step 6
+
+---
+
+**Step 6 - Language Detection** *(Chat #87 update)*
+Reads `lang_csv` from Step 4. Validates against allowed list. Falls back to `en` if absent or unrecognized.
+
+```javascript
+const row = $input.first().json;
+const validLangs = ['en', 'es'];
+const csvLang = (row.lang_csv || '').toLowerCase().trim();
+if (validLangs.includes(csvLang)) {
+  return [{ json: { ...row, lang: csvLang, lang_source: 'csv' } }];
+}
+return [{ json: { ...row, lang: 'en', lang_source: 'default' } }];
+```
+
+`lang_source` values: `'csv'` when resolved from column, `'default'` when fallback applied.
+
+**Note:** Spread operator confirmed safe in Step 6 and Step 7 — do not remove.
+
+---
+
+**Step 7 - Star Rating Extraction** *(Chat #88 update)*
+Preserves `star_rating` from Step 4 upstream. Previously recalculated from inline `[4★]` text notation — overwriting the CSV value with null. Now reads `row.star_rating` directly.
+
+```javascript
+const row = $input.first().json;
+const rawText = row.raw_text || '';
+const starMatch = rawText.match(/^\[(\d)[★*]?\]/);
+let cleanText = rawText;
+if (starMatch) {
+  cleanText = rawText.replace(/^\[\d[★*]?\]\s*/, '').trim();
+}
+return [{ json: { ...row, star_rating: row.star_rating, clean_text: cleanText, raw_text_original: rawText } }];
+```
+
+Inline text cleaning still runs if `[4★]` notation is present — backward compatible.
+
+---
+
+**Step 8 - Reviewer Handle**
+Normalizes `reviewer_name` into `reviewer_handle`. Filters handles containing "review" or starting with "anonymous" — treated as unnamed. Passes `null` for unnamed records. Used by RDA Step 7a for opening construction.
+
+---
+
+**Step 9 - Dedup Hash**
+Generates SHA256 deduplication key. Hash input includes `client_id` *(Chat #87 update — previously excluded)*.
+
+Hash key: `client_id + platform + date + clean_text` (all lowercased and trimmed).
+
+---
+
+### DEDUPLICATION (Steps 10–11)
+
+**Step 10 - Duplicate Check GET**
+NocoDB GET against ALA table. Query: `WHERE Dedup Hash = calculated_hash`. Uses `pageInfo.totalRows` — NOT `list.length`.
+
+**Step 11 - Is Duplicate**
+IF node. Condition: `pageInfo.totalRows > 0`
+
+- **TRUE** (duplicate found) → Step 5 SplitInBatches — record skipped silently, no NocoDB write
+- **FALSE** (not duplicate) → Step 12 Build GPT Prompt
+
+⚠️ **OPEN DESIGN QUESTION:** Prior version logged duplicate records to NocoDB with `EIP Status: Duplicate` for audit trail. Current version silently drops them — no record written. Intent of this change not confirmed. Flag for decision before V2.
+
+---
+
+### GPT CLASSIFICATION (Steps 12–15)
+
+**Step 12 - Build GPT Prompt**
+Reads from `$('Step 9 - Dedup Hash')` directly — not from `$input`. Constructs system prompt and user prompt. Builds `request_body` as JSON string. Carries all fields key-by-key.
+
+GPT task: preliminary `pain_point_domain`, `preliminary_emotion_tag`, `keywords` (3–5 terms). No controlled taxonomy at this stage — plain reasoning only.
+
+Model parameters:
+```
+model: gpt-5.2
+temperature: 0
+max_completion_tokens: 150
+response_format: { type: "json_object" }
+```
+
+**Star rating in prompt:** `row.star_rating !== null ? row.star_rating : 'not provided'`
+
+---
+
+**Step 13 - OpenAI GPT Call**
+HTTP POST to `https://api.openai.com/v1/chat/completions`. RAW body mode. `retryOnFail: true`, `waitBetweenTries: 5000ms`. Credential: `OpenAIToken` (Bearer auth).
+
+---
+
+**Step 14 - Output Validation** *(Chat #87 update)*
+Validates GPT JSON response. Throws on missing fields. `console.warn` removed — task runner blocks it. Keywords outside 3–5 range accepted silently. `.slice(0, 5)` enforces 5-keyword cap. Reads upstream from `$('Step 9 - Dedup Hash')` for field restoration.
+
+Validations:
+- `pain_point_domain` — required string, truncated to 80 chars if exceeded
+- `preliminary_emotion_tag` — required string
+- `keywords` — required array, filtered to strings, lowercased, trimmed, capped at 5
+
+---
+
+**Step 15 - Run ID and Timestamp**
+Generates `ala_run_id` and `ala_timestamp`. Format: `ALA-YYYYMMDD-HHMMSS-NNN` where NNN is zero-padded `$runIndex + 1`. All fields carried key-by-key.
+
+---
+
+### NOCODB WRITE (Steps 16–18)
+
+**Step 16 - Build NocoDB Body**
+Constructs NocoDB POST body as `JSON.stringify`. Star Rating handling:
+```javascript
+"Star Rating": (row.star_rating !== null && row.star_rating !== undefined && row.star_rating !== '') ? Number(row.star_rating) : null
+```
+Outputs both the NocoDB body string and all pipeline fields for downstream use.
+
+---
+
+**Step 17 - NocoDB POST ALA Record**
+HTTP POST. RAW body mode. URL: `http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr`. Credential: `xc-token` (Header Auth, id: `DT9tnRgqYpPc3rXo`).
+
+---
+
+**Step 18 - Capture Record ID**
+Reads `response.Id` from Step 17 NocoDB response. Throws if Id absent. Restores full upstream payload from `$('Step 15 - Run ID and Timestamp')`. Adds `ala_record_id` to output.
+
+---
+
+### EIP TRIGGER (Step 19)
+
+**Step 19 - EIP Trigger**
+HTTP POST to `http://161.35.133.49:5678/webhook/scx-eip`. `onError: continueRegularOutput` — EIP failure does not break ALA batch. Timeout: 5000ms. Loops back to Step 5 SplitInBatches after firing.
+
+Payload:
+```json
+{
+  "ala_record_id": "{{ $json.ala_record_id }}",
+  "prior_run_id": "{{ $json.ala_run_id }}",
+  "prior_table": "ALA",
+  "lang": "{{ $json.lang }}",
+  "client_id": "{{ $json.client_id }}"
+}
+```
+
+⚠️ **OPEN:** ALA confirmed sending `lang: 'es'` correctly for Spanish records. EIP confirmed receiving it. Root cause of EIP processing only EN records not resolved in this session — investigation continues in EIP workflow.
+
+---
+
+### BATCH INTEGRITY (Steps 20–23)
+
+**Step 20 - Batch Integrity GET**
+Triggered when SplitInBatches output 0 (done) fires. NocoDB GET on ALA table filtered by `batch_id` with `limit: 1000`.
+
+**Step 21 - Batch Integrity Check**
+⚠️ **CONFIRMED BUG — always returns PASS.** Current condition:
+```javascript
+const status = totalAccounted > 0 || errorCount === 0 ? 'PASS' : 'FAIL';
+```
+Tautology — no input combination produces FAIL. Fix pending. Do not rely on integrity check output until resolved.
+
+**Step 22 - Integrity PASS or FAIL**
+IF node routing on integrity status field.
+
+**Step 23 - Integrity PASS END**
+Terminal node for clean batch completion.
+
+---
+
+## NOCODB SCHEMA — m57efwbtrvwohhr
+
+| Field Name | Field ID | Type |
+|---|---|---|
+| Id | cnfgsgpukp15v72 | ID |
+| CreatedAt | ca6g2k9qzxxq4j6 | CreatedTime |
+| UpdatedAt | cfvqdimdpllv6sw | LastModifiedTime |
+| Date | cdsweb8fv7ozkk5 | SingleLineText |
+| Run ID | cf41c46rc5xfj0y | SingleLineText |
+| Platform | ct34zbkyj875fr4 | SingleSelect |
+| Star Rating | cgrdcjgj4q6gmh1 | Number |
+| Raw Tex | cftgpa71he7q2sv | LongText |
+| Reviewer Handle | c2w5j8attd3zqfq | SingleLineText |
+| Pain Point Domain | cll8ku3kokhsswe | SingleLineText |
+| Preliminary Emotion Tag | ch8icqzn0tdj9fg | SingleLineText |
+| Keywords | cr6vvaj2ho05f9u | SingleLineText |
+| Dedup Hash | cqt3pzepigl0ni9 | SingleLineText |
+| ALA Timestamp | ccwwe6wvst5ymj2 | DateTime |
+| Error Log | cb2wmx0lfn0doqp | LongText |
+| EIP Status | cmg3jdjgd06m3y5 | SingleSelect |
+| Lang | clenu1hyj92zdrx | SingleLineText |
+| Client ID | cxhcfl9ndia8q5f | SingleLineText |
+
+**Note:** `Raw Tex` field name is truncated from "Raw Text." Do not rename until post-pilot.
+
+---
+
+## DOWNSTREAM HANDOFF → EIP
+
+Fields sent in Step 19 trigger payload:
+
+| Field | Source | Used By EIP |
+|---|---|---|
+| ala_record_id | Step 18 NocoDB response Id | Primary FK, NocoDB lookup |
+| prior_run_id | Step 15 ala_run_id | Traceability |
+| prior_table | Hardcoded "ALA" | Audit |
+| lang | Step 6 resolved value | Dictionary routing (EN/ES) |
+| client_id | Step 4 CSV column | Client Config lookup |
+
+---
+
+## LOCKED BUILD RULES
+
+| Rule | Detail |
+|---|---|
+| SplitInBatches size | 1 — permanently locked |
+| max_completion_tokens | NOT max_tokens — gpt-5.2 throws 400 on max_tokens |
+| No console.warn | Blocked by n8n 2.4.6 task runner |
+| No spread operator | Safe only in confirmed Steps 6 and 7 — do not use in new nodes |
+| pageInfo.totalRows | NOT list.length for NocoDB record counts |
+| NocoDB URL inside n8n | http://nocodb:8080 — NEVER localhost |
+| PATCH body mode | JSON body mode — NOT RAW |
+| Webhook auth | NONE on all agent webhooks |
+| CSV encoding | UTF-8 required — Windows-1252 produces garbled characters |
+| Client ID at Source | Must be CSV column — cannot be introduced mid-pipeline |
+
+---
+
+## OPEN ITEMS
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Duplicate silent drop — design intent | Unconfirmed — flag for V2 decision |
+| 2 | Step 21 Batch Integrity always PASS | Confirmed bug — fix pending |
+| 3 | Spanish routing inside EIP | ALA confirmed sending `lang: 'es'` — root cause inside EIP unresolved |
+| 4 | Raw Tex field rename | Post-pilot cleanup only |
+
+---
+
+## CHANGELOG
+
+| Version | Chat | Changes |
+|---|---|---|
+| v4.0 | #70 | Original 24-node build |
+| v4.1 | #76 | Client ID chain, Field Traceability Map, Phase 1b architecture |
+| v5.0 | #87–88 | Spanish language activation (Step 6), Star Rating fix (Steps 4+7), Dedup Hash includes client_id (Step 9), console.warn removed (Step 14), NocoDB schema field IDs confirmed, 23-node count confirmed |
+
+---
+
+**Subtext CX · SCX_ALA_HOW · v5.0 · Chat #88 · June 29, 2026 · Solofella LLC**
