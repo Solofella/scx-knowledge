@@ -1,0 +1,54 @@
+Generate the next version (v5.0) of the SCX_EIP_HOW document for the SubtextCX EIP (Emotion & Intelligence Preprocessor) agent.
+
+CURRENT BASELINE (v4.0, Chat #74, April 4, 2026):
+https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/EIP/SCX_EIP_HOW_v4.md
+
+Fetch and read that document first. It describes an English-only, single-dictionary design that has since drifted from the live workflow. The following has been verified this cycle by reading the actual live n8n workflow JSON node-by-node (all 29 nodes) and by checking the underlying NocoDB tables directly. Use this as ground truth, not the v4 document, wherever they conflict.
+
+=== ARCHITECTURAL CORRECTIONS TO v4 ===
+
+1. INPUT CONTRACT: ALA does NOT push full review data. The webhook payload to EIP is only: ala_record_id, prior_run_id, prior_table ("ALA"), lang ("en"/"es"), client_id. EIP re-fetches the full ALA record itself via a NocoDB GET (Step 3) — Platform, Date, Star Rating, Raw Text, Pain Point Domain, Preliminary Emotion Tag, Keywords, Reviewer Handle.
+
+2. DUAL-LANGUAGE DICTIONARIES (undocumented in v4 entirely): EIP branches by resolved `lang` and selects one of two table pairs:
+   - es → Emotion Dictionary table `mhot4w62tupht71` (161 rows, confirmed populated/clean), Pain Point Master table `mwmiyyoucuhsms8` (253 rows, confirmed populated/clean)
+   - en (default) → Emotion Dictionary `mrrscb955j1d2i7`, Pain Point Master `meavqh37mdqgl4d` (336 rows per v4 — NOT re-verified this cycle, see Gaps below)
+
+3. FULL NODE FLOW (29 nodes), in order:
+   Webhook → Step 1 Payload Validation (requires positive-int ala_record_id) → Step 2 Idempotency Check/IF/Skip Duplicate/False Branch Gate (checks EIP table by ALA Record ID; duplicate branch dead-ends, no further routing) → Step 3 Fetch ALA Record → Step 3b ALA Validation (requires Raw Tex, Platform, Date, Pain Point Domain, Preliminary Emotion Tag; strips [N★] markers) → Step 4 Patch ALA Processing (sets EIP Status: Processing) → Step 5 Dictionary Load Check (resolves lang, picks table IDs) → Step 5 INIT 1-4 (fetch + serialize Emotion Dictionary and Pain Point Master, language-branched field names, builds signal_weight_map) → Step 6 Build GPT Prompt (ALA's own domain/emotion passed as context-only hints, not authoritative) → Step 7 Build GPT Request Body (model gpt-5.2, temperature 0.2, max_completion_tokens 600, response_format json_object) → Step 8 GPT Classification Call (NO retry-on-fail configured) → Step 9 Output Parsing (validates emotion fields/enums, clamps polarity/certainty to [0,1], caps certainty at 0.40 if tag looks numeric/bracketed, looks up signal_weight) → Step 10 Signal Type → STEP 11 Semantic Collapse Detection → Step 12 Ambiguity Flag (threshold 0.65) → STEP 13 Run ID + Timestamp (format EIP-YYYYMMDD-HHMMSS-mmm) → Step 14 Build NocoDB Body → STEP 15 NocoDB POST (writes EIP record) → Step 16 Capture EIP Record ID (throws if no Id returned) → Step 17/17a Patch ALA Complete (sets EIP Status: Complete) → Step 18/18a ESS Trigger (fires webhook to ESS, NO onError fallback configured).
+
+4. SIGNAL TYPE (Step 10) — v4's documented T-NEGATIVE/T-AMBIGUOUS/T-POSITIVE taxonomy does NOT match the live code. Actual logic produces one of six values based on dominant_pole, masked_emotion_flag, certainty_score, and emotion_category:
+   - Positive Signal (pole = Positive)
+   - Masked Negative Signal (pole = Negative, masked = true)
+   - Ambiguous Negative Signal (pole = Negative, certainty < 0.65)
+   - Dignity-Risk Signal (pole = Negative, emotion_category text-matches "Relational"/"Identity"/"Dignity"/"Trust")
+   - Negative Signal (pole = Negative, none of the above)
+   - Mixed Signal (pole = Mixed)
+   Document this as the actual current logic, explicitly superseding v4's taxonomy.
+
+5. NOCODB SCHEMA (table mhicpnrahaesxmy) — actual fields written by Step 14: EIP Run ID, ALA Record ID, EIP Timestamp, Enriched Emotion Tag, Enriched Pain Point, Domain, Intensity Level, Polarity Balance, Dominant Pole, Certainty Score, Ambiguity Flag, Collapse flag, Masked Emotion Flag, Cognitive Driver, Need State, Signal Type, Emotion Hypothesis, Pain Hypothesis, Keywords, Signal Weight, Client ID, ESS Status, Error Log. v4's documented "Enriched Emotion Breakdown", "Enriched Pain Point Breakdown" (JSON arrays), and standalone "Core Emotion" column do NOT appear in the actual write payload — remove or flag as unconfirmed.
+
+=== RESOLVED THIS CYCLE ===
+- Spanish Pain Point Master (mwmiyyoucuhsms8) had 3 column names with ñ corrupted to � (Señal_Operacional, Señal_Emocional, Peso_Señal) plus at least one corrupted cell value — this was the root cause of "EIP only processing EN records" reported previously. Columns renamed, cell values cleaned, verified clean and populated (253 rows).
+
+=== PENDING FIXES TO DOCUMENT AS OPEN ISSUES ===
+- STEP 11 Semantic Collapse Detection is a non-functional stub: passes all input through unchanged and unconditionally sets collapse_flag: false, collapse_warning: null regardless of input.
+- Step 10's Dignity-Risk detection matches ENGLISH keywords against emotion_category, which GPT outputs in Spanish for lang: 'es' — Spanish dignity/trust-risk reviews can never get this classification.
+- Step 9 has ZERO validation on pain_point_domain_confirmed for lang: 'es' (not just skipped whitelist — no presence/type check either).
+- Step 18 ESS Trigger has no onError: continueRegularOutput, unlike ALA's equivalent EIP handoff — an ESS outage fails the whole EIP execution even after successful classification and write.
+- Step 8 GPT call has no retry-on-fail, unlike ALA's equivalent OpenAI call.
+- Step 17a computes an ala_patch_body value that Step 17 never actually references (hardcodes its own body instead) — dead code, not a live bug.
+- emotion_category is computed and carried through every node up to Step 14, then dropped — never written to the EIP table or forwarded to ESS.
+- Step 14's "Enriched Emotion Tag" column holds core_emotion, not the GPT-generated enriched_emotion_tag field, which is never persisted anywhere.
+- Step 3b's fallback record['lang'] (lowercase) doesn't match the actual NocoDB field Lang (capitalized) — low-risk dead code in a fallback path.
+- ALA's Step 22 FAIL branch (a related, upstream item) now loops to a reachable FAIL state as of ALA's own v6.0 update — retry-cap/alert design was drafted but deferred to V2, not implemented.
+
+=== GAPS — CANNOT BE CLOSED WITHOUT MORE INFORMATION, FLAG THESE EXPLICITLY IN THE DOCUMENT ===
+1. Correlative chat/session number for this update, to fill the "Last Updated: Chat #___" field — supply it directly.
+2. English Emotion Dictionary (mrrscb955j1d2i7) and English Pain Point Master (meavqh37mdqgl4d) row counts and column-name integrity were NOT re-checked this cycle — only the Spanish tables were audited. Token budget and coverage assumptions for English are unconfirmed as of v5.
+3. Whether the NocoDB EIP table (mhicpnrahaesxmy) actually has unused columns for "Enriched Emotion Breakdown", "Enriched Pain Point Breakdown", "Core Emotion", or "Emotion Category" that the code simply doesn't populate — this needs a direct schema pull on that table, not yet done.
+4. Design intent confirmation needed: is it deliberate that the "Enriched Emotion Tag" NocoDB column stores core_emotion rather than the GPT enriched_emotion_tag field? (Mirrors the pain-point side's field mapping, which suggests it may be intentional, but this needs confirmation from whoever built the schema.)
+5. What STEP 11 Semantic Collapse Detection was originally intended to detect — no design spec exists to reconstruct real logic from; needs input from whoever named/designed this node.
+6. No end-to-end live test has been run: submit one real Spanish-language review through ALA and confirm the resulting EIP record has a non-null signal_weight and coherent Spanish emotion_hypothesis/pain_hypothesis, before treating the Spanish-language data fix as fully production-confirmed.
+7. Whether EIP's Step 2 - Skip Duplicate dead-end (no outgoing connection, so a duplicate ala_record_id just halts execution silently) is intentional, mirroring the same open design question already flagged on the ALA side for its own duplicate-handling behavior.
+
+Produce the full v5.0 document in the same structure/style as the v4.0 source (Purpose, Input Source, Processing Logic, NocoDB Schema, Dictionary Injection Strategy, Downstream Inheritance, Key Design Decisions, Data Flow, Known Issues & Pending Fixes, Related Documents, n8n Workflow Details), correcting drift per the above, and explicitly listing the 7 gaps above as open items requiring follow-up rather than silently guessing at them.
