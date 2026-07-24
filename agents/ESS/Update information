@@ -1,0 +1,121 @@
+Generate the next version (v5.0) of the SCX_ESS_HOW document for the SubtextCX ESS (Emotional Signal Synthesis / Stabilizer) agent.
+
+CURRENT BASELINE (v4.0, Chat #74, April 4, 2026):
+https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/ESS/SCX_ESS_HOW_v4.md
+
+Fetch and read that document first. It describes an architecture that has drifted substantially from the live workflow in several specific, confirmed ways. Everything below was verified this cycle by reading the actual live n8n workflow JSON node-by-node, in full (all 23 nodes, matching v4's node count exactly — only the node *content* has drifted, not the count). Treat this as ground truth over the v4 document wherever they conflict.
+
+=== ACCESS / INFRASTRUCTURE FACTS ===
+- NocoDB base: http://nocodb:8080, base id pq249fix22t3ofv (internal Docker hostname — never localhost)
+- ESS's own NocoDB table: m5yektnbtxf8evk
+- EIP's NocoDB table (ESS reads/patches this): mhicpnrahaesxmy
+- NocoDB auth: httpHeaderAuth credential, xc-token, credential id DT9tnRgqYpPc3rXo
+- Anthropic API: https://api.anthropic.com/v1/messages, headers `anthropic-version: 2023-06-01` + `Content-Type: application/json`, auth via httpHeaderAuth x-api-key, credential id uMahlx4nOC5YJh0Z
+- Upstream trigger: webhook POST from EIP to path `/scx-ess`
+- Downstream trigger: ESS itself POSTs to `http://161.35.133.49:5678/webhook/scx-hsi` (HSI's webhook)
+- Model: claude-sonnet-4-6, one call per record, max_tokens: 100, temperature: 0.3
+
+=== FULL NODE-BY-NODE WALKTHROUGH (23 nodes, in execution order) ===
+
+1. **Webhook** — receives POST from EIP at path `scx-ess`, hardcoded response `{"status":"received"}`.
+
+2. **Step 2 - Payload Validation** (Code) — parses `input.body`, handling both string and already-parsed-object cases (`typeof input.body === 'string' ? JSON.parse(input.body) : input.body`). Requires `eip_record_id` present and a positive integer, else throws. Extracts ~25 fields from the payload with `|| null` fallbacks (ala_record_id, enriched_emotion_tag, core_emotion, pain_point_sub_category, pain_point_domain_confirmed, need_state, cognitive_driver, polarity_balance, dominant_pole, intensity_level, certainty_score, ambiguity_flag, masked_emotion_flag, collapse_flag [defaults false], signal_type, signal_weight, emotion_hypothesis, pain_hypothesis, keywords, reviewer_handle, review_date, platform, star_rating, lang, client_id). Computes `eip_run_id: p.prior_run_id || p.eip_run_id || null` — accepts either key name defensively.
+
+3. **Step 3 - Idempotency Check** (HTTP GET) — queries ESS's own table (m5yektnbtxf8evk) `WHERE EIP Record ID = eip_record_id, limit 1`.
+
+4. **Step 4a - IF Already Processed?** — condition: `pageInfo.totalRows > 0`.
+
+5. **Step 4b - Skip Exit** (Set, TRUE branch) — sets `skip_reason: "Duplicate: EIP Record ID already processed by ESS"`, `includeOtherFields: true`. This is a dead end — no further connection, consistent with the same duplicate-dead-end pattern seen in ALA and EIP.
+
+6. **Step 4c - FALSE Branch Gate** (Code, FALSE branch) — if `totalRows > 0` returns `[]` (belt-and-suspenders against the IF), otherwise rebuilds the full ~25-field record from `$('Step 2 - Payload Validation')`.
+
+7. **Step 5 - Canonical Integrity Check** (Code) — **this is the actual logic; it does NOT match what v4 describes (see Corrections below).** Hard checks (any failure → pushed to `hardErrors`):
+   - `enriched_emotion_tag`, `pain_point_sub_category`, `cognitive_driver` must be non-empty
+   - `polarity_balance`, `certainty_score` must parse as float in [0.0, 1.0]
+   - `dominant_pole` must be one of `Positive`/`Negative`/`Mixed`
+   - `intensity_level` must be one of `Low`/`Moderate`/`High`/`Critical`
+   - `signal_type` must be one of the 6 EIP-produced values: `Positive Signal`, `Negative Signal`, `Masked Negative Signal`, `Ambiguous Negative Signal`, `Dignity-Risk Signal`, `Mixed Signal`
+   - `ambiguity_flag`, `masked_emotion_flag` must be boolean-ish (`true`/`false`/`1`/`0`)
+
+   Soft checks (append to `softWarnings`, don't hard-fail): `emotion_hypothesis`/`pain_hypothesis` — missing → warning string containing `-0.10`; present but under 10 characters → warning string containing `-0.05`. These warning strings are later parsed by substring match in Step 11 (see below) — the `-0.10`/`-0.05` text is not decorative, it's functionally read back out.
+
+   Output: `canon_pass` (**string** `'true'`/`'false'`, not boolean), `failure_reason` (hardErrors joined with `' | '`, or null), `canon_warnings` (array of warning strings, or null).
+
+8. **Step 6 - IF Canon Pass?** — compares `$json.canon_pass` equals string `"true"`, loose type validation. TRUE → continues to Claude classification (Step 7+). FALSE → error-exit path (Step 6a/6b).
+
+9. **Step 6a - NocoDB POST ESS Error Record** (HTTP POST, FALSE branch) — writes directly to ESS's table with `"ESS Run ID": "ERROR-{eip_record_id}"`, `"Canon Flag": false`, `"Integrity Failure Reason": failure_reason`, `"HSI Status": "Error"`, `"Error Log": "Canon hard fail — record rejected before Claude call"`. No Claude call ever happens for a canon-failed record.
+
+10. **Step 6b - NocoDB PATCH EIP Error** (HTTP PATCH) — sets `mhicpnrahaesxmy/{eip_record_id}` → `{"ESS Status": "Error"}`.
+
+11. **Step 7 - Build Claude Prompt** (Code) — constructs `ess_system_prompt` defining ESS's role explicitly: classify HOW emotion is expressed and assess narrative coherence; explicitly told NOT to interpret meaning or speculate about motivation. Demands **exactly 3 keys**, JSON only:
+    - `expression_mode`: one of `Explicit`/`Implicit`/`Masked`/`Performative`/`Conflicted`/`Absent`
+    - `emotional_clarity`: one of `Clear`/`Diffuse`/`Fragmented`/`Ambiguous`
+    - `narrative_alignment_score`: decimal 0.0–1.0, measuring whether Enriched Emotion Tag logically aligns with Pain Point Sub-Category, Signal Type, and Dominant Pole simultaneously (1.0 = perfect coherence, 0.0 = none)
+    Explicit language rule: input fields may be in any language, but output values must always be in English regardless of input language.
+    `ess_user_prompt` feeds: enriched_emotion_tag, core_emotion, cognitive_driver, need_state, pain_point_sub_category, domain, signal_type, dominant_pole, polarity_balance, certainty_score, masked_emotion_flag, ambiguity_flag, emotion_hypothesis, pain_hypothesis, and `lang` if present.
+
+12. **Step 8 - Build Claude Request Body** (Code) — `model: claude-sonnet-4-6, max_tokens: 100, temperature: 0.3, system: <ess_system_prompt>, messages: [{role: user, content: ess_user_prompt}]`.
+
+13. **Step 9 - Claude API Call** (HTTP POST) — `retryOnFail: true, waitBetweenTries: 5000` — **this one DOES have retry configured**, unlike EIP's equivalent GPT call.
+
+14. **Step 10 - Output Parsing + Validation** (Code) — strips markdown code fences (regex removes ` ```json ` and ` ``` ` variants) before `JSON.parse` — this manual fence-stripping is necessary because, unlike EIP's OpenAI call, this Claude call does not use a structured/forced-JSON response mode. Validates `expression_mode` against the 6 valid values, `emotional_clarity` against the 4 valid values, `narrative_alignment_score` parses as float in [0,1] — throws on any violation.
+
+15. **Step 11 - Structural Confidence Score** (Code) — **fully deterministic, NOT an LLM output.** Formula:
+    `score = (certainty_score × 0.40) + (narrative_alignment_score × 0.35) + (canon_bonus × 0.25)`
+    where `canon_bonus` is a **hardcoded constant `1.0`** with an explicit code comment explaining why: only canon-passing records ever reach this node (hard fails already exited via Step 6a/6b), so this term always contributes the full 0.25 — it is not actually a live variable input despite being named like one.
+    Then: subtract 0.10 if `ambiguity_flag` is true; subtract 0.05 if `masked_emotion_flag` is true; subtract a soft penalty derived by scanning `canon_warnings` strings for the literal substrings `-0.10`/`-0.05` (summed, then capped at a maximum total soft penalty of -0.15). Final score clamped to [0, 1].
+
+16. **Step 12 - Run ID + Timestamp** (Code) — generates `ess_run_id` in format `ESS-YYYYMMDD-HHMMSS-mmm`, `ess_timestamp` as ISO string.
+
+17. **Step 13 - Build NocoDB POST Body** (Code) — builds the write body for ESS's table: `ESS Run ID`, `EIP Record ID`, `ALA Record ID`, `ESS Timestamp`, `Canon Flag` (**correctly derived as a real boolean**: `inp.canon_pass === true || inp.canon_pass === 'true'`), `Canon Warnings` (JSON-stringified array or null), `Integrity Failure Reason: null` (always null on this success path), `Expression Mode`, `Emotional Clarity`, `Narrative Alignment Score`, `Structural Confidence Score`, `Lang`, `HSI Status: "Ready"`, `Error Log: null`, `Client ID`.
+
+18. **Step 14 - NocoDB POST ESS Record** (HTTP POST) — writes the above body to m5yektnbtxf8evk.
+
+19. **Step 15 - Capture ESS Record ID** (Code) — reads `response.Id`, throws if absent, rebuilds the full field set by referencing `$('Step 12 - Run ID + Timestamp')` (not its immediate predecessor).
+
+20. **Step 16 - Build Patch Body** (Code) — computes `ess_patch_body: JSON.stringify({"ESS Status": "Complete"})`. **This value is never actually used — see Known Issues.**
+
+21. **Step 17 - NocoDB PATCH EIP Complete** (HTTP PATCH) — sets `mhicpnrahaesxmy/{eip_record_id}` → hardcoded `{"ESS Status": "Complete"}`, ignoring Step 16's computed value entirely.
+
+22. **Step 18 - Build HSI Payload** (Code) — references `$('Step 15 - Capture ESS Record ID')` directly (bypasses Step 17's PATCH response, which isn't needed). Builds the HSI-bound payload with: trace fields (`ess_record_id`, `eip_record_id`, `ala_record_id`, `prior_run_id: ess_run_id`, `prior_table: 'ESS'`), ESS's own outputs (`canon_flag: inp.canon_pass` — **sends the raw string, see Known Issues**, `expression_mode`, `emotional_clarity`, `narrative_alignment_score`, `structural_confidence_score`, `canon_warnings`, `lang`, `client_id`), and a full EIP pass-through (~20 more fields: enriched_emotion_tag, core_emotion, pain_point_sub_category, pain_point_domain_confirmed, intensity_level, polarity_balance, dominant_pole, certainty_score, ambiguity_flag, masked_emotion_flag, collapse_flag, cognitive_driver, need_state, signal_type, signal_weight, emotion_hypothesis, pain_hypothesis, keywords, reviewer_handle, review_date, platform, star_rating).
+
+23. **Step 19 - HSI Trigger** (HTTP POST) — POSTs the payload to HSI's webhook, `timeout: 5000`, `alwaysOutputData: true`. **No `onError: continueRegularOutput` configured — see Known Issues.**
+
+FULL CONNECTION PATH: Webhook → Step 2 → Step 3 → Step 4a → [TRUE: Step 4b, dead end] / [FALSE: Step 4c] → Step 5 → Step 6 → [FALSE: Step 6a → Step 6b, dead end] / [TRUE: Step 7] → Step 8 → Step 9 → Step 10 → Step 11 → Step 12 → Step 13 → Step 14 → Step 15 → Step 16 → Step 17 → Step 18 → Step 19 (dead end).
+
+=== ARCHITECTURAL CORRECTIONS TO v4 (confirmed by direct code inspection) ===
+
+1. **v4 describes TWO separate Claude calls** (Expression Mode analysis, Steps 9-16; Emotional Clarity analysis, Steps 17-21) and states this as a "Critical Rule." **The real code makes ONE combined Claude call** (Steps 7-10) that returns `expression_mode`, `emotional_clarity`, AND `narrative_alignment_score` together in a single 3-key JSON response.
+
+2. **v4 describes Narrative Alignment Score as a deterministic Code Node calculation on a 1-10 scale.** **It is actually an LLM output** (part of the combined Claude call above), on a **0.0-1.0 decimal scale**, validated to fall in that range. This is a genuine scale error in v4, not just a missing detail.
+
+3. **`structural_confidence_score` does not exist anywhere in v4** but is a fully real, implemented, deterministic field (Step 11, formula above) — and it's a field HSI's intake requires. This is the one truly deterministic score in the workflow; v4 attributed that role to Narrative Alignment Score instead, which is wrong.
+
+4. **The Canonical Integrity Check's actual rules bear no resemblance to v4's description.** v4 says it verifies "Core Emotion maps correctly to Enriched Emotion Tag," "Need State matches Emotion Dictionary entry," "Cognitive Driver aligns with emotion type." The real Step 5 does none of these cross-referential/dictionary checks — see the actual rule list under node 7 above. v4 also never mentions that this is a hard-fail gate with its own dedicated error-recording path (Step 6a/6b) that bypasses Claude entirely.
+
+5. **NocoDB schema is wrong, not just incomplete.** v4 lists `Core Emotion` and `Need State` as fields stored in ESS's own table "for reference" — **the real write body does not include either.** Conversely, v4 omits several real fields entirely: `Canon Flag`, `Canon Warnings`, `Integrity Failure Reason`, `Structural Confidence Score`, `HSI Status`, `Lang`, `Error Log`.
+
+6. **Downstream handoff to HSI is far richer than v4 documents.** v4 lists 5 fields sent to HSI (Expression Mode, Emotional Clarity, Narrative Alignment Score, Core Emotion pass-through, Need State pass-through). The real payload (Step 18) carries over 30 fields — the full EIP pass-through plus all ESS outputs.
+
+7. **v4's Input Source section says ESS receives "Enriched Emotion Breakdown JSON" from EIP.** This field does not exist — EIP's own audit (see companion SCX_EIP_HOW_v5.md) confirmed EIP never produces or sends this field. v4 documents receiving something that was never actually sent.
+
+=== KNOWN ISSUES TO DOCUMENT ===
+
+- **`canon_pass`/`canon_flag` naming inconsistency — confirmed NOT currently a functional bug, but fragile.** Step 13 (ESS's own NocoDB write) correctly converts `canon_pass` to a real boolean (`inp.canon_pass === true || inp.canon_pass === 'true'`). Step 18 (the HSI-bound payload) does NOT do this conversion — it sends `canon_flag: inp.canon_pass`, the raw string. This works today only because: (a) HSI's own intake code explicitly checks for the string `'true'` as one of three accepted forms (a defensive choice made on HSI's side, per its own code comment "boolean may arrive as true, 1, or 'true' — handle all"), and (b) structurally, Step 18 can only ever be reached after Step 6's TRUE branch, so `canon_pass` is always the string `'true'` by the time it gets there — a `'false'` value never reaches this node because it would have exited via Step 6a/6b instead. It works by two separate pieces of the pipeline coincidentally agreeing on an undocumented convention, not by an explicit, enforced contract. Recommend either hardening Step 18 to do the same boolean conversion Step 13 does, or explicitly documenting this convention so a future edit to either side doesn't silently break it.
+
+- **Step 16/17 dead code**, same pattern as EIP's Step 17a/17: Step 16 computes `ess_patch_body` that Step 17 never references (hardcodes its own body instead). No active bug, but a maintenance trap.
+
+- **Step 19 - HSI Trigger has no `onError: continueRegularOutput`**, unlike ALA's equivalent handoff to EIP. `alwaysOutputData: true` is present but is not the same protection. An HSI outage would fail the entire ESS execution even after a fully successful canon check, Claude call, and NocoDB write. This is now confirmed as a pipeline-wide pattern: ALA→EIP has fault tolerance; EIP→ESS and ESS→HSI both lack it.
+
+- **`structural_confidence_score`'s `canon_bonus` term is a hardcoded constant (1.0)**, contributing a fixed 0.25 to every score rather than functioning as a true variable input. Document this precisely as intentional-by-consequence (since only canon-passing records reach this node), not as a bug — but flag it so a future refactor doesn't assume it's meant to vary.
+
+=== GAPS — CANNOT BE CLOSED WITHOUT MORE INFORMATION, FLAG THESE EXPLICITLY IN THE DOCUMENT ===
+
+1. Correlative chat/session number for the "Last Updated: Chat #___" field — supply it directly.
+2. Whether it's an intentional decision that ESS's own NocoDB table no longer stores `Core Emotion`/`Need State` "for reference" as v4 originally specified, or whether that's a regression that should be restored — needs a product decision, not something recoverable from the code.
+3. Whether the `canon_pass`/`canon_flag` string-vs-boolean inconsistency (see Known Issues) should be actively hardened now, or left as-is since it currently works — needs a decision from whoever owns this workflow.
+4. Whether `Step 19`'s missing `onError: continueRegularOutput` should be fixed as part of this version or bundled with the same fix on EIP's `Step 18` (already tracked as EIP's item P6) as one pipeline-wide consistency pass.
+5. The v4 token budget figure (~1,200 tokens/record) was not re-measured this cycle against the actual combined single-call prompt structure — needs a fresh estimate given the architecture is materially different (one call instead of two) from what v4 assumed when that figure was calculated.
+6. Whether HSI's defensive multi-type check for `canon_flag` (accepting `true`/`1`/`'true'`) should be treated as the documented, permanent contract between ESS and HSI, or whether it was only ever meant as defensive coding against an anticipated-but-undesired edge case — needs input from whoever designed HSI's intake originally.
+
+Produce the full v5.0 document in the same structure/style as the v4.0 source (Purpose, Input Source, Processing Logic, NocoDB Schema, Expression Mode Categories, Emotional Clarity Categories, Narrative Alignment Score, Structural Confidence Score [new section needed], Token Budget, Key Design Decisions, Downstream Handoff, Related Documents, n8n Workflow Details), correcting drift per the above, and explicitly listing the 6 gaps above as open items requiring follow-up rather than silently guessing at them.
