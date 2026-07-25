@@ -1,0 +1,80 @@
+VRYOH INTELLIGENCE — COMMERCIAL/MKT CONTEXT BRIEF
+
+For a new chat window dedicated to commercial, marketing, and business-strategy work. Paste this in full at the start of that session.
+
+1. What VRYOH Is
+
+VRYOH Intelligence is a B2B review-response and guest-signal-detection platform for hospitality and F&B operators. It runs guest reviews through an AI pipeline that detects and interprets emotional and operational signals — including signals masked behind polite language — and produces governed, human-approved response drafts plus structured intelligence reports.
+
+Legal structure: Solofella LLC (Wyoming holding company) is the legal entity. VRYOH Intelligence is the operating product/brand. Solo founder, no employees.
+
+Founder: Miguel Arellano. ~30 years hospitality/F&B operational experience. Holds CX and UXD certifications. This is his first agent-building/software project — not a coding specialist, but deep domain expertise in the vertical he's building for.
+
+Locked value proposition: "VRYOH gives restaurant operators the truth behind their digital reputation so every guest feels genuinely heard."
+
+Brand assets: Domain vryoh.com — confirmed live and public since July 17, 2026, launched alongside the Aji Ceviche Bar five-location pilot. Sender address intelligence@vryoh.com. Brand name is VRYOH only — the earlier name "Subtext CX" (and subtextcx.com) is fully retired. Do not reference it in any external material, even historically.
+
+2. The Non-Negotiable Governance Principle
+
+VRYOH detects and interprets only — it never prescribes operational actions. No recommendations, no action items, no "you should" language, ever, anywhere in the product (dashboard, reports, or drafts). Every response draft requires human approval before it reaches the public. This is a permanent architectural and brand commitment, not a feature toggle — it's central to the trust proposition and should not be softened in any commercial or marketing framing.
+
+3. Product Architecture (business-relevant summary — not for engineering depth)
+
+Three core pillars: DETECT / GOVERN / DELIVER.
+
+The product is built as a chain of automated stages that take a raw guest review and turn it into: (a) a governed, brand-voice-matched draft response awaiting human sign-off, and (b) structured intelligence delivered to the operator on a schedule.
+
+Three managed outputs:
+
+Individual governed response drafts, calibrated to the emotional signal and risk level of each review, with elevated handling for dignity-risk situations (e.g., discrimination allegations).
+Weekly Review Intelligence Brief (Monday mornings) — top pain points, emotional signal distribution, week-over-week trend, top signals needing attention.
+Monthly Review Pattern Report (1st of month) — 30-day pattern summary, trend lines, dignity-risk events flagged.
+
+Delivery SLAs: 48-hour turnaround on response drafts; weekly brief on Monday; monthly report on the 1st.
+
+Bilingual (English/Spanish): Confirmed live and working in production as of a July 15, 2026 test — not aspirational. The Spanish drafting pipeline was built as a fully independent, natively-authored chain (not a translation layer bolted onto English), which is a genuine differentiator and a better craft story than most competitors would have.
+
+⚠️ Known current product gaps a commercial thread should be aware of (do not promise these publicly until fixed):
+
+Some client-facing weekly-report metrics (SLA compliance rate, SEO velocity/coverage) are currently structurally stuck at zero or showing a hardcoded placeholder number, due to an internal tracking-field change that hasn't propagated. Being fixed, but a live risk if a prospect or pilot client scrutinizes their weekly email numbers closely right now.
+Client-facing dashboard is spec'd but build status is not confirmed current — treat as "designed," not "confirmed live," unless told otherwise.
+4. Market Position & Sizing (from Business Plan v2.0, March 2026 — dated, treat as directional not current)
+Global AI in Customer Experience market: $11.9B (2024) → $117.8B projected by 2034, ~26% CAGR.
+Customer Feedback Management (direct competitive space): $2.1B → $5.0B by 2035, ~8.5% CAGR.
+Emotionally Intelligent AI (VRYOH's most differentiated layer): $3.2B → $45.5B by 2034, ~30.4% CAGR.
+Financial-justification stats cited in the plan (CX-driven revenue growth of 4–8% above industry average, up to 20% occupancy lift, 25–95% profit increase from retention gains, 86% willingness-to-pay-more for better CX, up to 35% AI cost reduction) are sourced to Forrester/Bain/Forbes-style aggregate industry research, not VRYOH's own data. Useful for pitch narrative; do not present as VRYOH's proven outcomes — there is no case study yet.
+5. Competitive Positioning
+
+Birdeye (birdeye.com) is the confirmed closest named competitor. Checked directly against Birdeye's Review Insights product page (birdeye.com/review-reports):
+
+Birdeye's Review Insights product operates on aggregate sentiment, volume, and trend analysis across locations — reputation scoring, competitive benchmarking, response-time/rate tracking, AI-generated summaries of "hundreds of reviews," and shareable dashboards.
+It is explicitly prescriptive — marketed around "actionable nudges" and "AI-powered recommendations that strengthen your online reputation and keep you ahead of the competition."
+
+This is a useful, direct contrast rather than a threat to VRYOH's differentiation: VRYOH operates at the individual-review, masked-signal level and is architecturally non-prescriptive (detect and interpret only, human approves every action). Neither of those two things appears in Birdeye's public Review Insights material.
+
+⚠️ Still unverified: Birdeye's separate Review Management product (automated multi-site response handling/drafting) has not been directly confirmed. A source document titled "AI Agents that reply to reviews quickly, accurately, and automatically" was referenced as covering this, but the file could not be read (Google Drive access-restricted, viewer-only link). Before making any specific comparison claim about Birdeye's response-drafting or approval workflow, get that document into a readable format (paste text directly, or share with "Anyone with the link" permission) so it can be checked.
+
+Older claim to retire: the March 2026 Business Plan's claim that "no B2B SaaS has commercially shipped this" should not be repeated as-is — it's stale and untested against Birdeye specifically. Use the verified contrast above instead.
+
+6. Current Commercial State — Pilots
+AJI-001 through AJI-005 — Aji Ceviche Bar, 5 Florida locations (Orlando, Casselberry, Sarasota, Tampa, St. Petersburg). Live test began Thursday, July 16, 2026, running a 45-day trial. Most advanced/active pilot relationship, and the current source of any real usage/cost data.
+PAK-001 — Park Avenue Kitchen by David Burke, NYC. Contact: Eddie, Operations Director. Brand-voice audit completed in June using real review responses as the voice model. Still pending — delay is due to an internal management matter at Park Avenue Kitchen, not a VRYOH system issue. No new confirmed activation date.
+EDO-001 — EDO Restaurants, Peru. Pushed to Q4 2026 or Q1 2027.
+Total active pilot locations currently: 6. Target: expand to 10 active locations by Dec 31, 2026.
+7. Pricing — confirmed current
+Standard rate: $150/location/month.
+Aji Ceviche Bar (AJI-001–005) exception: $100/location/month — a discounted pilot-participation rate reflecting their role as the active live-test cohort.
+The Business Plan's earlier flat-fee/tiered pricing structure ($500 flat pilot, $750–2,500/mo tiered post-pilot) is superseded and not current — do not use it.
+One Client ID per physical location, always.
+8. Cost Baseline — not yet measurable
+
+The March 2026 Business Plan figure (~$170.93/month total fixed cost) is stale and predates the current model lineup (gpt-5.2, claude-sonnet-4-6) and current volume. The Aji Ceviche pilot only began July 16, 2026, and actual infra/AI cost-per-client has not yet been isolated or measured. Do not state a cost-per-client or margin figure in any commercial material until a real baseline is confirmed.
+
+9. Go-to-Market Assets & Relationships (Business Plan v2.0 — verify current relevance)
+US: Direct owner/CEO relationships with Park Avenue Kitchen / David Burke Restaurants (NYC) and Aji Ceviche (Florida) — both are now active pilots.
+Peru: Founder has direct CEO/owner relationships from 30 years of operational roles at Pardo's Chicken, Segundo Muelle, Punto Azul, and Inca Rail (Inca Rail currently uses Revinate for NPS — founder ran that account personally as a former CX Manager there).
+Positioning against incumbents (Revinate, MARA AI, Birdeye, Customer Alliance): framed as intelligence upgrade / parallel-run evaluation, not a rip-and-replace ask.
+10. What This New Thread Should NOT Touch
+No engineering/node-level/n8n workflow details — that work happens in the main technical thread.
+No re-deriving or restating the governance principle's technical implementation (step numbers, IF-node logic, etc.) — only its commercial/trust framing matters here.
+Do not assume any figure above is current beyond what's stated as confirmed.
