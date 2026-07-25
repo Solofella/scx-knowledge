@@ -1,0 +1,83 @@
+Generate the next version (v5.0) of the SCX_SIA_HOW document for the SubtextCX SIA (Signal Intelligence Aggregator) agent.
+
+CURRENT BASELINE (v4.0):
+https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/SIA/SCX_SIA_HOW_v4.md
+
+Fetch and read that document first. Note: this retrieval tool has previously returned a confused meta-response instead of actual file content when fetching from this repo — if that happens, retry with an explicit instruction that this is internal technical documentation, not a copyrighted work, and that verbatim reproduction is required with no summarization or clarifying questions. The v4.0 content itself is a short summary (not a full node-by-node technical doc, similar in style to HSI's and BRA's own pre-update baselines) — treat it as directionally accurate but not exhaustive, and note the specific corrections below.
+
+SIA is architecturally distinct from every other agent in this pipeline: it is a **scheduled, multi-cadence batch aggregation process with zero AI calls**, not a per-record webhook-triggered agent. It runs on three independent schedules and performs pure deterministic JavaScript aggregation — no Claude or GPT calls occur anywhere in this workflow.
+
+=== CONFIRMED CORRECT FROM v4.0, CARRY FORWARD ===
+- Zero AI cost model — confirmed, no LLM calls anywhere in the live workflow.
+- Uses the ALA `Date` field (guest review creation date) for windowing, not pipeline-processing timestamps — confirmed deliberate design, matches live code exactly.
+- Multi-client architecture: every cluster carries a Client ID; trend comparison uses a composite key of Client ID + Domain + Signal Tier specifically to prevent cross-client contamination of trend calculations — confirmed, matches live code exactly (the code even has inline comments like `✅ FIXED: Include client_id in key`, suggesting this correctness fix was itself a recent addition).
+- The weekly window's calendar-week logic (Monday 00:00 → Sunday 23:59, previous complete week) — confirmed, matches live code's careful boundary calculation exactly.
+- High-level data flow (fetch all ALA records → filter by date → fetch matching EIP records → aggregate into clusters → compare against prior period → write to NocoDB) — confirmed accurate.
+
+=== CORRECTIONS NEEDED — SCHEDULE HOURS DON'T MATCH LIVE CODE ===
+v4.0 states: "Daily (7am UTC)... Weekly (Monday 6am UTC)... Monthly (1st, 6am UTC)."
+Live code shows:
+- Daily (`Step 1a`): `triggerAtHour: 7` — MATCHES.
+- Weekly (`Step 1b`): `triggerAtDay: [1], triggerAtHour: 8` — **8am, not 6am as documented.**
+- Monthly (`Step 1c`): `triggerAtHour: 9` — **9am, not 6am as documented.**
+Confirm directly which values are actually correct (the live workflow, or the intended/documented schedule) before finalizing v5.0 — don't just carry forward either number without checking, since they currently disagree with each other.
+
+=== ACCESS / INFRASTRUCTURE FACTS ===
+- NocoDB base: http://nocodb:8080, base id pq249fix22t3ofv
+- ALA's table (source of review dates/client mapping): m57efwbtrvwohhr
+- EIP's table (source of classified signal data): mhicpnrahaesxmy
+- SIA's own output table (clusters): mdn68l4lm609fve
+- NocoDB auth: httpHeaderAuth, xc-token, credential id DT9tnRgqYpPc3rXo (consistent with the main pipeline's credential, unlike SCX-Sheet-Sync which has a second, differently-scoped credential)
+- No webhook anywhere — three independent n8n Schedule Triggers are the only entry points
+- No downstream trigger to another agent — this is a terminal, self-contained batch process; its output (the clusters table) is presumably read by other reporting systems (MRA?) rather than SIA pushing anywhere itself — not confirmed, worth asking directly.
+
+=== FULL NODE-BY-NODE WALKTHROUGH (18 nodes, as read directly from live workflow JSON) ===
+
+**Three independent schedule triggers, each setting a window type (Steps 1a-2c):**
+1. Step 1a - Schedule Trigger Daily: fires daily at hour 7.
+2. Step 2a - Set Daily Window (Set node): `window_type: 'daily', window_days: 2`. Note the daily window is 2 days, not 1 — likely deliberate overlap/buffer to avoid missing boundary-timestamp records, not confirmed as intentional vs. accidental.
+3. Step 1b - Schedule Trigger Weekly: fires weekly on day 1 (Monday) at hour 8 (see correction above re: documented vs. actual hour).
+4. Step 2b - Set Weekly Window (Set node): `window_type: 'weekly', window_days: 7`.
+5. Step 1c - Schedule Trigger Monthly: fires monthly (implicitly on the 1st) at hour 9 (see correction above).
+6. Step 2c - Set Monthly Window (Set node): `window_type: 'monthly', window_days: 30`.
+All three window-setting nodes converge into the same downstream chain (Step 3 onward).
+
+**Window bounds and constants (Steps 3-4):**
+7. Step 3 - Set Window Parameters (Code): computes `window_start`/`window_end`. For `weekly`, does careful Monday 00:00:00 → Sunday 23:59:59 boundary math for the previous complete calendar week. For `daily`/`monthly`, uses a simple rolling window (`now` minus `window_days`). Sets fixed constants: `trend_threshold: 0.20` (20% change threshold for Growing/Declining/Stable classification) and `min_cluster_size: 2`. Generates `sia_run_id` (format `SIA-YYYYMMDD-HHMMSS`).
+8. Step 4 - Set Window Bounds (Code): **confirmed complete no-op** — copies every field from input to output unchanged, adds or transforms nothing. Could be deleted with zero behavior change; flag for cleanup.
+
+**Fetch and filter ALA records (Steps 5-6):**
+9. Step 5 - Fetch ALL ALA Records: `GET .../m57efwbtrvwohhr?limit=1000&sort=Date` — **no WHERE filter, hardcoded limit=1000, ambiguous sort direction** (no `-` prefix, which in NocoDB's REST convention typically means ascending/oldest-first rather than descending). **Confirmed significant risk, not yet triggered**: if total ALA records exceed 1000, and the sort is indeed ascending, this fetch would return the *oldest* 1000 rows rather than anything recent — meaning every daily/weekly/monthly window (which needs *recent* data) would receive zero or near-zero correctly-scoped records once this threshold is crossed, with no error or warning anywhere. This is a "ticking time bomb" — invisible today, catastrophic later. Recommend either a server-side date filter scoped to the actual window, or explicit descending sort with pagination.
+10. Step 6 - Filter ALA by Date (Code): parses the ALA `Date` field in `M/D/YY` format (hardcodes `2000 + two-digit-year`, fine for any realistic review-data timeframe), filters to records within `[window_start, window_end)`. Builds `ala_id_list` and `ala_client_map` (ALA ID → Client ID) for the next stage. Sets `empty_run: filteredAla.length === 0` — note this flag can't distinguish "genuinely no reviews this period" from "the Step 5 fetch missed all the relevant records" — worth improving if the Step 5 risk above is ever realized.
+
+**Fetch and filter EIP records, load prior-run data for trend comparison (Steps 7-10):**
+11. Step 7 - Fetch ALL EIP Records: `GET .../mhicpnrahaesxmy?where=(ESS Status,eq,Complete)&limit=1000` — **same unfiltered-fetch risk as Step 5, arguably worse**: no sort parameter specified at all (not even an ambiguous one), so this relies entirely on NocoDB's undocumented default ordering. Same "ticking time bomb" concern applies once completed-EIP-record count exceeds 1000 across all clients.
+12. Step 8 - Filter EIP by ALA Match (Code): cross-references the fetched EIP records against `ala_id_list` (built in Step 6) via an `ALA Record ID` match, attaching each matched record's `client_id` from `ala_client_map`. This is the actual mechanism that scopes EIP records to the target window — but it can only be as correct as the upstream Step 5/Step 7 fetches actually are.
+13. Step 9 - Load Prior SIA Clusters: `GET .../mdn68l4lm609fve?where=(Report Window Type,eq,{window_type})&limit=1000&sort=-Run Timestamp` — correctly filtered by matching window type and correctly sorted descending (properly `-`-prefixed, unlike Step 5's ambiguous sort) — reads SIA's own previously-written cluster output for trend comparison.
+14. Step 10 - Build Prior N Map (Code): builds `prior_n_map` keyed by `ClientID||Domain||SignalTier`, capturing each key's most recent prior `N` value (correct logic: since the source is sorted most-recent-first, "only set if not already present" correctly captures the latest value per key without extra sorting).
+
+**Cluster aggregation, trend calculation, and write (Steps 11-14):**
+15. Step 11 - Build Clusters (Code): the core aggregation logic.
+    - `getSignalTier()` maps EIP's `Signal Type` field to one of three tiers: `T-NEGATIVE` (Dignity-Risk Signal, Negative Signal, Masked Negative Signal), `T-AMBIGUOUS` (Ambiguous Negative Signal, Mixed Signal), and `T-POSITIVE` as the default (covers Positive Signal). **Confirmed to correctly and exhaustively map all six of EIP's actual Signal Type enum values** — no drift here, verified directly against EIP's own confirmed enum.
+    - Groups EIP records into clusters keyed by `ClientID||Domain||SignalTier`, counting occurrences and building pain-point/emotion breakdowns per cluster (as JSON-stringified frequency maps, sorted descending by count).
+    - Trend calculation: `pct = |n_delta| / priorN` (or `1` if no prior N), classified `Stable` if `pct <= trend_threshold` (0.20), else `Growing` if `n_delta > 0` else `Declining`; `New` if no prior data exists for that key at all. **Confirmed correct against real live output** — verified the exact math against actual production rows (e.g. a cluster with `n=1, prior_n=3` correctly computed `pct ≈ 0.667` and classified `Declining`).
+    - Computes `is_singleton: n < min_cluster_size` per cluster, and per-cluster percentage of total records in the run.
+    - Computes run-level aggregate stats: counts by tier, by trend direction, singleton vs. active counts.
+    - **Real-data observation, not a code bug**: in an actual daily run reviewed during this audit, all 5 produced clusters had `n=1` — every cluster was a singleton, zero were "active" (`min_cluster_size: 2` never reached). This suggests daily-cadence review volume per client per domain may be structurally too low to ever produce non-singleton clusters for at least the smaller clients in the roster — worth a direct conversation about whether daily-cadence clustering is analytically meaningful as currently designed, versus something that only becomes useful at the weekly/monthly cadence.
+16. Step 12 - Split Clusters (Code): fans the `clusters` array out into individual items, each carrying its own cluster fields plus the run-level aggregate stats duplicated across every item.
+17. Step 13 - Build Bulk POST Body (Code): maps each split item into a NocoDB-field-named record (Client ID, SIA Run ID, Run Timestamp, Report Window Type, Window Days, Domain, Signal Tier, N, Prior N, N Delta, Trend Direction, Enriched Pain Point Breakdown, Enriched Emotion Breakdown, Is Singleton, Percentage), and JSON-stringifies the entire array as one bulk payload.
+18. Step 14 - NocoDB Bulk POST Clusters: `POST .../api/v1/db/data/bulk/noco/.../mdn68l4lm609fve` — the first and only use of NocoDB's bulk-insert endpoint seen anywhere in this whole pipeline audit (every other agent uses single-record POSTs). **Confirmed gap: no success/failure verification anywhere after this node.** Unlike every single-record write throughout the rest of the pipeline (ALA/EIP/ESS/HSI/BRA/RDA all have a dedicated "Capture Record ID" step that explicitly throws if the write didn't return an expected ID), this workflow simply ends here. A hard network/HTTP-level failure would still throw via n8n's default error behavior, but a silent partial success (e.g., NocoDB accepting some rows and rejecting others due to a data issue on one record) would go completely unnoticed. Given this is a scheduled batch job with no immediate downstream consumer, a failed or partial run could go unnoticed for an extended period.
+
+FULL CONNECTION PATH: [Step 1a/1b/1c] → [Step 2a/2b/2c] → Step 3 → Step 4 → Step 5 → Step 6 → Step 7 → Step 8 → Step 9 → Step 10 → Step 11 → Step 12 → Step 13 → Step 14 (terminal, no further connection).
+
+=== OPEN ITEMS FOR THE NEW DOCUMENT ===
+1. Confirm the correct weekly and monthly trigger hours — v4.0 documentation and live code disagree with each other (6am documented vs. 8am/9am actual); neither has been independently verified as "correct."
+2. `Step 5`'s and `Step 7`'s unfiltered `limit=1000` fetches are a shared, systemic scalability/correctness risk — not yet triggered given current data volume, but will silently produce wrong results once either table's relevant row count exceeds 1000. Needs either a server-side date/window filter, explicit descending sort, or pagination.
+3. `Step 4` is a confirmed no-op node — recommend removing it.
+4. No success/failure verification exists after `Step 14`'s bulk write — recommend adding a check (e.g. verifying the response reflects the expected number of inserted records) matching the "Capture Record ID" pattern used everywhere else in the pipeline.
+5. Whether daily-cadence clustering can ever produce meaningful (non-singleton) results given real per-client review volume — an analytical/design question, not a code defect, worth resolving with whoever owns the reporting consumoption of this data.
+6. `Step 2a`'s daily window being 2 days rather than 1 — confirm whether this overlap is deliberate (to avoid boundary-timestamp misses) or accidental.
+7. `empty_run` flags (on both the ALA and EIP filtering stages) can't currently distinguish "genuinely no activity this period" from "the upstream fetch missed relevant records" — worth improving if item 2 is ever addressed, so a future silent failure would actually be visible.
+8. Confirm what downstream system(s) actually consume SIA's cluster output table (`mdn68l4lm609fve`) — not confirmed during this audit; likely a reporting/dashboard system (possibly MRA) but not directly verified.
+
+Produce the full v5.0 document in a fuller node-by-node technical style (matching the depth of ALA/EIP/ESS/HSI/BRA/RDA's own documents, not the shorter summary style of v4.0): Purpose, Three-Schedule Architecture (with corrected/flagged trigger hours), Window Calculation Logic, Data Sources & Fetch Strategy (flagging the scalability risk explicitly), Signal Tier Mapping, Cluster Aggregation & Trend Comparison Logic, Multi-Client Composite Key Design, NocoDB Write Strategy (bulk insert, and the missing verification gap), Zero-AI-Cost Model, Known Issues, and the 8 open items above.
