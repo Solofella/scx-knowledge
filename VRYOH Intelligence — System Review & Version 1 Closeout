@@ -1,0 +1,108 @@
+Adding a concise per-agent summary section. Here's the updated document with that addition inserted right after the system overview.
+
+---
+
+**Date: July 25, 2026 · Chat #[TBD — please supply the correlative number for this session]**
+
+# VRYOH Intelligence — System Review & Version 1 Closeout
+
+**Prepared for:** Executive review
+**Scope:** Full technical audit of all nine VRYOH workflows (ALA → EIP → ESS → HSI → BRA → RDA, plus the three supporting systems: Google Sheet Sync, SIA, and MRA)
+**Purpose:** Document the current state of the system as Version 1 closes, so Version 2 can be scoped with a clear, complete picture of what works, what doesn't, and what to prioritize.
+
+---
+
+## What VRYOH Does
+
+VRYOH takes in guest reviews from six restaurant locations, uses AI to understand what each guest actually felt (beyond the star rating), decides how serious each review is, drafts a response in the guest's own language, and routes everything through a human for final approval before anything goes out. Alongside that, it keeps restaurant managers informed with automated summary emails and trend reports.
+
+The system is built as a chain of nine connected workflows, each handing off to the next. This review examined every one of them, line by line, and cross-checked the results against real production data wherever possible.
+
+---
+
+## The Nine Workflows, One Line Each
+
+| Workflow | What it does | What it hands off |
+|---|---|---|
+| **ALA** | Ingests the raw review (from a CSV upload), detects language, does a first-pass guess at emotion and topic | A cleaned review record with a preliminary read on what it's about |
+| **EIP** | Takes a real, deep look — matches the review against a full emotional and pain-point reference library, in the guest's own language | A structured emotional and topical classification |
+| **ESS** | Checks that classification for internal consistency, then assesses *how* the guest expressed themselves (directly, sarcastically, holding back, etc.) | A validated signal plus an "expression style" read |
+| **HSI** | Interprets what the signal actually means for the business — the human story behind the data — and sets an initial severity tier | A plain-language interpretation and a severity tier (routine / needs care / urgent) |
+| **BRA** | Decides the response *strategy* — tone, urgency, and any governance concerns — without writing anything yet | A response brief, or a hard stop if something's too risky to proceed automatically |
+| **RDA** | Actually writes the draft response, in the guest's language, following the brand's voice, then runs its own quality check | A finished draft, held for human approval |
+| **Google Sheet Sync** | Copies pending drafts into each restaurant's shared spreadsheet so a manager can review and approve them | An approval queue managers actually work from |
+| **SIA** | Runs on a schedule (not per-review) and groups recent signals into patterns and trends across each location | Trend data used in reports |
+| **MRA** | Also scheduled, not per-review — builds and sends the daily/weekly/monthly summary emails to each restaurant | The actual client-facing report emails |
+
+---
+
+## The Good News
+
+The system's core design is sound, and several of its most important safety principles are genuinely working, not just documented:
+
+- **The "human always has the final say" principle is real, not just a slogan.** Multiple independent checkpoints — some automated, some clearly working as intended — correctly flag reviews for human review when something needs a closer look, and this was confirmed directly against real examples during this audit.
+- **The system never lets AI make business promises on its own.** Discounts, refunds, and similar commitments are explicitly and repeatedly blocked from ever appearing in a drafted response.
+- **Cost efficiency is built in thoughtfully.** Routine, low-severity reviews are handled without an AI call at all wherever possible, reserving the more expensive reasoning steps for cases that actually need judgment.
+- **The bilingual (English/Spanish) capability is real and, in the drafting stage particularly, was built with genuine care** — in some respects the Spanish version of the response-writing logic is more refined than the English one.
+- One major, previously-reported problem — Spanish-language reviews appearing not to process correctly — was tracked down to its root cause during this review and has been fixed and verified.
+
+---
+
+## What Needs Attention
+
+Issues found during this review fall into four groups, roughly by how urgently they should be addressed.
+
+### 1. Things that are visibly wrong to clients or staff today
+
+- **One of the automated weekly client emails currently states a performance number ("100% Response Coverage") that isn't calculated from anything — it's a fixed placeholder that was never replaced with a real calculation.** Every client sees this every week regardless of actual performance. This is the single highest-priority fix identified in this review.
+- **A meaningful chunk of the performance numbers reported to clients — response speed, on-time rate, and SEO effectiveness — are structurally guaranteed to always show as zero.** This traces back to an earlier, deliberate change to how approvals are tracked internally; the reporting logic that calculates these numbers was never updated to match, so it's been quietly reporting zero instead of erroring out.
+- **A garbled character sequence sometimes appears in guest review text shown to staff** (a star-rating symbol that gets corrupted somewhere during file intake). It's cosmetic — it doesn't affect the actual star rating or the AI's understanding of the review — but it's visible in real reports today and worth a clean fix at the source.
+- One drafted response reviewed during this audit had a small punctuation error ("Cheers!,") that would be visible to a client reading their sent response.
+
+### 2. A few things that need to be verified before they're trusted
+
+- **The most important finding of this review**: there is strong evidence that an entire parallel Spanish-language response-drafting system — built with real engineering effort — may not actually be switched on. The two paths (English and Spanish) were reviewed in detail, and the "on switch" for Spanish appears, from the code, to lead nowhere. This needs a direct, real-world test before anything else, since if true, it means Spanish-language responses may not be getting drafted at all despite the system clearly being built to handle them.
+- **A repeat-guest detection feature likely isn't working**, based on how a comparison in the code is written. This affects whether the system correctly recognizes when a guest has reviewed before — worth a live test to confirm.
+- **One system-wide safety check (the final backstop that's supposed to block discriminatory or legally risky drafted responses before anything reaches a client) has no record-keeping if it ever fires.** It's very likely working, but if it ever activates, there would currently be no way to know it happened or why, other than digging through raw system logs. Given this is the single most safety-critical control in the whole pipeline, it deserves the same visibility as every other safeguard.
+- The system's own internal documentation admits that its multi-client processing loop (making sure every restaurant location gets processed in each scheduled run, not just the first one) has never been tested against real, live multi-client data. A specific, related question was found during this review that should be resolved before this goes unchallenged any longer.
+
+### 3. Consistency gaps between English and Spanish
+
+Several safety and quality checks that exist for English reviews don't have a Spanish equivalent yet — most notably, a safeguard designed to catch inappropriate financial promises (like refund offers) in drafted responses only scans for English trigger words, meaning the same protection doesn't exist for Spanish drafts. Similarly, one severity-classification calculation used for daily reports doesn't fully account for all the categories of concern the system is capable of detecting — including its most serious category.
+
+### 4. Smaller technical debt
+
+A number of smaller items were found — leftover placeholder code that never got finished, a handful of steps that do nothing and could be safely removed, a couple of places where an outdated internal label is still referenced even though it no longer applies, and a security best-practice recommendation around how one access token gets generated. None of these are urgent on their own, but they add up, and cleaning them up will make the system easier to maintain and extend in Version 2.
+
+---
+
+## A Pattern Worth Naming
+
+Several of the issues above showed up more than once, in more than one part of the system, in the same shape:
+
+- **The same exact coding mistake was found copy-pasted into two different places** (a safety check referencing the wrong data field) — suggesting it was written once and reused without being re-verified each time.
+- **Several workflows fetch data with a hard limit and no filter for "how recent," rather than asking specifically for what's needed.** This works fine today because review volume is still low, but it will start silently returning stale or wrong data once volume grows — a problem that won't announce itself until it's already happening.
+- **Not every automated step verifies that the thing it just did actually succeeded** before moving on and marking it "done." Most do; a few important ones (a bulk data write, a final email send) don't.
+
+None of these are emergencies individually, but as a set, they point to a good opportunity for Version 2: a pass focused specifically on consistency and verification, not just new features.
+
+---
+
+## Recommended Priorities for Version 2
+
+In rough order:
+
+1. Fix the fabricated "100%" number in the weekly client email — immediate.
+2. Verify (with a real test) whether the Spanish response-drafting system is actually reachable in production.
+3. Add proper record-keeping for the system's most critical safety stop (the one blocking discriminatory/risky content).
+4. Decide how to handle the performance metrics that are currently guaranteed to show zero — either recalculate them a different way, or stop reporting them until they can be fixed.
+5. Extend the financial-promise safety check to Spanish drafts.
+6. Fix the garbled-character issue at its source.
+7. Verify the repeat-guest detection and multi-client processing loop with real data.
+8. A general cleanup pass: remove dead code, fix the copy-pasted safety-check bug in both places it appears, and add success-verification to the few steps still missing it.
+
+---
+
+## Closing Note
+
+This concludes the full technical review of VRYOH Version 1. Every workflow in the system was read in full, cross-checked against its own documentation, and — wherever possible — verified against real production examples rather than assumptions. The system's foundational design (human approval, no unauthorized commitments, cost-conscious AI use, bilingual support) is sound and, in most cases, demonstrably working. The issues above represent real, specific, fixable gaps — not a reason to distrust the system's core approach, but a clear and prioritized map for what Version 2 should address first.
