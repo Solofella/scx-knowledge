@@ -1,0 +1,101 @@
+Generate the next version (v5.1) of the SCX_RDA_HOW document for the SubtextCX RDA (Response Drafting Agent) agent.
+
+CURRENT BASELINE (v5.0, Chat #97, July 8, 2026):
+https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/RDA/SCX_RDA_HOW_v5.0
+
+Fetch and read that document first in full — it is unusually detailed and largely accurate (unlike some sibling agents' thinner baselines), so treat it as authoritative EXCEPT where specifically flagged below as needing correction or addition. This is a reconciliation/correction pass on an already-comprehensive document, not a rebuild from scratch.
+
+=== CONFIRMED CORRECT, NO ACTION NEEDED ===
+- Language Router (Step 6f) wiring: TRUE (lang==='es') → 7a-ES, FALSE → 7a (EN). This was verified directly against the live production system and is working as the v5.0 document describes. (An earlier read of an exported JSON snapshot appeared to show the TRUE branch disconnected — that was either a stale export or a misread; the live system is confirmed correctly wired. No fix needed.)
+- Internal follow-up brief (Step 10a/10b/10c) being English-only regardless of guest language: confirmed deliberate, per direct user instruction, rationale being an internal ops note for management, not guest-facing. Not a gap.
+
+=== ACCESS / INFRASTRUCTURE FACTS (from direct code read) ===
+- NocoDB base: http://nocodb:8080, base id pq249fix22t3ofv
+- RDA's own table: mr1v67cszcklwns (21 fields per v5.0 Section 13, NOT frozen)
+- BRA's table (RDA patches this): mwqejw7swhd2cf4
+- HSI's table: mb8nv8t3nk6xzed
+- EIP's table (direct-fetched for signal enrichment): mhicpnrahaesxmy
+- English Emotion Dictionary: mrrscb955j1d2i7 (queried by Core Emotion)
+- English Pain Point Master: meavqh37mdqgl4d (queried by Enriched Pain Point)
+- Client Config / Brand Voice table: m95cmabjfyb94ps, keyed by Client ID
+- ALA's table (raw review text fetch): m57efwbtrvwohhr, uses the literal "Raw Tex" column name
+- NocoDB auth: httpHeaderAuth, xc-token, credential id DT9tnRgqYpPc3rXo
+- Anthropic API: https://api.anthropic.com/v1/messages, auth via httpHeaderAuth x-api-key, credential id uMahlx4nOC5YJh0Z
+- Upstream trigger: webhook POST from BRA to path /scx-rda
+- Terminal agent: no automated downstream trigger found; final step builds an approval-notification email (subject/body/recipient) but no email-send node was found in the workflow — see Open Items below
+- Model: claude-sonnet-4-6, all calls, both languages (v5.0 notes an unswitched upgrade path to claude-sonnet-5)
+
+=== FULL NODE-BY-NODE WALKTHROUGH (as read directly from live workflow JSON, ~46 nodes total) ===
+
+**Intake & idempotency (Steps 1-4):**
+- Step 1 - Webhook: receives POST from BRA.
+- Step 2 - Payload Validation: requires bra_record_id (positive int); explicitly re-checks governance_flag !== 'Halt', throwing "Halt record reached RDA --- BRA suppression failure" if violated — this is a deliberate defense-in-depth backstop against BRA's own Halt Check, confirming in its own error text that reaching RDA at all represents a BRA-side suppression failure. Extracts ~27 fields.
+- Step 3 - Idempotency Check: GETs RDA's own table WHERE BRA Record ID = bra_record_id.
+- Step 4 - Already Processed: single-node duplicate-check-and-passthrough (no dedicated skip_reason logging, same thinner convention as BRA's own Step 4).
+
+**Brand voice & signal enrichment (Steps 5-6e, "unchanged from v4.1" per v5.0, upstream of the language split):**
+- Step 5 - Brand Voice Load: GETs Client Config table by client_id; hard-fails if not found.
+- Step 6 - Build Brand Voice Object: maps Client Config's form-questionnaire-style column names (e.g. "THE RECOVERY PROTOCOL - How you handle negative or mixed reviews *") into a clean brand_voice object.
+- Step 6a - Brand Voice Consolidation: builds brand_voice_brief text block; uses a manual key-copy loop rather than spread operator.
+- Step 6b - Fetch EIP Signal Data: re-fetches EIP's own record directly by eip_record_id. THIS APPEARS TO EXIST BECAUSE BRA'S OWN INTAKE (BRA's Step 2) silently drops cognitive_driver and need_state even though HSI forwards both to BRA — not confirmed in v5.0's own documentation, worth investigating/confirming and adding to BRA's known issues if verified.
+- Step 6c - Fetch Emotion Dictionary Row: queries the ENGLISH Emotion Dictionary table's "Core Emotion" column using EIP's own "Enriched Emotion Tag" field value. IMPORTANT CROSS-AGENT DEPENDENCY: this only returns correct matches because of EIP's own known field-mapping quirk (documented in EIP's HOW as item P10) — EIP's "Enriched Emotion Tag" column currently holds the canonical core_emotion term, not the true nuanced GPT-generated enriched tag. If EIP's P10 is ever corrected in isolation, this exact RDA lookup would silently break. This dependency should be documented explicitly in both RDA's and EIP's HOW docs as a coordination requirement before either is changed independently.
+- Step 6d - Fetch Pain Point Master Row: queries the ENGLISH Pain Point Master table's "Enriched Pain Point" column, same EIP-record-based lookup pattern.
+- Step 6e - Build Signal Enrichment Brief: combines Cognitive Driver, Need State, Common Expressions, Operational/Emotional Signal, Sample Expression into signal_enrichment_brief text.
+- Note: Steps 6c/6d only ever query the ENGLISH-language dictionary/pain-master tables, with no language branching, even though this whole layer sits upstream of Step 6f's language split. For a Spanish-language record, EIP's own Enriched Emotion Tag/Enriched Pain Point values would themselves be in Spanish, so these English-table lookups would very likely return zero matches, silently producing a blank signal_enrichment_brief for Spanish reviews (neither node throws on empty result — they default to {}). This is a distinct, real language gap not addressed by v5.0's Spanish-branch rebuild (Section 5), since this layer is explicitly described there as sitting "upstream of the language split" and needing "no per-language logic" — that framing may need revisiting given this finding.
+
+**Language routing (Step 6f) and full parallel EN/ES generation+audit chains (Steps 7a-9e, both languages):**
+- Step 6f - Language Router: confirmed correctly wired (see above).
+- EN chain: 7a (Build Opening Prompt) → 7b (Opening Claude Call) → 7c (Parse Opening + Build Body Prompt — v5.0 Section 11 item 13 notes a still-unverified "missing + operator" bug here, carried forward from v4.1, not touched this session) → 7d (Body Claude Call) → 7e (Build SEO/Governance Prompt) → 7f (SEO Governance Claude Call) → 8 (Build Final Output, computes seo_keywords_used) → 9a (Fetch ALA Record, reads alaRecord['Raw Tex']) → 9a-2 (Fetch Recent RDA Drafts, filtered ~and(lang,eq,en) per v5.0's confirmed fix) → 9b (Build Audit Prompt, 9-item checklist including the "landed"-word ban) → 9c (Audit Claude API Call) → 9d (Parse Audit Output, selects closing phrase via bra_record_id % closings.length from a 4-item T1 pool / 3-item T2-T3 pool, brand signature falls back to literal string "VRYOH Intelligence") → 9e (Deterministic Compliance Check: auto-corrects "landed"/"landing" via regex, flags missing T2 contact invitation, flags a "near-miss carry phrase" pattern).
+- ES chain (fully independent, natively-authored per v5.0 Section 5, not a translation layer): 7a-ES → 7b-ES → 7c-ES (per v5.0 Section 9, deliberately excludes an idiom-repetition ban, concrete-verb-preference rule, and closing-repetition ban — all three were tried and reverted after confirmed quality regression; this is a locked design decision, not a gap) → 7d-ES → 7e-ES (does not insert guest name under any circumstance; if missing, sets human_review_required=true and a pre_audit_flags note instead — the final state after two earlier fix attempts both failed, per v5.0 Section 10) → 7f-ES → 8a-ES (does NOT include the EN path's dead guest_name field reference at all) → 9a-ES / 9a-2-ES (filtered ~and(lang,eq,es)) → 9b-ES (9-item checklist; item 7 is a general repetition rule, not a "landed"-style specific word ban — deliberately, per v5.0, since no equivalent Spanish failure pattern has been observed; item 8's brand-phrase list has 10 entries vs. English's 3) → 9c-ES → 9d-ES (closing pools: T1 has 3 options vs. English's 4; T2/T3 has 2 vs. English's 3 — minor inventory-size asymmetry, low priority, easy fix by adding one more phrase to each Spanish pool) → 9e-ES (only replicates the T2 contact-invitation check; deliberately does not replicate the "landed"-style deterministic word-ban regex, per v5.0's stated "observed-failure-first patching discipline" — a locked, deliberate decision, not an oversight, though see Open Items below for a related concern).
+- Merge point: both 9e (EN) and 9e-ES wire into the same Step 10 input; no Merge node needed since only one branch ever fires per record.
+
+**Post-merge, shared for both languages (Steps 10-18):**
+- Step 10 - Output Parsing: validates public_response_draft present/length ≥20.
+- Step 10a/10b/10c - Internal Brief (Build Prompt → Claude Call → Parse): generates internal_followup_draft, English-only (confirmed deliberate, see above). Note: a dead/vestigial reference to a field called generation_internal appears earlier in the EN chain's Step 9d, always undefined at that point — harmless, since this later Step 10a-c properly computes and overwrites the real value; worth cleaning up the dead reference in Step 9d regardless, since it currently does nothing but reads as if it should.
+- Step 11 - Commercial Commitment Scan: checks both public_response_draft and internal_followup_draft against a prohibited-terms list — CONFIRMED ENGLISH-ONLY: ['refund','voucher','complimentary','discount','credit','compensation','reimburse','waive','free of charge','no charge']. No Spanish equivalents (reembolso, cupón, descuento, compensación, gratis, sin cargo, etc.). This runs after the language merge and is NOT covered by v5.0's Spanish-branch rebuild (Section 5) or by any item in v5.0's Section 11 open-items list. This is a genuine, currently-undocumented governance/safety gap: a Spanish draft containing an unauthorized financial commitment that slipped past the Spanish SEO/governance Claude call (7e-ES) would have zero deterministic backstop catching it, whereas English drafts get both an LLM-level attempt (7e's governance instruction) AND this deterministic regex-style scan. Recommend flagging this as a new, higher-priority open item.
+- Step 12 - Approval Status Assignment: sets approval_status to the hardcoded literal 'Pending' unconditionally (matches v5.0 Section 8's description of the simplified 4-value scheme). Computes elevation_reason from commercial_commitment_flag, governance_flag==='Flag', human_review_required, and tier==='T3'.
+- Step 13 - RDA Run ID: generates rda_run_id (format RDA-YYYYMMDD-HHMMSS-NNN) and rda_timestamp.
+- Step 14 - Build NocoDB POST Body: writes the full RDA record. NOTE: a field literally named guest_name has been carried through every node since Step 8/8a-ES (always null, since nothing upstream ever actually sets it — a local variable computed inside Step 7a was never exported under that key), and Step 14's write body does NOT include it at all — it is fully inert dead code, distinct from the guest-name-IN-THE-DRAFT-TEXT issue that v5.0 Section 10 already fixed. These are two separate things that sound similar; recommend the new document explicitly distinguish them, and flag the dead guest_name field/variable for cleanup.
+- Step 15 - NocoDB POST RDA Record: writes to RDA's table, retryOnFail true.
+- Step 16 - Capture RDA Record ID: standard capture pattern.
+- Step 17 - Patch BRA RDA Status: PATCHes BRA's table → "RDA Status": "Complete". No retryOnFail (unlike Step 15) — low priority inconsistency.
+- Step 18 - Approval Notification: builds email_subject/email_body/approval_contact_email and outputs pipeline_complete: true.
+
+=== CRITICAL DISCREPANCY REQUIRING VERIFICATION — NOT YET RESOLVED, UNLIKE THE LANGUAGE ROUTER ===
+
+v5.0 Section 8 states, regarding the Approval Status simplification (6 values → 4: Pending/Approved/Modify/Not Accepted): "the underlying elevation reasoning... still populates Elevation Reason and still drives Step 18's [ELEVATED — APPROVAL REQUIRED] email subject line — only the second dropdown value was removed, not the signal itself."
+
+But direct read of the actual code shows:
+- Step 12 sets approval_status to the hardcoded literal 'Pending' — always, unconditionally, no branching on the elevation reasoning at all.
+- Step 18 selects the subject line via: `inp.approval_status === 'Pending-Elevated' ? '[ELEVATED...]' : '[APPROVAL REQUIRED]...'`
+
+Since the new 4-value scheme has no 'Pending-Elevated' value at all, and Step 12 never produces it, this check in Step 18 appears to be permanently dead — every approval email would get the generic subject line regardless of tier, governance flag, or commercial-commitment detection, even though elevation_reason itself does correctly appear with real content in the email body. This directly contradicts v5.0's claim that the mechanism "still drives" the subject line.
+
+Unlike the Language Router wiring (already confirmed correct against the live system), THIS discrepancy has NOT yet been verified either way. Before finalizing v5.1, confirm directly against the live n8n editor: does Step 18 currently produce two visually distinct subject lines depending on elevation status, or does every approval email currently look identical regardless of severity? If the latter, the fix is small: either have Step 12 set a real elevated-status marker when reasons.length > 0, or have Step 18 check elevation_reason (or human_review_required, or confirmed_response_tier === 'T3') directly instead of a status string value the new schema no longer produces.
+
+=== OPEN ITEMS TO CARRY FORWARD FROM v5.0 SECTION 11 (all 13, unchanged) ===
+1. SEO instruction revision — applied, untested against real output.
+2. Empty-review-text/rating-only submissions — undocumented at ALA, EIP, RDA. No fix designed.
+3. Dev/parallel test workflow — agreed approach, not yet built.
+4. 9b-ES's narrowed repetition rule and 9d-ES's closing arrays — both changed, untested at volume.
+5. 9b-ES's shared client-agnostic Spanish brand-phrase list (10 phrases) — V1 simplification; V2 should add a per-client Spanish field to Client Config.
+6. Closing-repeats-complaint-detail tension — identified, a fix was tried and reverted, not re-solved by any other means; genuine unresolved tension between two data points.
+7. HSI tier-routing gap ("Mixed Signal" unconditionally → T2) — deferred to V2, contained RDA-side workaround applied.
+8. GPT-vs-Claude standalone comparison workflow — scoped, not built.
+9. Model upgrade to claude-sonnet-5 — confirmed to benchmark better than 4-6, not yet tested.
+10. Feedback loop — reason/comment capture design — explicitly left open for next stage.
+11. Per-client separate NocoDB tables — proposed, evaluated, REJECTED this session. Settled, not open — do not reopen.
+12. MRA/SCX-Sheet-Sync duplicate email reports — traced outside RDA's scope. Not RDA's issue.
+13. Step 7c's (EN) missing + operator — first diagnosed in v4.1, still not verified or touched.
+
+=== NEW OPEN ITEMS TO ADD, FROM THIS SESSION'S LIVE-CODE AUDIT (NOT IN v5.0) ===
+14. Step 11's Commercial Commitment Scan is English-only — no Spanish prohibited-terms equivalent. Governance/safety gap, not just a style gap, given this is specifically the deterministic backstop layer.
+15. Steps 6c/6d (Emotion Dictionary / Pain Point Master lookups) only query English-language tables, with no language branching, despite sitting upstream of the language split — likely produces a blank signal_enrichment_brief for every Spanish-language record.
+16. Cross-agent dependency: Step 6c's lookup only works because of EIP's own known field-mapping quirk (P10, documented in EIP's HOW). Must be flagged in both docs before EIP's P10 is ever "fixed" in isolation.
+17. Likely root cause for why Step 6b re-fetches EIP directly: BRA's own intake (BRA Step 2) appears to silently drop cognitive_driver/need_state despite HSI forwarding both. Needs confirmation and, if confirmed, an addition to BRA's own known issues.
+18. The Step 12/Step 18 approval-status elevation-signal discrepancy described above — needs direct verification, unlike the already-resolved Language Router question.
+19. A dead field literally named guest_name (JSON key, not the guest-name-in-draft-text issue v5.0 Section 10 already fixed) — always null, carried through ~8 nodes, never written to the final NocoDB record. Recommend cleanup, and recommend the new doc clearly distinguish this from the Section 10 fix so the two aren't conflated.
+20. Step 9d's dead reference to generation_internal in the EN chain — harmless (superseded by Step 10a-c's correct computation) but should be cleaned up since it currently reads as if it does something.
+21. No email-send node was found anywhere in the workflow following Step 18 — confirm whether approval-notification delivery happens via some mechanism outside this n8n workflow (a NocoDB automation, an external watcher) or whether the constructed email is not currently being dispatched anywhere.
+
+Produce the full v5.1 document, preserving v5.0's existing rigorous structure and content in full (Purpose, Input Contract, Signal Enrichment Layer, Language Routing, Spanish Branch, Internal Follow-Up Brief, SEO Keyword Tracking, Approval Status, Prompt Iteration History, Guest-Name Insertion, Open Items, Governance vs. Style, NocoDB Schema, Active Clients, Credentials, Standing Process Rules, Quality Baseline), updating only: (a) confirming the Language Router wiring as verified-correct with no further action needed, (b) adding the Step 12/Step 18 discrepancy as a flagged-but-unverified item pending direct confirmation, and (c) appending open items 14-21 above to the existing 13-item list, renumbered as one combined set. Do not remove or alter any of v5.0's existing confirmed-working items or settled/rejected items (e.g., item 11, per-client tables) — those remain closed.
