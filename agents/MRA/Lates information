@@ -1,0 +1,113 @@
+Generate the next version (v4.0) of the SCX_MRA_HOW document for the SubtextCX MRA (Metrics & Reporting Agent).
+
+CURRENT BASELINE (v3.0, filename has a literal trailing asterisk — "SCX_MRA_HOW_v3.0*" — percent-encode it as %2A when fetching, or you'll get a 404):
+https://raw.githubusercontent.com/Solofella/scx-knowledge/refs/heads/main/agents/MRA/SCX_MRA_HOW_v3.0%2A
+
+If that 404s, query the GitHub directory listing first (https://api.github.com/repos/Solofella/scx-knowledge/contents/agents/MRA) to confirm the exact current filename before retrying — this repo has had filename quirks before (a version/content mismatch was also found in BRA's own baseline document during this audit).
+
+Fetch and read that document first. It is short but important: it documents a real historical bug (pre-v3.0, `Step 5` read only `records[0]` from Client Config, silently discarding every client but the first) and the fix (a Loop Over Items architecture). It ends with an explicit, still-relevant caveat: **"Not yet verified against real multi-client data execution. Wiring confirmed correct via JSON review and manual verification, but live multi-client execution testing remains pending."** Treat that caveat as live and unresolved, not historical — it directly bears on one of the findings below.
+
+MRA is architecturally similar to SIA: a **scheduled, multi-cadence (daily/weekly/monthly), multi-client batch process**, not a per-record webhook agent. Unlike SIA, MRA sends real client-facing emails (via Brevo) and is the terminal stage of the entire 8-stage pipeline (ALA→EIP→ESS→HSI→BRA→RDA, plus SIA and MRA as supporting scheduled workflows).
+
+=== CRITICAL, UNRESOLVED DISCREPANCY — RESOLVE THIS BEFORE ANYTHING ELSE IN THE NEW DOCUMENT ===
+
+The v3.0 baseline document states: **"Step 20 (final delivery status PATCH) wires back to Step 4b to advance to the next client."** But direct confirmation during this audit stated: **"Step 19 is wired back to Step 4b."**
+
+This matters critically because of what sits between those two nodes: `Step 19b - Gate Daily PATCH` explicitly returns `[]` (halts that branch) for daily reports, which never receive a `nocodb_record_id` (they skip the NocoDB write entirely per `Step 14`'s report-type routing). **If `Step 20` is genuinely the only loop-back point, daily-report processing can never reach it, and the scheduled run would silently stop advancing to the next client after processing only the first client's daily report** — a critical regression in the exact multi-client loop architecture this v3.0 document exists to describe and fix. If `Step 19` itself loops back (independently of whether the item continues on to `Step 19b`/`Step 20`), this concern is resolved and the architecture is sound for all report types.
+
+**This needs to be verified directly against the live n8n editor before writing anything else** — check `Step 19 - Update Delivery Status`'s actual outgoing connections. Given the v3.0 document's own explicit admission that live multi-client execution has never been verified, this is exactly the kind of thing that could be silently broken today without anyone having noticed, since a single-client-per-run failure wouldn't necessarily be obvious from a status dashboard unless someone specifically checked client counts per run.
+
+=== ACCESS / INFRASTRUCTURE FACTS ===
+- NocoDB base: http://nocodb:8080, base id pq249fix22t3ofv
+- Client Config table (source of client roster, sheet mapping, SEO keywords, approval emails): m95cmabjfyb94ps
+- ALA table: m57efwbtrvwohhr (uses the "Raw Tex"/"Date" columns; "Date" is M/D/YY format)
+- RDA table: mr1v67cszcklwns
+- SIA's cluster output table: mdn68l4lm609fve
+- ESS table: m5yektnbtxf8evk
+- EIP table: mhicpnrahaesxmy
+- MRA's own table: mybieof2em75t6e
+- NocoDB auth: httpHeaderAuth, xc-token, credential id DT9tnRgqYpPc3rXo (consistent with the main pipeline)
+- Brevo transactional email API: https://api.brevo.com/v3/smtp/email, credential id uJbXCL9WY5rfhkcv ("api-key") — same Brevo account SCX-Sheet-Sync uses, but this is a separate, distinct email (client-facing report emails, not SCX-Sheet-Sync's internal-operator digest)
+- No webhook — three independent Schedule Triggers, staggered exactly one hour after SIA's corresponding schedules (daily 8am vs. SIA's 7am; weekly Monday 9am vs. SIA's Monday 8am; monthly hour 10 vs. SIA's hour 9) — very likely deliberate dependency ordering, giving SIA time to write its cluster data before MRA reads it, though not independently confirmed as intentional.
+
+=== FULL NODE-BY-NODE WALKTHROUGH (38 nodes, as read directly from live workflow JSON) ===
+
+**Three schedules, per-run report-type tagging (Steps 1a-2c):**
+1. Step 1a - Trigger Daily 24hr: fires daily at hour 8.
+2. Step 2a - Set Report Type Daily: `report_type: 'daily'`.
+3. Step 1b - Trigger Weekly Brief: fires weekly, Monday, hour 9.
+4. Step 2b - Set Report Type Weekly: `report_type: 'weekly'`.
+5. Step 1c - Trigger Monthly Report: fires monthly, hour 10.
+6. Step 2c - Set Report Type Monthly: `report_type: 'monthly'`.
+All three converge into Step 3.
+
+**Window calculation, client fetch, and the multi-client loop setup (Steps 3-5):**
+7. Step 3 - Set Window Parameters: generates `mra_run_id` (format `MRA-YYYYMMDD-HHMMSS`). Daily: rolling 1-day window. Weekly: rolling 7-day window. **Monthly: uses a true calendar-month boundary** (`period_start` = first of last month, `period_end` = 1ms before first of this month) — **confirmed different in kind from SIA's monthly window, which is a rolling 30-day window ending at run time, not a calendar-month boundary.** These will only coincide by coincidence; worth confirming whether MRA's report labels (period_start/period_end) end up describing a different date range than the SIA cluster data it actually reports on, given MRA very likely consumes SIA's output rather than re-deriving its own filtered dataset for the weekly/monthly cases.
+8. Step 4 - Fetch Client Config: fetches all client configs, `limit=100` (fine — client count is small, ~6).
+9. Step 4a - Explode Client Array: throws if zero clients found; converts the array into individual items for the loop. This is the documented v3.0 fix for a real historical bug (pre-v3.0, only `records[0]` was ever processed, silently dropping every other client).
+10. Step 4b - Split Clients for Processing (SplitInBatches): the main per-client loop. Output 1 (item) → Step 5.
+11. Step 5 - Extract Client Config: has defensive dual-shape handling (accepts either a raw multi-record NocoDB response or a single already-exploded loop item) with an explicit code comment noting the multi-record case "shouldn't happen after Loop Over Items is wired" — this is the documented v3.0 rewrite, confirmed correct. Extracts and normalizes each client's SEO keyword list (comma-split, lowercased, trimmed).
+
+**ALA/RDA fetch and window filtering (Steps 6-8, note: real filtering happens later in Step 9, not here):**
+12. Step 6 - Fetch ALA Records: `WHERE Client ID = {client_id}, limit=1000, sort=ALA Timestamp` (unprefixed, likely ascending — same latent risk pattern as SIA's fetches, lower urgency here since it's scoped to a single client rather than all clients at once, but still a real risk over a long enough time horizon for a high-volume client).
+13. Step 7 - Filter ALA by Window: **despite its name, does no actual filtering** — passes `allRecords` straight through unfiltered, and hardcodes `total_records: 0, avg_star_rating: 0, platform_counts: {}` as literal placeholder values. **This looked like a serious bug in isolation, but is fully resolved by `Step 9` below, which correctly recomputes all three from scratch.** Worth cleaning up regardless (either implement the real filtering here, or rename the node to reflect that it's a pure passthrough, since as written its name is actively misleading).
+14. Step 7b - Build RDA Query URL: builds a query string for RDA's table, filtered by client_id, `limit=1000, sort=RDA Timestamp` (same unprefixed-sort pattern).
+15. Step 8 - Fetch RDA Records: executes the URL from Step 7b.
+
+**Real metric computation (Step 9) — the actual filtering and aggregation logic:**
+16. Step 9 - Process RDA Records: this is where `total_records`, `avg_star_rating`, and `platform_counts` are genuinely computed, by joining RDA records against the ALA records (via `ALA Record ID`) and filtering by the actual `period_start`/`period_end` window using ALA's `Date` field (same M/D/YY parsing approach as SIA).
+    - **A subtle date-boundary issue worth confirming, not asserting as definitely wrong**: `pEnd.setHours(0,0,0,0)` discards the precise end-of-period timestamp `Step 3` computed and resets it to midnight of that date. Combined with the strict `alaTs < periodEndTs` comparison and day-granular ALA dates, this consistently excludes the final day of every reporting period from the report. Could be intentional ("only report on fully-completed days") or an unintended truncation — confirm intent.
+    - **A major, confirmed-dead metric category**: `is_published = status === 'Published'`. Per RDA's own v5.0 HOW document, `Approval Status` was simplified (Chat #97) to 4 values (Pending/Approved/Modify/Not Accepted) — `'Published'` was removed entirely, and `Published Timestamp` is confirmed to stay permanently null at approval (RDA's own document explicitly foresaw this exact consequence: "the dashboard's originally-specified 'Avg approval time' metric... can never be computed as designed"). This means `published_count`, `sla_compliant`, `velocity_sum`/`velocity_count`, and `published_drafts` are **all permanently zero/empty**, cascading into `sla_compliance_rate`, `seo_avg_velocity_hrs`, and `seo_response_rate` (all always `0`), for every report, every client, forever.
+    - `is_approved`/`is_pending` also reference the deprecated `'Edited-Approved'`/`'Pending-Elevated'` values, but both are OR'd with their still-valid counterparts, so these two specific checks are harmless vestigial code, not broken — distinguish this from the `is_published` issue above, which is genuinely non-functional.
+    - Tier parsing (`tier_raw.indexOf('T1') === 0`, etc.) is correct given RDA's actual `Confirmed Response Tier` values.
+17. Step 10a - Build SIA Query URL: builds a query filtered by client_id AND report_type, sorted `-Run Timestamp` (correctly descending).
+18. Step 10b - Fetch SIA Clusters: executes it.
+19. Step 10c - Fetch ESS Records: fetches ESS records by client_id, `limit=1000`, no date filter — same latent-risk pattern, single-client-scoped.
+20. Step 10d - Fetch EIP Records: fetches EIP records by client_id, `limit=1000`, no date filter — same pattern.
+
+**Signal/SEO/expression-mode processing (Step 11) — the biggest concentration of findings:**
+21. Step 11 - Process SIA and SEO: branches by report_type.
+    - **Daily branch: a confirmed, real bug.** Classifies EIP records directly by raw `Signal Type` using only 3 of EIP's actual 6 enum values (`Positive Signal`, `Negative Signal`, `Mixed Signal`, plus a mistyped `'Ambiguous Signal'` that doesn't match anything EIP produces). **`Masked Negative Signal`, `Dignity-Risk Signal`, and `Ambiguous Negative Signal` are silently uncounted in daily reports' tier tallies** — including `Dignity-Risk Signal`, arguably the most safety-critical category in the entire pipeline. This is confirmed to be visible in the actual sent daily email (`Step 17a`'s "Signal Direction" section renders these same counts directly).
+    - Weekly/monthly branch: correctly reads SIA's own pre-computed `Signal Tier` field (already confirmed correct in SIA's own audit) — this branch is fine. This confirms the v3.0 document's own described "Critical Safeguard" fix (previously all report types read raw EIP data via `$input`, causing weekly/monthly to show 0 signal counts) is correctly implemented — the weekly/monthly branch explicitly references `$('Step 10b - Fetch SIA Clusters')` by name, not `$input`.
+    - Trend-signal extraction (weekly/monthly only): filters out singleton clusters, sorts by tier order then N descending (via manual bubble sort, not `.sort()` — stylistic, not a bug), takes top 5.
+    - **SEO keyword-hit computation is a downstream victim of the `is_published` bug above**: it iterates `published_drafts` (always empty), so `seo_top_keyword`, `seo_coverage_rate`, and `seo_keyword_hits` are also always zero/blank. Separately, this logic re-derives keyword hits by scanning raw draft text for keyword substrings, rather than reading RDA's own already-computed `SEO Keywords Used` field (which RDA persists on every draft at generation time, regardless of approval status, per RDA's own Chat #97 "SEO Keyword Tracking" work). **Recommend MRA read RDA's `SEO Keywords Used` field directly instead** — this would both simplify the logic and sidestep the dead-`Published`-status dependency entirely.
+    - Expression-mode tally (all report types): builds a per-ALA-ID lookup of ESS's `Expression Mode`, defaults to `'Absent'` if no ESS record found. This logic is correctly implemented and unaffected by the Published-status bug.
+
+**Record building, magic-link token, report-type routing (Steps 12-14):**
+22. Step 12 - Build MRA Record: builds the full NocoDB write body. **Generates a `Magic Link Token` (UUID-v4-shaped) using `Math.random()`** — not cryptographically secure, and confirmed (via `Step 17b`/`17c`) to be embedded directly in real client-facing dashboard URLs (`https://subtextcx.solofella.com/{client_id}?token={magic_token}`) with a 72-hour expiry. **Recommend switching to a proper CSPRNG** (e.g. `crypto.randomBytes`) given this functions as a real access-control token, not just a display ID.
+23. Step 13 - Check Report Type: sets `skip_nocodb = true` for daily reports specifically — daily reports are never persisted to MRA's own table, only weekly/monthly.
+24. Step 14 - Route Report Type: independently re-checks `report_type === 'daily'` (redundant with, but consistent with, `Step 13`'s flag) to decide whether to proceed to the NocoDB write.
+25. Step 14b - Catch Daily Reports (IF, fed directly from Step 13 in parallel with Step 14): routes by `report_type === 'daily'`.
+
+**NocoDB write for weekly/monthly (Steps 15-16a), then the three-way email-template fan-out (Steps 16b-17c):**
+26. Step 15 - NocoDB POST MRA Record: writes to MRA's table (weekly/monthly only).
+27. Step 16a - Extract Record ID: **correctly implements the "throw if no ID returned" pattern** (unlike SIA's bulk write, which had no such check) — a positive finding.
+28. Step 16b/16c/16d - Route to Daily/Weekly/Monthly (three parallel IF nodes, fed from both `Step 14b`'s TRUE branch and `Step 16a` — confirmed: this is the convergence point where both the daily path (no NocoDB write) and the weekly/monthly path (written and ID-captured) reunite before email templating): route by `report_type`.
+29. Step 17a - Build Daily Email: builds the "24-Hour Review Summary" HTML email. Renders `platform_counts` (correctly computed, unaffected by the daily signal-tier bug), `t_negative_count`/`t_ambiguous_count`/`t_positive_count` (**affected by the daily signal-tier bug above — visibly undercounts Dignity-Risk/Masked-Negative/Ambiguous-Negative signals**), `expression_modes` (correct), `all_time_pending` (uses the harmless vestigial `'Pending'`/`'Pending-Elevated'` OR-check). Minor cosmetic bug: email subject doesn't handle singular/plural (confirmed in real output: `"(1 reviews)"` instead of `"(1 review)"`).
+30. Step 17b - Build Weekly Email: **contains a hardcoded, fabricated metric** — `<span class="metric-value">100%</span>` for "Response Coverage," not derived from any actual data, shown to every client every week regardless of real performance. Also renders `sla_compliance_rate`, `seo_avg_velocity_hrs`, and the full "SEO IMPACT" section — **all permanently zero/blank per the `is_published` bug**, creating a visibly contradictory juxtaposition (e.g., "SLA Compliance: 0%" directly next to the hardcoded "Response Coverage: 100%"). Also: trend-arrow rendering checks for `ts.trend_direction === 'UP'`/`'DOWN'`, but SIA's actual values are `'Stable'`/`'Growing'`/`'Declining'`/`'New'` — the arrow always falls back to a meaningless static `→`, and the real trend-direction word is never displayed anywhere else in that section either, so the entire "Trend Analysis" block conveys no actual directional information to the reader.
+31. Step 17c - Build Monthly Email: builds the "Monthly Pattern Report" HTML email, including a dashboard link using the same `magic_token`. Also renders the dead `sla_compliance_rate`/`seo_avg_velocity_hrs` metrics in its "Response Metrics" section.
+
+**Send and delivery-status tracking (Steps 17d-20):**
+32. Step 17d - Prepare for Send: pure merge/passthrough node (explicit comment confirms this), converging whichever of `17a`/`17b`/`17c` fired into a single reference point.
+33. Step 18 - Send Email: POSTs to Brevo. Real output confirmed a client (AJI-005) receiving its daily email with three recipients: two real-looking personal client addresses plus `miguel@solofella.com` cc'd alongside them — **confirmed intentional internal-oversight cc, not a bug replacing real client recipients** (directly resolves the earlier ambiguity from the SCX-Sheet-Sync/RDA hardcoded-email discussion elsewhere in this audit).
+34. Step 19 - Update Delivery Status: **marks `"Delivery Status": "sent"` unconditionally**, without checking `Step 18`'s actual Brevo response for success — a real observability gap, same shape as SIA's missing bulk-write verification. A hard network-level failure would still throw via n8n's default behavior, but any softer failure (bad recipient, Brevo-level rejection) wouldn't be caught. **This is also the node at the center of the critical unresolved loop-back discrepancy described at the top of this prompt.**
+35. Step 19b - Gate Daily PATCH: correctly returns `[]` for daily reports (which have no `nocodb_record_id`), preventing an invalid PATCH attempt.
+36-38. Step 20 - NocoDB PATCH Delivery Status: PATCHes MRA's table with delivery status/timestamp (weekly/monthly only, per Step 19b's gate).
+
+=== OPEN ITEMS FOR THE NEW DOCUMENT ===
+1. **Resolve the Step 19 vs. Step 20 loop-back discrepancy directly against the live n8n editor before anything else** — this could mean the daily-report path silently processes only one client per scheduled run, given the v3.0 document's own admission that live multi-client execution has never been verified.
+2. Fix the hardcoded "100%" Response Coverage in the weekly email — fabricated client-facing data, needs either real computation or removal.
+3. Address the `is_published`/`Published`-status dependency killing SLA compliance, response velocity, and all SEO metrics — likely needs redefinition (e.g. time-to-decision instead of time-to-publish, matching RDA's own document's suggestion) rather than continuing to reference a status value that no longer exists.
+4. Fix the daily-report signal-tier mapping to cover all 6 of EIP's actual `Signal Type` values (reuse SIA's `getSignalTier()` logic rather than reimplementing it incompletely).
+5. Fix the weekly email's trend-arrow logic to check for SIA's actual `Trend Direction` values (`Growing`/`Declining`/`Stable`/`New`), not `'UP'`/`'DOWN'`, and ensure the real trend-direction word is actually displayed somewhere in that section.
+6. Confirm whether MRA's monthly calendar-month window definition should be reconciled with SIA's rolling-30-day monthly window, given MRA likely consumes SIA's output directly.
+7. Switch the magic-link token generation from `Math.random()` to a proper CSPRNG, given it's used as a real dashboard access credential.
+8. Add verification that `Step 18`'s Brevo send actually succeeded before `Step 19` marks delivery status as "sent."
+9. Consider having MRA read RDA's `SEO Keywords Used` field directly rather than re-deriving keyword hits from raw draft text gated behind the dead publish-status check.
+10. Confirm intent behind `Step 9`'s midnight-reset of `period_end` (excludes the final day of every reporting period) — deliberate or accidental.
+11. Clean up `Step 7`'s misleadingly-named no-op (either implement real filtering there or rename/remove it, since `Step 9` already does the real work).
+12. Minor: fix the singular/plural handling in the daily email subject line ("1 reviews" → "1 review").
+13. The unfiltered `limit=1000` fetches (Step 6, Step 10c, Step 10d) carry the same latent scalability risk identified in SIA, though lower urgency here given single-client scoping — worth the same fix (explicit date filtering or descending sort + pagination) eventually.
+14. Confirm whether the one-hour stagger between SIA's and MRA's corresponding schedules is deliberate dependency-ordering (SIA finishes writing before MRA reads) or coincidental.
+
+Produce the full v4.0 document in a fuller node-by-node technical style (matching the depth of ALA/EIP/ESS/HSI/BRA/RDA/SIA's own documents, not the shorter summary style of v3.0): Purpose, Three-Schedule Architecture, Multi-Client Loop Design (with the critical loop-back discrepancy resolved and documented explicitly), Window Calculation Logic (flagging the SIA/MRA monthly-window mismatch), Data Sources & Per-Client Fetch Strategy, Metric Computation Logic (flagging the dead Published-status metrics clearly, distinguishing them from the harmless vestigial status checks), Daily vs. Weekly/Monthly Signal Classification (flagging the daily-branch gap), Email Templates (Daily/Weekly/Monthly, flagging the hardcoded metric and the trend-arrow bug), Magic Link Token & Dashboard Access, Delivery Tracking, Known Issues, and the 14 open items above.
