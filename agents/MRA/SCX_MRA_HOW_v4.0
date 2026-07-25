@@ -1,0 +1,360 @@
+**SCX_MRA_HOW_v4.0**
+Agent Name: MRA (Metrics & Reporting Agent)
+Version: 4.0
+Last Updated: Chat #105 · July 19, 2026
+Model: Pure JavaScript (zero LLM calls)
+Status: Production-live — 30 nodes — Multi-client loop, execution-confirmed across daily, weekly, and monthly cadences
+
+**Purpose**
+
+MRA generates scheduled intelligence reports for ALL active clients on three cadences:
+- 24-hour review summary (daily 8am UTC delivery)
+- Weekly intelligence brief (Monday 9am UTC delivery)
+- Monthly comprehensive report (1st of month 10am UTC delivery)
+
+MRA uses pure JavaScript — zero AI calls, zero token cost. All computation is deterministic aggregation and formatting.
+
+**CRITICAL ARCHITECTURE PRINCIPLE #1:** Reports filter by guest review posting date (ALA Date field), NOT by pipeline processing date (RDA Timestamp).
+
+**CRITICAL ARCHITECTURE PRINCIPLE #2:** MRA processes ALL clients in Client Config in a single scheduled run via a Loop Over Items architecture. One schedule trigger fires once; the workflow internally loops once per client. **As of v4.0, this is execution-confirmed across all three report types (daily, weekly, monthly), against real multi-client production data (PAK-001 + AJI-001 through AJI-005) — not just wiring-verified.** This is the key status change from v3.0, where the loop was structurally complete but had only been tested on weekly reports.
+
+**Note on related but separate workflow:** SCX-Sheet-Sync is a distinct n8n workflow (its own 5am schedule, its own dedup/append logic to each client's Google Sheet) that shares some NocoDB tables with MRA but has no execution dependency in either direction. It is not covered in this document.
+
+---
+
+**What changed since v3.0 (Chat #89)**
+
+Three real defects were found and fixed via live production testing between Chat #89 and this document, plus one required data-model change:
+
+1. **Daily reports silently stopped after the first client** (Chat #100) — root cause: the loop-back wire was attached to Step 20, which legitimately produces zero output items for daily reports (they skip the NocoDB PATCH by design). Zero items reaching Step 4b's loop input halted the loop after client #1, with no error surfaced anywhere. Fixed by moving the loop-back wire to Step 19 instead (see Loop Architecture section below).
+2. **Daily report window used a 2-day offset while labeled `window_days = 1`** (Chat #103) — caused each daily "New Reviews" count to silently double-count any review dated on the prior day's report window, since consecutive daily runs overlapped by one day. Fixed by changing the offset multiplier from 2 to 1 in Step 3.
+3. **Every client's "View & Approve Drafts" button linked to PAK-001's Google Sheet**, regardless of which client's report it was in (Chat #99 diagnosis, Chat #100 fix) — Step 17a/17b had the sheet URL hardcoded as a literal string. Fixed by adding `sheet_id` to Client Config passthrough and building the URL dynamically per client.
+4. **Multi-recipient email support did not actually work** (Chat #101) — prior documentation (v3.0, Lesson 9) claimed Brevo auto-parses comma-separated addresses; direct code read showed this was never implemented — only a single address was ever placed in Brevo's `to[]` array. Fixed by adding explicit split/trim logic in Step 17a/17b/17c, and changing Client Config's Approval Contact Email field from NocoDB's Email type to LongText (Email type likely rejects or mishandles multi-address strings).
+
+---
+
+**Input Sources**
+
+MRA does NOT receive webhooks. Runs on n8n schedule triggers, queries NocoDB tables directly, once per client per run.
+
+Tables queried:
+
+*ALA table (m57efwbtrvwohhr)*
+- Date field (M/D/YY format) — PRIMARY date filter for all reports
+- Platform (Google, OpenTable, Yelp, TripAdvisor)
+- Star Rating
+- Client ID
+
+*RDA table (mr1v67cszcklwns)*
+- ALA Record ID (FK to ALA for date matching)
+- Confirmed Response Tier (T1/T2/T3)
+- Approval Status (Pending/Pending-Elevated/Approved/Edited-Approved/Published)
+- RDA Timestamp (draft generation time)
+- Published Timestamp (approval time — for SLA calculation)
+- Public Response Draft (for SEO keyword detection)
+
+*SIA table (mdn68l4lm609fve)*
+- Report Window Type (daily/weekly/monthly)
+- Client ID
+- Domain (pain point category)
+- Signal Tier (T-NEGATIVE/T-AMBIGUOUS/T-POSITIVE)
+- N (signal count)
+- Prior N (prior period count for trend direction)
+- Trend Direction (UP/DOWN/STABLE/null for new clusters)
+- Is Singleton (exclude from trend signals)
+
+*EIP table (mhicpnrahaesxmy)*
+- ALA Record ID (FK to ALA)
+- Signal Type (Positive Signal/Negative Signal/Mixed Signal/Ambiguous Signal)
+- Domain (pain point category)
+- Used for daily reports only
+
+*ESS table (m5yektnbtxf8evk)*
+- ALA Record ID (FK to ALA)
+- Expression Mode (Explicit/Implicit/Masked/Performative/Conflicted/Absent)
+- Used for expression mode breakdowns
+
+*Client Config table (m95cmabjfyb94ps)*
+- Client ID
+- Client Name (display name for email)
+- **Approval Contact Email — CHANGED IN v4.0 from NocoDB "Email" field type to "LongText."** Supports multiple addresses, separated by comma or semicolon (e.g., `Ale.gabal@hotmail.com; miguel@solofella.com; Freddyzub@icloud.com`). The Email field type is a validated single-address type and is presumed incompatible with multi-address strings (not exhaustively tested against NocoDB's exact validation behavior, but the practical decision to switch was made and confirmed working).
+- SEO Keywords (comma-separated, for SEO performance tracking)
+- **Sheet ID — NOW ACTIVELY READ (v4.0).** Previously present in the schema but not read into the MRA payload; now pulled into Step 5 and threaded through the pipeline to build each client's own Google Sheet approval link.
+- This table is fetched in FULL (all rows, no client filter) at Step 4, then exploded and looped — every active row is processed every run.
+
+---
+
+**Architecture Overview — 30 Nodes (unchanged count from v3.0 — all v4.0 fixes were wiring/logic changes, no new nodes)**
+
+Three Schedule Triggers (Node 1a/1b/1c):
+- Daily: Every day 8am UTC → report_type = 'daily'
+- Weekly: Every Monday 9am UTC → report_type = 'weekly'
+- Monthly: 1st of month 10am UTC → report_type = 'monthly'
+
+**Steps 1-5: Session initialization + multi-client loop entry**
+
+- Step 1a/1b/1c: Trigger on schedule
+- Step 2a/2b/2c: Set report_type (daily/weekly/monthly)
+- Step 3: Calculate period window and generate MRA Run ID. **CHANGED v4.0:** daily branch's `period_start` offset corrected from `now − 2 days` to `now − 1 day`, matching the `window_days = 1` label and eliminating the one-day overlap between consecutive daily reports. Weekly (`− 7 days`, `window_days = 7`) and monthly branches confirmed correct, unchanged — multiplier matches label in both.
+- Step 4: Fetch Client Config from NocoDB — ALL rows, no client filter, limit=100
+- Step 4a: Explode Client Array — Code Node. Converts `{ list: [config1, config2, ...] }` into N separate items, one per client config row.
+- Step 4b: Loop Over Items (n8n's SplitInBatches equivalent in 2.4.6) — batchSize 1. Emits one client config at a time down output index 1 to Step 5.
+- Step 5: Extract client config + SEO keywords + **sheet_id (NEW field read, v4.0)**. Accepts a single config object directly from Step 4b, with defensive dual-path handling retained for manual test scenarios.
+
+**Steps 6-10: Fetch data sources (per client, once per loop iteration)**
+
+- Step 6: Fetch ALL ALA records for the current client (dynamic client_id via named reference to Step 5)
+- Step 7: Filter ALA by window. **CHANGED v4.0:** now also passes `sheet_id` through in its rebuilt return object (previously dropped here).
+- Step 7b: Build RDA query URL (dynamic client_id). **CHANGED v4.0:** passes `sheet_id` through.
+- Step 8: Fetch ALL RDA records for the current client
+- Step 9: CRITICAL DATE FILTERING NODE — filter RDA by ALA Date matching, calculate star rating, platform counts, tier breakdown, all-time pending, `filtered_ala_record_ids`. **CHANGED v4.0:** passes `sheet_id` through.
+- Step 10a: Build SIA query URL by report_type + dynamic client_id. **CHANGED v4.0:** passes `sheet_id` through.
+- Step 10b: Fetch SIA clusters (weekly/monthly window, current client only) — pure fetch, no passthrough needed
+- Step 10c: Fetch ESS records — pure fetch, no passthrough needed
+- Step 10d: Fetch EIP records — pure fetch, no passthrough needed
+
+**Step 11: CONDITIONAL PROCESSING NODE** (daily=EIP via Step 10d, weekly/monthly=SIA via Step 10b named reference). **CHANGED v4.0:** passes `sheet_id` through in its rebuilt return object.
+
+**Steps 12-16: Build report data**
+
+- Step 12: Generate magic link token + expiration. **CHANGED v4.0:** passes `sheet_id` through.
+- Step 13: Check report type, sets `skip_nocodb` flag for daily. **CHANGED v4.0:** passes `sheet_id` through.
+- Step 14: Route daily reports (returns `[]` for daily, blocking Step 15). **CHANGED v4.0:** passes `sheet_id` through in its rebuilt object.
+- Step 14b: Catch Daily Reports — plain IF node (`report_type == 'daily'`), routes without rebuilding the item; no passthrough change needed, confirmed by node type.
+- Step 15: NocoDB POST (weekly/monthly only) — pure HTTP write, no passthrough needed.
+- Step 16a: Extract NocoDB record ID. **CHANGED v4.0:** passes `sheet_id` through in its rebuilt object.
+- Step 16b/16c/16d: Route to email builder by report_type (IF nodes, no rebuild, no change needed)
+
+**Steps 17+: Email generation & delivery**
+
+- Step 17a: Build daily HTML email. **CHANGED v4.0:** (a) added `sheet_id`/`sheet_url` construction, replaced hardcoded PAK-001 Google Sheet link with dynamic per-client URL; (b) replaced single-recipient Brevo `to[]` construction with a split/trim loop supporting multiple comma- or semicolon-separated addresses from Approval Contact Email.
+- Step 17b: Build weekly HTML email. **CHANGED v4.0:** identical two fixes as 17a (dynamic sheet_url + multi-recipient split).
+- Step 17c: Build monthly HTML email. **CHANGED v4.0:** multi-recipient split fix applied (same as 17a/17b). **Sheet URL fix does NOT apply** — this node only ever links to `dashboard_url` (already dynamic, unaffected), never to a Google Sheet; confirmed by direct code read, no changes needed there.
+- Step 17d: Prepare for Send — merge point, unchanged.
+- Step 18: Send email via Brevo API — unchanged.
+- Step 19: Update Delivery Status (in-memory field set). **CHANGED v4.0 — CRITICAL:** this node's output is now wired to **two** downstream destinations: (a) Step 19b, unchanged; (b) **Step 4b directly (NEW loop-back path)** — see Loop Architecture section below for why.
+- Step 19b: Gate Daily PATCH — unchanged code, but **no longer responsible for loop continuation** as of v4.0.
+- Step 20: NocoDB PATCH Delivery Status (weekly/monthly only). **CHANGED v4.0: no longer wired to Step 4b.** Its role is now exclusively the NocoDB write; it has no bearing on loop advancement.
+
+Error Handler: 3 nodes (trigger, log, email notification) — unchanged.
+
+---
+
+**Loop Architecture — Step 4a/4b, and the v4.0 Loop-Back Fix**
+
+*Original v3.0 design (Chat #88):* Step 20 wired back to Step 4b, on the reasoning that Step 20 is the last node in each client's chain.
+
+*Defect discovered via live testing (Chat #100):* This reasoning held for weekly/monthly reports (which always produce exactly one item at Step 20), but daily reports are designed to skip the NocoDB PATCH entirely — Step 19b's `if (!s19.nocodb_record_id) return [];` correctly produces zero items for daily, and Step 20 correctly does nothing with zero items. But with **zero items reaching Step 4b's loop input**, Loop Over Items had nothing to advance on — the loop silently stopped after the first client, every time, for every daily run, with no error visible anywhere in the execution log. This went undetected through Chat #89 because every full-loop test before Chat #100 had been a weekly run.
+
+*Fix applied (Chat #100):* Loop-back moved to **Step 19** — the last node in the chain that unconditionally produces exactly one item, every time, for every report_type (confirmed directly from its code: a single Code Node with one fixed `return [{ json: {...} }]`, no IF/Switch, no filtering).
+
+```
+Step 19 → Step 19b (unchanged — still gates the PATCH)
+Step 19 → Step 4b (NEW — this is now the loop-back)
+Step 19b → Step 20 (unchanged — fires only weekly/monthly)
+Step 20 → Step 4b (REMOVED)
+```
+
+*Result, confirmed via live test:* daily reports for PAK-001 + all 5 AJI locations were received correctly in one run after this fix, closing out what had been the most serious open item in v3.0's "Known Issues" section.
+
+---
+
+**sheet_id Passthrough Chain (NEW, v4.0)**
+
+Client Config's Sheet ID field existed in the schema since early in the project but was never read into the MRA payload. To surface each client's own Google Sheet in the approval email button, `sheet_id` needed to be added at the point of extraction (Step 5) and then explicitly carried through **every node that rebuilds its return object field-by-field** — Steps 7, 7b, 9, 10a, 11, 12, 13, 14, 16a.
+
+**Node categorization established during this fix (useful pattern for future similar additions):**
+- **HTTP Request / fetch nodes** (Steps 6, 8, 10b, 10c, 10d, 15) — never need a field added; they don't rebuild payloads, they either fetch fresh data or use named references (`$('Step 5 - ...').first().json.field`) to reach back to an earlier node directly.
+- **IF/Switch/routing nodes that don't rebuild the object** (Step 14b, 16b/16c/16d) — pass the existing item through unchanged; no code change needed.
+- **Code Nodes that explicitly reconstruct their return object key-by-key** (Steps 5, 7, 7b, 9, 10a, 11, 12, 13, 14, 16a) — any field not explicitly listed in that reconstruction is silently dropped, regardless of whether it existed on the input. This is the category that needed the one-line addition (`sheet_id: <upstream>.sheet_id`) at each hop.
+
+This same category distinction is worth checking any time a new field needs to travel through this pipeline in the future — walk the chain node by node and classify each one before assuming a field survives automatically.
+
+---
+
+**Multi-Recipient Email Fix (NEW, v4.0)**
+
+*Prior documented assumption (v3.0, now confirmed false):* "Brevo parses comma-separated Approval Contact Email automatically."
+
+*Actual prior code (Steps 17a/17b/17c, confirmed via direct read, Chat #101):*
+```javascript
+const brevo_to = {};
+brevo_to['email'] = s16.approval_email || 'miguel@solofella.com';
+brevo_to['name'] = client_name;
+const brevo_to_arr = [];
+brevo_to_arr.push(brevo_to);
+```
+This placed the entire raw string — however many addresses it contained, whatever separator was used — into a single `email` field of a single recipient object. No split logic existed anywhere.
+
+*Fix applied to all three (17a, 17b, 17c):*
+```javascript
+const raw_emails = s16.approval_email || 'miguel@solofella.com';
+const email_list = raw_emails.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0);
+
+const brevo_to_arr = [];
+for (let i = 0; i < email_list.length; i++) {
+  const recipient = {};
+  recipient['email'] = email_list[i];
+  recipient['name'] = client_name;
+  brevo_to_arr.push(recipient);
+}
+```
+Splits on either comma or semicolon, trims whitespace, filters empty entries, builds one `{email, name}` object per address.
+
+**Supporting data-model change:** Client Config's Approval Contact Email field type changed from NocoDB "Email" (single-address validated type) to "LongText" — consistent with the pattern already used for other multi-value fields in the same table (SEO Keywords, Brand Phrases To Include/Avoid).
+
+**Fallback behavior note (unresolved decision, not a defect):** if a client's Approval Contact Email is blank, the code defaults to sending that client's report to `miguel@solofella.com`. This was raised as an open question — whether that's the desired behavior long-term, versus erroring/skipping — and has not yet been explicitly decided.
+
+---
+
+**Sheet URL Fix (17a, 17b only — NOT 17c)**
+
+*Defect (confirmed via direct code read, Chat #99, fixed Chat #100):* Steps 17a and 17b both contained the identical hardcoded literal:
+```
+https://docs.google.com/spreadsheets/d/1JT0jt_l4NthR2n3Eu0-DUcWkhsMLV6mKaVJ5FFgIU6w/edit
+```
+(PAK-001's own sheet), completely independent of which client's loop iteration was building the email. Every client — AJI-001 through AJI-005 alike — received this same link.
+
+*Fix applied to 17a and 17b:*
+```javascript
+const sheet_id = s16.sheet_id || '';
+const sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheet_id + '/edit';
+```
+...with the hardcoded href replaced by `sheet_url` in the button markup.
+
+*17c requires no such fix* — confirmed by direct code read that this node's only CTA links to `dashboard_url` (already dynamic since v3.0/earlier), never to a Google Sheet.
+
+**Separately required, non-code fix:** each client's Google Sheet document itself needed its Google Drive sharing setting changed to "Anyone with the link" (or specific-collaborator sharing) — external recipients otherwise hit a Google "request access" screen regardless of correct URL routing. Confirmed resolved by live test (AJI Ceviche owner confirmed sheet visibility after this change).
+
+---
+
+**Full Corrected Flow Diagram (v4.0)**
+
+```
+Step 1a/1b/1c (schedule trigger)
+  → Step 2a/2b/2c (set report_type)
+  → Step 3 (window parameters — daily offset now 1 day, not 2; MRA Run ID)
+  → Step 4 (fetch ALL Client Config rows)
+  → Step 4a (explode array → N items)
+  → Step 4b (Loop Over Items, batch=1)
+      → [output 1, per iteration] Step 5 (extract client config incl. sheet_id)
+        → Step 6 (fetch ALA for this client)
+        → Step 7 (filter by window, sheet_id passthrough)
+        → Step 7b (build RDA URL, sheet_id passthrough)
+        → Step 8 (fetch RDA for this client)
+        → Step 9 (date filter, tier breakdown, filtered_ala_record_ids, sheet_id passthrough)
+        → Step 10a (build SIA URL, sheet_id passthrough)
+        → Step 10b (fetch SIA clusters)
+        → Step 10c (fetch ESS)
+        → Step 10d (fetch EIP)
+        → Step 11 (conditional aggregation, sheet_id passthrough)
+        → Step 12 (magic link token, sheet_id passthrough)
+        → Step 13 (check report type, sheet_id passthrough)
+        → Step 14 / Step 14b (route daily vs weekly/monthly, sheet_id passthrough on Step 14)
+        → Step 15 (NocoDB POST — skipped for daily)
+        → Step 16a (extract record ID, sheet_id passthrough)
+        → Step 16b/16c/16d (route to email builder by report_type)
+        → Step 17a / 17b (dynamic sheet_url + multi-recipient split)
+        → Step 17c (multi-recipient split only, no sheet_url — uses dashboard_url)
+        → Step 17d (merge point, prepare for send)
+        → Step 18 (send via Brevo, now to all listed recipients)
+        → Step 19 (update delivery status in-memory)
+             ├─→ Step 19b (gate: only weekly/monthly proceed to PATCH) → Step 20 (NocoDB PATCH)
+             └─→ Step 4b (LOOP BACK — NEW v4.0 path, fires every iteration regardless of report_type)
+      → [output 0, on exhaustion] (unwired — execution ends)
+```
+
+---
+
+**Step 11 Architecture — Conditional Processing (unchanged from v3.0)**
+
+Daily branch reads EIP records (Step 10d) filtered by `filtered_ala_record_ids`; weekly/monthly branch reads SIA clusters (Step 10b) via explicit named reference, never `$input`. No functional changes in v4.0 beyond the `sheet_id` passthrough addition noted above.
+
+---
+
+**Date Filtering Architecture**
+
+Step 9's ALA Date matching logic (M/D/YY parsing, midnight truncation, `>= periodStartTs && < periodEndTs`) is unchanged from v3.0. **What changed is the window boundary calculation feeding it (Step 3, daily branch only)** — see "What changed since v3.0," item 2, above.
+
+---
+
+**Email Design & Branding**
+
+Format: HTML email, inline CSS. VRYOH Brand Colors unchanged from v3.0 (#64B8CE cyan, #2E304E navy, #C7E0E7 light cyan, #C3643D burnt orange, #E9CFC9 light peach, #384653 dark gray, #A8A9AD medium gray, #F6F6F6 off white).
+
+Sender: intelligence@vryoh.com. **Naming inconsistency confirmed, unresolved:** Steps 17a/17b use sender name "VRYOH intelligence" (lowercase i), Step 17c uses "VRYOH Intelligence" (capital I). Not yet flagged as a fix request.
+
+Multi-Recipient Support: now genuinely implemented per-client (see fix above), each loop iteration builds its own recipient array from that client's own Approval Contact Email field.
+
+Governance Note (every email footer, unchanged): "VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can't see in raw reviews."
+
+---
+
+**Report Types & Content** (unchanged from v3.0)
+
+1. **24-Hour Review Summary (Daily)** — 8am UTC. Sources: ALA, RDA, EIP, ESS. Skips NocoDB write. Window is now genuinely 1 day (v4.0 fix), no overlap with prior day's report.
+2. **Weekly Intelligence Brief** — Monday 9am UTC. Sources: ALA, RDA, SIA, ESS. 7-day window confirmed correct (multiplier matches label, no fix needed).
+3. **Monthly Pattern Report** — 1st of month 10am UTC. Sources: ALA, RDA, SIA, ESS.
+
+---
+
+**NocoDB Schema** (unchanged from v3.0)
+
+Table ID: mybieof2em75t6e — 26 fields (Id through Error Log, full list unchanged from v3.0). Daily reports skip NocoDB write. Each loop iteration reaching Step 15 (weekly/monthly) creates ONE MRA record per client per run.
+
+---
+
+**Key Locked Lessons (consolidated, Chats #78-105)**
+
+1. Date Filtering by Source Timestamp — filter by ALA Date, never RDA Timestamp.
+2. Step 11 Conditional Data Source — daily=Step 10d(EIP), weekly/monthly=Step 10b(SIA) via explicit node reference, never `$input`.
+3. SIA Window Type Alignment — Step 10a filters by both Client ID and Report Window Type.
+4. all_time_pending Field Chain — calculated in Step 9 from ALL RDA records for current client, carried through Steps 9→10a→11→12→13→16.
+5. filtered_ala_record_ids Array — built in Step 9, used by Step 11's daily branch.
+6. HTML Email Client Compatibility — inline styles required on CTA/links.
+7. M/D/YY Date Parsing — ALA Date is never ISO 8601; parse manually.
+8. Type Safety (String vs Integer) — always wrap ALA Record ID in `String()` for comparisons.
+9. **CORRECTED v4.0 — Multi-Recipient Email Support:** Brevo does NOT auto-parse comma-separated strings — this must be done explicitly in code (split/trim/filter), confirmed by direct code read after the v3.0 claim proved false in practice.
+10. Array-in-Single-Item vs Multi-Item Loop Requirement — Loop Over Items iterates over the items array it receives, not a JS array nested inside one item's json. An explode Code Node (Step 4a) is required first.
+11. Silent Truncation Risk of `records[0]` Patterns — works with zero errors as long as there's exactly one row, silently drops every row after the first. Confirmed and fixed in MRA Step 5. Recommend auditing BRA, RDA, and other agents that bulk-fetch Client Config or similar shared tables.
+12. **REVISED v4.0 — Loop-Back Wiring Convention:** The node wired back to Loop Over Items must produce **exactly one item, unconditionally, on every iteration, regardless of any branch-specific logic** — not simply "the last node in the chain." A node that legitimately produces zero items under some valid condition (like a report-type gate) is unsafe as a loop-back point, even if it usually produces one item. Confirmed via the Step 20→Step 19 loop-back relocation.
+13. **NEW v4.0 — Field Passthrough Requires Per-Node Classification:** When adding a new field to a payload partway through a long Code Node chain, each downstream node must be individually classified as (a) a pure fetch/HTTP node — no passthrough needed, (b) a non-rebuilding IF/Switch — no passthrough needed, or (c) a Code Node that explicitly reconstructs its return object — needs the field added by hand at every such hop. Assuming a field "just carries through" without this check is how `sheet_id` almost shipped broken.
+14. **NEW v4.0 — NocoDB Field Type Constrains Multi-Value Data:** A field typed as "Email" in NocoDB is a validated single-address type; multi-address strings (needed for multiple approval recipients) require a LongText field instead, consistent with how other multi-value fields (SEO Keywords, Brand Phrases) are already typed in this same table.
+15. **NEW v4.0 — Google Sheet Sharing Is Independent of Correct URL Routing:** Even after a sheet_url correctly resolves to the right per-client document, external recipients will hit a Google "request access" wall unless that document's own Drive sharing setting is changed to "Anyone with the link" (or the recipient is added as an explicit collaborator). This is a Drive permission setting, not something fixable in workflow code.
+16. **NEW v4.0 — Missing Source Data Silently Zeroes Averages, Not a Pipeline Bug:** A blank Star Rating field on an ALA record contributes `0` to `avg_star_rating`'s sum via `parseFloat(x || 0)`, while still counting toward the denominator — dragging the average down without any visible error. Confirmed via live diagnosis (AJI-003, 2.5 shown instead of a true 5.0) and resolved by filling in the missing source values, not a code change. Worth checking data completeness before assuming a calculation defect when an average looks implausible.
+
+---
+
+**Known Open Items (NOT resolved — explicitly deferred, per your instruction)**
+
+🔴 **SEO Impact section (Keywords Placed / Top Keyword / Coverage Rate) showing zero/blank across all clients.** Root cause identified: these fields are only populated from RDA records with `Approval Status = "Published"` — not "Approved" or "Edited-Approved." If no records anywhere have reached "Published" status yet, this section will correctly show all zeros simultaneously across every client, which matches what's being observed. **Still open:** whether "Published" is meant to be a manual status you set after a response actually goes live, or whether a missing automation step should be setting it — this determines whether the current all-zero state is "working as designed, awaiting real approvals" or "a missing piece of automation." Not yet decided; explicitly left open for the next session.
+
+⚠️ Sender name casing inconsistency ("VRYOH intelligence" vs "VRYOH Intelligence") — noted, not yet flagged as a fix request.
+
+⚠️ Fallback-to-miguel@solofella.com behavior when a client's Approval Contact Email is blank — raised as a question, not yet explicitly decided as intended long-term behavior.
+
+---
+
+**Token Budget**
+
+Zero tokens per report, regardless of client count. NocoDB queries + JavaScript aggregation + one Brevo call per client per run (now to potentially multiple recipients) — no AI calls anywhere in the loop.
+
+---
+
+**Change Log (v3.0 → v4.0)**
+Chats #99-104 · July 15-19, 2026
+
+- Fixed: daily reports silently stopping after first client (loop-back moved Step 20 → Step 19)
+- Fixed: daily report window overlap (Step 3 offset corrected 2 days → 1 day)
+- Fixed: hardcoded PAK-001 sheet URL in Step 17a/17b (dynamic sheet_id/sheet_url added)
+- Fixed: multi-recipient email support (previously non-functional despite being documented as working; explicit split logic added to 17a/17b/17c)
+- Changed: Client Config's Approval Contact Email field type, Email → LongText
+- Added: `sheet_id` field, read at Step 5, threaded through Steps 7/7b/9/10a/11/12/13/14/16a
+- Confirmed: multi-client loop now execution-verified across daily, weekly, and monthly (previously only weekly-tested in v3.0)
+- Confirmed: Step 17c requires no sheet_url fix (uses dashboard_url only, not a sheet link)
+- Corrected: Lesson 9 (multi-recipient claim) — previously documented as working automatically, now confirmed false and fixed explicitly
+- Revised: Lesson 12 (loop-back convention) — refined from "wire to the last node in the chain" to "wire to the node that unconditionally produces exactly one item every iteration"
+- Added: Lessons 13-16 (field passthrough classification, NocoDB field type constraints, Google Sheet sharing independence, missing-source-data effect on averages)
+- Added: disambiguating note distinguishing MRA from the separate SCX-Sheet-Sync workflow
+- Left open, by design: SEO/Published-status question — root cause identified, resolution deferred to next session
+- Node count unchanged at 30 — all v4.0 changes were logic/wiring fixes and field additions, no new nodes
