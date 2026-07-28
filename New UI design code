@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRYOH Intelligence — Daily Summary (All Locations)</title>
+</head>
+<body style="margin:0; padding:0; background-color:#FBF6EE; font-family:Georgia,'Times New Roman',serif;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBF6EE; padding:24px 0;">
+<tr>
+<td align="center">
+
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:640px; max-width:640px; background-color:#FBF6EE; border:1px solid #D7C2AA; border-radius:10px; overflow:hidden;">
+
+  <!-- ============ HEADER ============ -->
+  <tr>
+    <td style="background-color:#50352B; padding:22px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="font-family:Georgia,serif; font-size:14px; font-weight:700; letter-spacing:0.1em; color:#FBF6EE; text-transform:uppercase;">
+            VRYOH Intelligence
+          </td>
+          <td align="right" style="font-family:Georgia,serif; font-size:11px; color:#D7C2AA;">
+            intelligence@vryoh.com
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ============ TITLE BAND ============ -->
+  <tr>
+    <td style="background-color:#B57152; padding:26px 28px 30px 28px;">
+      <div style="font-family:Georgia,serif; font-size:22px; font-weight:700; color:#FBF6EE; line-height:1.3;">
+        24-Hour Review Summary
+      </div>
+      <div style="font-family:Georgia,serif; font-size:13px; color:#F3E4D4; margin-top:6px;">
+        Aji Ceviche Bar &middot; All 5 locations &middot; 2026-07-28
+      </div>
+    </td>
+  </tr>
+
+  <!-- ============ AGGREGATE STRIP ============ -->
+  <tr>
+    <td style="padding:24px 28px 6px 28px;">
+      <div style="font-family:Georgia,serif; font-size:10px; font-weight:700; letter-spacing:0.1em; color:#B39A7D; text-transform:uppercase; margin-bottom:12px;">
+        Across all locations — last 24 hours
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td width="25%" style="background-color:#EADBC7; border-radius:8px; padding:13px 8px; text-align:center;">
+            <div style="font-family:Georgia,serif; font-size:22px; font-weight:700; color:#50352B;">11</div>
+            <div style="font-family:Georgia,serif; font-size:8px; color:#8A6A50; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">New reviews</div>
+          </td>
+          <td width="6"></td>
+          <td width="25%" style="background-color:#D7C2AA; border-radius:8px; padding:13px 8px; text-align:center;">
+            <div style="font-family:Georgia,serif; font-size:22px; font-weight:700; color:#50352B;">4.6</div>
+            <div style="font-family:Georgia,serif; font-size:8px; color:#6B4F3A; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Avg rating</div>
+          </td>
+          <td width="6"></td>
+          <td width="25%" style="background-color:#EADBC7; border-radius:8px; padding:13px 8px; text-align:center;">
+            <div style="font-family:Georgia,serif; font-size:22px; font-weight:700; color:#50352B;">9</div>
+            <div style="font-family:Georgia,serif; font-size:8px; color:#8A6A50; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Drafts generated</div>
+          </td>
+          <td width="6"></td>
+          <td width="25%" style="background-color:#D7C2AA; border-radius:8px; padding:13px 8px; text-align:center;">
+            <div style="font-family:Georgia,serif; font-size:22px; font-weight:700; color:#B57152;">62</div>
+            <div style="font-family:Georgia,serif; font-size:8px; color:#6B4F3A; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Pending (all time)</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ============ LOCATION ROLL-CALL (primary focus — expanded) ============ -->
+  <tr>
+    <td style="padding:20px 28px 10px 28px;">
+      <div style="font-family:Georgia,serif; font-size:12px; font-weight:700; letter-spacing:0.1em; color:#B57152; text-transform:uppercase; margin-bottom:4px; border-top:1px solid #D7C2AA; padding-top:20px;">
+        By location
+      </div>
+    </td>
+  </tr>
+
+  <!-- Location row: Orlando -->
+  <tr>
+    <td style="padding:9px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D7C2AA; border-radius:10px; background-color:#ffffff;">
+        <tr>
+          <td width="8" style="background-color:#7A9B76; border-radius:10px 0 0 10px;">&nbsp;</td>
+          <td width="46%" style="padding:22px 14px 22px 20px; vertical-align:middle;">
+            <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; color:#50352B;">AJI-001 &middot; Orlando</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#8A7862; margin-top:7px;">2 reviews &middot; 5.0★</div>
+            <div style="font-family:Georgia,serif; font-size:11px; color:#B39A7D; margin-top:5px;">2 drafts (T3) &middot; Service Quality &amp; Delivery</div>
+          </td>
+          <td width="28%" style="padding:22px 14px; vertical-align:middle; border-left:1px solid #EADBC7;">
+            <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#7A9B76;">Positive 100%</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#B57152; font-weight:700; margin-top:10px;">27 pending</div>
+          </td>
+          <td width="26%" style="padding:22px 20px 22px 14px; vertical-align:middle; border-left:1px solid #EADBC7; text-align:center;">
+            <a href="#aji-001" style="display:inline-block; font-family:Georgia,serif; font-size:12px; font-weight:700; color:#B57152; text-decoration:none; border:1px solid #B57152; border-radius:6px; padding:10px 14px;">View &amp; Approve →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Location row: Casselberry -->
+  <tr>
+    <td style="padding:9px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D7C2AA; border-radius:10px; background-color:#ffffff;">
+        <tr>
+          <td width="8" style="background-color:#C9A24A; border-radius:10px 0 0 10px;">&nbsp;</td>
+          <td width="46%" style="padding:22px 14px 22px 20px; vertical-align:middle;">
+            <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; color:#50352B;">AJI-002 &middot; Casselberry</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#8A7862; margin-top:7px;">5 reviews &middot; 4.2★</div>
+            <div style="font-family:Georgia,serif; font-size:11px; color:#B39A7D; margin-top:5px;">3 drafts (T2) &middot; Wait Time &amp; Reservations</div>
+          </td>
+          <td width="28%" style="padding:22px 14px; vertical-align:middle; border-left:1px solid #EADBC7;">
+            <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#C9A24A;">Mixed 60% / 40%</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#B57152; font-weight:700; margin-top:10px;">14 pending</div>
+          </td>
+          <td width="26%" style="padding:22px 20px 22px 14px; vertical-align:middle; border-left:1px solid #EADBC7; text-align:center;">
+            <a href="#aji-002" style="display:inline-block; font-family:Georgia,serif; font-size:12px; font-weight:700; color:#B57152; text-decoration:none; border:1px solid #B57152; border-radius:6px; padding:10px 14px;">View &amp; Approve →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Location row: Sarasota -->
+  <tr>
+    <td style="padding:9px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D7C2AA; border-radius:10px; background-color:#ffffff;">
+        <tr>
+          <td width="8" style="background-color:#7A9B76; border-radius:10px 0 0 10px;">&nbsp;</td>
+          <td width="46%" style="padding:22px 14px 22px 20px; vertical-align:middle;">
+            <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; color:#50352B;">AJI-003 &middot; Sarasota</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#8A7862; margin-top:7px;">1 review &middot; 5.0★</div>
+            <div style="font-family:Georgia,serif; font-size:11px; color:#B39A7D; margin-top:5px;">1 draft (T1) &middot; Food &amp; Beverage Quality</div>
+          </td>
+          <td width="28%" style="padding:22px 14px; vertical-align:middle; border-left:1px solid #EADBC7;">
+            <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#7A9B76;">Positive 100%</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#B57152; font-weight:700; margin-top:10px;">6 pending</div>
+          </td>
+          <td width="26%" style="padding:22px 20px 22px 14px; vertical-align:middle; border-left:1px solid #EADBC7; text-align:center;">
+            <a href="#aji-003" style="display:inline-block; font-family:Georgia,serif; font-size:12px; font-weight:700; color:#B57152; text-decoration:none; border:1px solid #B57152; border-radius:6px; padding:10px 14px;">View &amp; Approve →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Location row: Tampa -->
+  <tr>
+    <td style="padding:9px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D7C2AA; border-radius:10px; background-color:#ffffff;">
+        <tr>
+          <td width="8" style="background-color:#A5453A; border-radius:10px 0 0 10px;">&nbsp;</td>
+          <td width="46%" style="padding:22px 14px 22px 20px; vertical-align:middle;">
+            <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; color:#50352B;">AJI-004 &middot; Tampa</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#8A7862; margin-top:7px;">3 reviews &middot; 3.3★</div>
+            <div style="font-family:Georgia,serif; font-size:11px; color:#B39A7D; margin-top:5px;">3 drafts (T3) &middot; Service Quality &amp; Delivery</div>
+          </td>
+          <td width="28%" style="padding:22px 14px; vertical-align:middle; border-left:1px solid #EADBC7;">
+            <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#A5453A;">Negative 67%</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#B57152; font-weight:700; margin-top:10px;">9 pending</div>
+          </td>
+          <td width="26%" style="padding:22px 20px 22px 14px; vertical-align:middle; border-left:1px solid #EADBC7; text-align:center;">
+            <a href="#aji-004" style="display:inline-block; font-family:Georgia,serif; font-size:12px; font-weight:700; color:#FBF6EE; text-decoration:none; background-color:#A5453A; border-radius:6px; padding:10px 14px;">View &amp; Approve →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Location row: St. Petersburg -->
+  <tr>
+    <td style="padding:9px 28px 22px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D7C2AA; border-radius:10px; background-color:#ffffff;">
+        <tr>
+          <td width="8" style="background-color:#7A9B76; border-radius:10px 0 0 10px;">&nbsp;</td>
+          <td width="46%" style="padding:22px 14px 22px 20px; vertical-align:middle;">
+            <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; color:#50352B;">AJI-005 &middot; St. Petersburg</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#8A7862; margin-top:7px;">0 reviews &middot; —</div>
+            <div style="font-family:Georgia,serif; font-size:11px; color:#B39A7D; margin-top:5px;">No new signal in the last 24 hours</div>
+          </td>
+          <td width="28%" style="padding:22px 14px; vertical-align:middle; border-left:1px solid #EADBC7;">
+            <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#B39A7D;">No change</div>
+            <div style="font-family:Georgia,serif; font-size:13px; color:#B57152; font-weight:700; margin-top:10px;">6 pending</div>
+          </td>
+          <td width="26%" style="padding:22px 20px 22px 14px; vertical-align:middle; border-left:1px solid #EADBC7; text-align:center;">
+            <a href="#aji-005" style="display:inline-block; font-family:Georgia,serif; font-size:12px; font-weight:700; color:#B57152; text-decoration:none; border:1px solid #B57152; border-radius:6px; padding:10px 14px;">View &amp; Approve →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ============ FOOTER (always included — compact, secondary) ============ -->
+  <tr>
+    <td style="background-color:#D7C2AA; padding:16px 28px; text-align:center;">
+
+      <div style="font-family:Georgia,serif; font-size:13px; font-weight:700; color:#50352B; letter-spacing:0.03em; margin-bottom:5px;">
+        VRYOH
+      </div>
+
+      <div style="font-family:Georgia,serif; font-size:10px; color:#8A6A50; margin-bottom:10px;">
+        Governed Review Responses &amp; Guest Signal Intelligence
+      </div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="background-color:#FBF6EE; border-left:3px solid #B57152; border-radius:0 4px 4px 0; padding:10px 14px;">
+            <div style="font-family:Georgia,serif; font-size:9.5px; font-style:italic; color:#50352B; line-height:1.5; text-align:center;">
+              <strong style="font-style:italic;">Governance:</strong> VRYOH detects and interprets signals only.
+              It never prescribes operational actions.
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="font-family:Georgia,serif; font-size:9px; color:#8A6A50; margin-top:10px;">
+        <a href="https://vryoh.com" style="color:#8A6A50; text-decoration:none;">vryoh.com</a>
+        &nbsp;|&nbsp;
+        <a href="#" style="color:#8A6A50; text-decoration:none;">Archive</a>
+      </div>
+
+      <div style="font-family:Georgia,serif; font-size:8px; color:#A6906F; margin-top:4px;">
+        © 2026 VRYOH. All rights reserved. Automated message, please do not reply.
+      </div>
+
+    </td>
+  </tr>
+  <!-- ============ END FOOTER ============ -->
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
