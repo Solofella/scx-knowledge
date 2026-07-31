@@ -1,0 +1,176 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s7 = $('Step 7b - Build RDA Query URL').first().json;\n\nconst allRda = input.list || [];\nconst alaRecords = s7.ala_records || [];\n\n// Build period timestamps for ALA Date comparison\nconst pStart = new Date(s7.period_start);\npStart.setHours(0, 0, 0, 0);\nconst periodStartTs = pStart.getTime();\n\nconst pEnd = new Date(s7.period_end);\npEnd.setHours(0, 0, 0, 0);\nconst periodEndTs = pEnd.getTime();\n\n// Build ALA Date lookup map\nconst alaDateMap = {};\nfor (let i = 0; i < alaRecords.length; i++) {\n  let alaId = String(alaRecords[i]['Id']);\n  let alaDateRaw = alaRecords[i]['Date'] || '';\n  let alaTs = 0;\n  \n  if (alaDateRaw.length > 0) {\n    let parts = alaDateRaw.split('/');\n    if (parts.length === 3) {\n      let month = parseInt(parts[0]);\n      let day = parseInt(parts[1]);\n      let year = 2000 + parseInt(parts[2]);\n      alaTs = new Date(year, month - 1, day).getTime();\n    }\n  }\n  \n  alaDateMap[alaId] = {\n    ala_record: alaRecords[i],\n    ala_timestamp: alaTs\n  };\n}\n\n// Filter RDA by ALA Date\nconst filteredRda = [];\nconst filtered_ala_ids = [];\nconst platform_counts = {};\nlet star_sum = 0;\n\nfor (let i = 0; i < allRda.length; i++) {\n  let rec = allRda[i];\n  let alaId = String(rec['ALA Record ID'] || '');\n  \n  if (alaDateMap[alaId]) {\n    let alaTs = alaDateMap[alaId].ala_timestamp;\n    \n    if (alaTs >= periodStartTs && alaTs < periodEndTs) {\n      filteredRda.push(rec);\n      filtered_ala_ids.push(alaId);\n      \n      let alaRec = alaDateMap[alaId].ala_record;\n      let plat = alaRec['Platform'] || 'Unknown';\n      platform_counts[plat] = (platform_counts[plat] || 0) + 1;\n      star_sum += parseFloat(alaRec['Star Rating'] || 0);\n    }\n  }\n}\n\nconst total_rda = filteredRda.length;\nconst avg_star_rating = total_rda > 0 ? Math.round((star_sum / total_rda) * 100) / 100 : 0;\n\nlet approved_count = 0;\nlet published_count = 0;\nlet sla_compliant = 0;\nlet velocity_sum = 0;\nlet velocity_count = 0;\n\nconst tier_map = {};\ntier_map['T1'] = {};\ntier_map['T1'].total = 0;\ntier_map['T1'].approved = 0;\ntier_map['T1'].pending = 0;\ntier_map['T1'].velocity_sum = 0;\ntier_map['T1'].velocity_count = 0;\ntier_map['T2'] = {};\ntier_map['T2'].total = 0;\ntier_map['T2'].approved = 0;\ntier_map['T2'].pending = 0;\ntier_map['T2'].velocity_sum = 0;\ntier_map['T2'].velocity_count = 0;\ntier_map['T3'] = {};\ntier_map['T3'].total = 0;\ntier_map['T3'].approved = 0;\ntier_map['T3'].pending = 0;\ntier_map['T3'].velocity_sum = 0;\ntier_map['T3'].velocity_count = 0;\n\nconst published_drafts = [];\n\nfor (let i = 0; i < filteredRda.length; i++) {\n  let rec = filteredRda[i];\n  let status = (rec['Approval Status'] || '').trim();\n  let tier_raw = (rec['Confirmed Response Tier'] || '').trim();\n  let tier = null;\n  if (tier_raw.indexOf('T1') === 0) tier = 'T1';\n  else if (tier_raw.indexOf('T2') === 0) tier = 'T2';\n  else if (tier_raw.indexOf('T3') === 0) tier = 'T3';\n  \n  if (tier && tier_map[tier]) {\n    tier_map[tier].total++;\n  }\n  \n  let is_approved = status === 'Approved' || status === 'Edited-Approved';\n  let is_pending = status === 'Pending' || status === 'Pending-Elevated';\n  let is_published = status === 'Published';\n  \n  if (is_approved || is_published) {\n    approved_count++;\n    if (tier && tier_map[tier]) {\n      tier_map[tier].approved++;\n    }\n  }\n  \n  if (is_pending) {\n    if (tier && tier_map[tier]) {\n      tier_map[tier].pending++;\n    }\n  }\n  \n  if (is_published) {\n    published_count++;\n    let pub_ts = rec['Published Timestamp'] ? new Date(rec['Published Timestamp']).getTime() : 0;\n    let rda_ts = rec['RDA Timestamp'] ? new Date(rec['RDA Timestamp']).getTime() : 0;\n    \n    if (pub_ts > 0 && rda_ts > 0) {\n      let hrs = (pub_ts - rda_ts) / 3600000;\n      velocity_sum += hrs;\n      velocity_count++;\n      if (tier && tier_map[tier]) {\n        tier_map[tier].velocity_sum += hrs;\n        tier_map[tier].velocity_count++;\n      }\n      if (hrs <= 48) {\n        sla_compliant++;\n      }\n    }\n    \n    let draft_text = (rec['Public Response Draft'] || '').toLowerCase();\n    let pd = {};\n    pd.draft_text = draft_text;\n    pd.tier = tier;\n    published_drafts.push(pd);\n  }\n}\n\nconst sla_compliance_rate = published_count > 0 ? Math.round((sla_compliant / published_count) * 10000) / 100 : 0;\nconst seo_avg_velocity_hrs = velocity_count > 0 ? Math.round((velocity_sum / velocity_count) * 100) / 100 : 0;\nconst seo_response_rate = total_rda > 0 ? Math.round((published_count / total_rda) * 10000) / 100 : 0;\n\nconst tier_labels = {};\ntier_labels['T1'] = 'T1 Standard';\ntier_labels['T2'] = 'T2 Calibrated';\ntier_labels['T3'] = 'T3 Dignity-restoration';\n\nconst tier_breakdown = [];\nconst tier_keys = ['T1', 'T2', 'T3'];\nfor (let i = 0; i < tier_keys.length; i++) {\n  let tk = tier_keys[i];\n  let tm = tier_map[tk];\n  let avg_hrs = tm.velocity_count > 0 ? Math.round((tm.velocity_sum / tm.velocity_count) * 10) / 10 : 0;\n  let tb = {};\n  tb.tier = tier_labels[tk];\n  tb.total = tm.total;\n  tb.approved = tm.approved;\n  tb.pending = tm.pending;\n  tb.avg_approval_hrs = avg_hrs;\n  tier_breakdown.push(tb);\n}\n\n// Calculate all-time pending count for daily reports\nlet all_time_pending = 0;\nfor (let i = 0; i < allRda.length; i++) {\n  let status = (allRda[i]['Approval Status'] || '').trim();\n  if (status === 'Pending' || status === 'Pending-Elevated') {\n    all_time_pending++;\n  }\n}\n\nreturn [{ json: {\n  mra_run_id: s7.mra_run_id,\n  report_type: s7.report_type,\n  period_start: s7.period_start,\n  period_end: s7.period_end,\n  window_days: s7.window_days,\n  run_timestamp: s7.run_timestamp,\n  client_id: s7.client_id,\n  client_name: s7.client_name,\n  approval_email: s7.approval_email,\n  seo_keywords: s7.seo_keywords,\n  sheet_id: s7.sheet_id, \n  total_records: total_rda,\n  avg_star_rating: avg_star_rating,\n  platform_counts: platform_counts,\n  sla_compliance_rate: sla_compliance_rate,\n  seo_avg_velocity_hrs: seo_avg_velocity_hrs,\n  seo_response_rate: seo_response_rate,\n  tier_breakdown: tier_breakdown,\n  published_drafts: published_drafts,\n  total_rda: total_rda,\n  published_count: published_count,\n  all_time_pending: all_time_pending,\n  filtered_ala_record_ids: filtered_ala_ids\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        928
+      ],
+      "id": "a4d26686-9688-47ea-95f1-8549a485c94d",
+      "name": "Step 9 - Process RDA Records"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s7 = $input.first().json;\n\nconst url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,' + s7.client_id + ')&limit=1000&sort=RDA%20Timestamp';\n\nreturn [{ json: {\n  mra_run_id: s7.mra_run_id,\n  report_type: s7.report_type,\n  period_start: s7.period_start,\n  period_end: s7.period_end,\n  window_days: s7.window_days,\n  run_timestamp: s7.run_timestamp,\n  client_id: s7.client_id,\n  client_name: s7.client_name,\n  approval_email: s7.approval_email,\n  seo_keywords: s7.seo_keywords,\n  sheet_id: s7.sheet_id,\n  total_records: s7.total_records,\n  avg_star_rating: s7.avg_star_rating,\n  platform_counts: s7.platform_counts,\n  ala_records: s7.ala_records,\n  rda_query_url: url\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        928
+      ],
+      "id": "069aec2c-9f40-4369-9c1c-b2859614a6fe",
+      "name": "Step 7b - Build RDA Query URL"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.rda_query_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1472,
+        928
+      ],
+      "id": "1a3b898b-e142-4751-a685-4606cb0c842f",
+      "name": "Step 8 - Fetch RDA Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const s9 = $input.first().json;\n\nconst report_type = s9.report_type || 'weekly';\n\nconst client_id = s9.client_id || 'UNKNOWN';\nconst url = 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mdn68l4lm609fve?where=(Client%20ID,eq,' + client_id + ')~and(Report%20Window%20Type,eq,' + report_type + ')&limit=1000&sort=-Run%20Timestamp';\n\nreturn [{ json: {\n  sia_query_url: url,\n  mra_run_id: s9.mra_run_id,\n  report_type: s9.report_type,\n  period_start: s9.period_start,\n  period_end: s9.period_end,\n  window_days: s9.window_days,\n  run_timestamp: s9.run_timestamp,\n  client_id: s9.client_id,\n  client_name: s9.client_name,\n  approval_email: s9.approval_email,\n  seo_keywords: s9.seo_keywords,\n  sheet_id: s9.sheet_id,\n  total_records: s9.total_records,\n  avg_star_rating: s9.avg_star_rating,\n  platform_counts: s9.platform_counts,\n  sla_compliance_rate: s9.sla_compliance_rate,\n  seo_avg_velocity_hrs: s9.seo_avg_velocity_hrs,\n  seo_response_rate: s9.seo_response_rate,\n  tier_breakdown: s9.tier_breakdown,\n  published_count: s9.published_count,\n  all_time_pending: s9.all_time_pending,\n  filtered_ala_record_ids: s9.filtered_ala_record_ids\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        1184
+      ],
+      "id": "6519addf-469f-4738-9e31-42ee15fddf62",
+      "name": "Step 10a - Build SIA Query URL"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.sia_query_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1824,
+        1184
+      ],
+      "id": "3d2e15bb-dbb9-48dc-89af-51acb619f71f",
+      "name": "Step 10b - Fetch SIA Clusters",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2000,
+        1184
+      ],
+      "id": "da026db0-9c3e-4a84-a995-873613c7116a",
+      "name": "Step 10c - Fetch ESS Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 9 - Process RDA Records": {
+      "main": [
+        [
+          {
+            "node": "Step 10a - Build SIA Query URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7b - Build RDA Query URL": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Fetch RDA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Fetch RDA Records": {
+      "main": [
+        [
+          {
+            "node": "Step 9 - Process RDA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10a - Build SIA Query URL": {
+      "main": [
+        [
+          {
+            "node": "Step 10b - Fetch SIA Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10b - Fetch SIA Clusters": {
+      "main": [
+        [
+          {
+            "node": "Step 10c - Fetch ESS Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10c - Fetch ESS Records": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
