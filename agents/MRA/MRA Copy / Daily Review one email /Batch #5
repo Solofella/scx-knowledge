@@ -1,0 +1,143 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst s9 = $('Step 10a - Build SIA Query URL').first().json;\nconst s10c = $('Step 10c - Fetch ESS Records').first().json;\nconst s10d = $('Step 10d - Fetch EIP Records').first().json;\n\nconst report_type = s9.report_type || 'weekly';\n\nlet t_negative_count = 0;\nlet t_ambiguous_count = 0;\nlet t_positive_count = 0;\nconst domain_map = {};\nlet trend_signals_top5 = [];\n\nif (report_type === 'daily') {\n  const eip_records = s10d.list || [];\n  const filtered_ids = s9.filtered_ala_record_ids || [];\n  \n  // Build lookup set for fast filtering\n  const id_set = {};\n  for (let i = 0; i < filtered_ids.length; i++) {\n    id_set[String(filtered_ids[i])] = true;\n  }\n  \n  for (let i = 0; i < eip_records.length; i++) {\n    let rec = eip_records[i];\n    let ala_id = String(rec['ALA Record ID'] || '');\n    \n    // CRITICAL: Only process records in the daily window\n    if (!id_set[ala_id]) {\n      continue;\n    }\n    \n    let signal_type = (rec['Signal Type'] || '').trim();\n    let domain = (rec['Domain'] || '').trim();\n    \n    if (!domain || domain === '') {\n      domain = 'Unknown';\n    }\n    \n    if (signal_type === 'Positive Signal') {\n      t_positive_count++;\n    } else if (signal_type === 'Negative Signal') {\n      t_negative_count++;\n    } else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') {\n      t_ambiguous_count++;\n    }\n    \n    if (!domain_map[domain]) {\n      domain_map[domain] = {\n        domain: domain,\n        neg: 0,\n        amb: 0,\n        pos: 0,\n        total: 0\n      };\n    }\n    \n    if (signal_type === 'Positive Signal') {\n      domain_map[domain].pos++;\n    } else if (signal_type === 'Negative Signal') {\n      domain_map[domain].neg++;\n    } else if (signal_type === 'Mixed Signal' || signal_type === 'Ambiguous Signal') {\n      domain_map[domain].amb++;\n    }\n    \n    domain_map[domain].total++;\n  }\n  \n  trend_signals_top5 = [];\n\n} else {\n  const sia_input = $('Step 10b - Fetch SIA Clusters').first().json;\n  const allClusters = sia_input.list || [];\n  const latestRunTs = allClusters.length > 0 ? allClusters[0]['Run Timestamp'] : null;\n  \n  const clusters = [];\n  for (let i = 0; i < allClusters.length; i++) {\n    if (allClusters[i]['Run Timestamp'] === latestRunTs) {\n      clusters.push(allClusters[i]);\n    }\n  }\n  \n  for (let i = 0; i < clusters.length; i++) {\n    let cl = clusters[i];\n    let tier = (cl['Signal Tier'] || '').trim();\n    let domain = (cl['Domain'] || '').trim();\n    \n    if (!domain || domain === '') {\n      domain = 'Unknown';\n    }\n    \n    let n = parseInt(cl['N'] || 0);\n    \n    if (tier === 'T-NEGATIVE') t_negative_count += n;\n    else if (tier === 'T-AMBIGUOUS') t_ambiguous_count += n;\n    else if (tier === 'T-POSITIVE') t_positive_count += n;\n    \n    if (!domain_map[domain]) {\n      domain_map[domain] = {\n        domain: domain,\n        neg: 0,\n        amb: 0,\n        pos: 0,\n        total: 0\n      };\n    }\n    \n    if (tier === 'T-NEGATIVE') {\n      domain_map[domain].neg += n;\n    } else if (tier === 'T-AMBIGUOUS') {\n      domain_map[domain].amb += n;\n    } else if (tier === 'T-POSITIVE') {\n      domain_map[domain].pos += n;\n    }\n    \n    domain_map[domain].total += n;\n  }\n  \n  const trend_signals = [];\n  for (let i = 0; i < clusters.length; i++) {\n    let cl = clusters[i];\n    let is_singleton = cl['Is Singleton'] === true || cl['Is Singleton'] === 1;\n    if (!is_singleton) {\n      let ts = {};\n      ts.domain = (cl['Domain'] || '').trim();\n      ts.tier = (cl['Signal Tier'] || '').trim();\n      ts.n = parseInt(cl['N'] || 0);\n      let prior_n_val = null;\n      if (cl['Prior N'] !== null && cl['Prior N'] !== undefined) {\n        prior_n_val = parseInt(cl['Prior N']);\n      }\n      ts.prior_n = prior_n_val;\n      ts.trend_direction = (cl['Trend Direction'] || '').trim();\n      ts.percentage = parseFloat(cl['Percentage'] || 0);\n      trend_signals.push(ts);\n    }\n  }\n  \n  const tierOrder = {};\n  tierOrder['T-NEGATIVE'] = 0;\n  tierOrder['T-AMBIGUOUS'] = 1;\n  tierOrder['T-POSITIVE'] = 2;\n  \n  let sort_tmp;\n  for (let i = 0; i < trend_signals.length - 1; i++) {\n    for (let j = i + 1; j < trend_signals.length; j++) {\n      let ta = tierOrder[trend_signals[i].tier] !== undefined ? tierOrder[trend_signals[i].tier] : 3;\n      let tb = tierOrder[trend_signals[j].tier] !== undefined ? tierOrder[trend_signals[j].tier] : 3;\n      let do_swap = false;\n      if (tb < ta) do_swap = true;\n      else if (tb === ta && trend_signals[j].n > trend_signals[i].n) do_swap = true;\n      if (do_swap) {\n        sort_tmp = trend_signals[i];\n        trend_signals[i] = trend_signals[j];\n        trend_signals[j] = sort_tmp;\n      }\n    }\n  }\n  \n  for (let i = 0; i < trend_signals.length && i < 5; i++) {\n    trend_signals_top5.push(trend_signals[i]);\n  }\n}\n\nconst domain_keys = Object.keys(domain_map);\nconst top_domains = [];\nfor (let i = 0; i < domain_keys.length; i++) {\n  top_domains.push(domain_map[domain_keys[i]]);\n}\n\nlet swap_tmp;\nfor (let i = 0; i < top_domains.length - 1; i++) {\n  for (let j = i + 1; j < top_domains.length; j++) {\n    if (top_domains[j].total > top_domains[i].total) {\n      swap_tmp = top_domains[i];\n      top_domains[i] = top_domains[j];\n      top_domains[j] = swap_tmp;\n    }\n  }\n}\n\nconst seo_keywords = s9.seo_keywords || [];\nconst published_drafts = s9.published_drafts || [];\n\nconst keyword_hits = {};\nfor (let i = 0; i < seo_keywords.length; i++) {\n  keyword_hits[seo_keywords[i]] = 0;\n}\n\nfor (let i = 0; i < published_drafts.length; i++) {\n  let text = published_drafts[i].draft_text || '';\n  for (let j = 0; j < seo_keywords.length; j++) {\n    if (text.includes(seo_keywords[j])) {\n      keyword_hits[seo_keywords[j]]++;\n    }\n  }\n}\n\nlet seo_top_keyword = '';\nlet seo_top_count = 0;\n\nconst kw_keys = Object.keys(keyword_hits);\nfor (let i = 0; i < kw_keys.length; i++) {\n  let kw = kw_keys[i];\n  let count = keyword_hits[kw];\n  if (count > seo_top_count) {\n    seo_top_count = count;\n    seo_top_keyword = kw;\n  }\n}\n\nconst total_published = s9.published_count || 0;\nlet drafts_with_keyword = 0;\nfor (let i = 0; i < published_drafts.length; i++) {\n  let text = published_drafts[i].draft_text || '';\n  let found = false;\n  for (let j = 0; j < seo_keywords.length; j++) {\n    if (text.includes(seo_keywords[j])) {\n      found = true;\n    }\n  }\n  if (found) {\n    drafts_with_keyword++;\n  }\n}\n\nconst seo_coverage_rate = total_published > 0 ? Math.round((drafts_with_keyword / total_published) * 10000) / 100 : 0;\n\nconst ess_records = s10c.list || [];\nconst filtered_ala_ids = s9.filtered_ala_record_ids || [];\n\nconst ess_map = {};\nfor (let i = 0; i < ess_records.length; i++) {\n  let alaId = String(ess_records[i]['ALA Record ID'] || '');\n  let expr = (ess_records[i]['Expression Mode'] || 'Absent').trim();\n  ess_map[alaId] = expr;\n}\n\nconst expression_modes = {\n  'Explicit': 0,\n  'Implicit': 0,\n  'Masked': 0,\n  'Performative': 0,\n  'Conflicted': 0,\n  'Absent': 0\n};\n\nfor (let i = 0; i < filtered_ala_ids.length; i++) {\n  let alaId = filtered_ala_ids[i];\n  if (ess_map[alaId]) {\n    let expr = ess_map[alaId];\n    if (expression_modes.hasOwnProperty(expr)) {\n      expression_modes[expr]++;\n    }\n  } else {\n    expression_modes['Absent']++;\n  }\n}\n\nreturn [{ json: {\n  mra_run_id: s9.mra_run_id,\n  report_type: s9.report_type,\n  period_start: s9.period_start,\n  period_end: s9.period_end,\n  window_days: s9.window_days,\n  run_timestamp: s9.run_timestamp,\n  client_id: s9.client_id,\n  client_name: s9.client_name,\n  approval_email: s9.approval_email,\n  seo_keywords: s9.seo_keywords,\n  sheet_id: s9.sheet_id,\n  total_records: s9.total_records,\n  avg_star_rating: s9.avg_star_rating,\n  platform_counts: s9.platform_counts,\n  sla_compliance_rate: s9.sla_compliance_rate,\n  seo_avg_velocity_hrs: s9.seo_avg_velocity_hrs,\n  seo_response_rate: s9.seo_response_rate,\n  tier_breakdown: s9.tier_breakdown,\n  published_count: s9.published_count,\n  all_time_pending: s9.all_time_pending,\n  t_negative_count: t_negative_count,\n  t_ambiguous_count: t_ambiguous_count,\n  t_positive_count: t_positive_count,\n  top_domains: top_domains,\n  trend_signals: trend_signals_top5,\n  seo_keyword_hits: drafts_with_keyword,\n  seo_top_keyword: seo_top_keyword,\n  seo_coverage_rate: seo_coverage_rate,\n  expression_modes: expression_modes\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        1184
+      ],
+      "id": "fed29b17-4fa2-45a6-aa2c-a73781492bad",
+      "name": "Step 11 - Process SIA and SEO"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s11 = $('Step 11 - Process SIA and SEO').first().json;\n\nconst now = new Date();\nconst expires = new Date(now.getTime() + 72 * 3600000);\n\nconst ey = expires.getFullYear();\nconst em = expires.getMonth() + 1;\nconst ed = expires.getDate();\nconst eh = expires.getHours();\nconst emin = expires.getMinutes();\nconst esec = expires.getSeconds();\nconst exp_str = ey + '-' + (em < 10 ? '0' + em : '' + em) + '-' + (ed < 10 ? '0' + ed : '' + ed) + 'T' + (eh < 10 ? '0' + eh : '' + eh) + ':' + (emin < 10 ? '0' + emin : '' + emin) + ':' + (esec < 10 ? '0' + esec : '' + esec) + '.000Z';\n\nconst hex_chars = '0123456789abcdef';\nlet tok_a = '';\nlet tok_b = '';\nlet tok_c = '';\nlet tok_d = '';\nlet tok_e = '';\nfor (let i = 0; i < 8; i++) { tok_a += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 4; i++) { tok_b += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 3; i++) { tok_c += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 3; i++) { tok_d += hex_chars[Math.floor(Math.random() * 16)]; }\nfor (let i = 0; i < 12; i++) { tok_e += hex_chars[Math.floor(Math.random() * 16)]; }\nconst magic_token = tok_a + '-' + tok_b + '-4' + tok_c + '-a' + tok_d + '-' + tok_e;\n\nconst top_domains_json = JSON.stringify(s11.top_domains);\nconst tier_breakdown_json = JSON.stringify(s11.tier_breakdown);\nconst trend_signals_json = JSON.stringify(s11.trend_signals);\nconst platform_counts_json = JSON.stringify(s11.platform_counts);\n\nconst record = {};\nrecord['MRA Run ID'] = s11.mra_run_id;\nrecord['Report Type'] = s11.report_type;\nrecord['Client ID'] = s11.client_id;\nrecord['Period Start'] = s11.period_start;\nrecord['Period End'] = s11.period_end;\nrecord['Total Records'] = s11.total_records;\nrecord['Avg Star Rating'] = s11.avg_star_rating;\nrecord['SLA Compliance Rate'] = s11.sla_compliance_rate;\nrecord['T Negative Count'] = s11.t_negative_count;\nrecord['T Ambiguous Count'] = s11.t_ambiguous_count;\nrecord['T Positive Count'] = s11.t_positive_count;\nrecord['Top Domains JSON'] = top_domains_json;\nrecord['Tier Breakdown JSON'] = tier_breakdown_json;\nrecord['Trend Signals JSON'] = trend_signals_json;\nrecord['SEO Keyword Hits'] = s11.seo_keyword_hits;\nrecord['SEO Top Keyword'] = s11.seo_top_keyword;\nrecord['SEO Coverage Rate'] = s11.seo_coverage_rate;\nrecord['SEO Response Rate'] = s11.seo_response_rate;\nrecord['SEO Avg Velocity Hrs'] = s11.seo_avg_velocity_hrs;\nrecord['Platform Counts JSON'] = platform_counts_json;\nrecord['Magic Link Token'] = magic_token;\nrecord['Token Expires At'] = exp_str;\nrecord['Error Log'] = '';\n\nreturn [{ json: {\n  mra_run_id: s11.mra_run_id,\n  report_type: s11.report_type,\n  client_id: s11.client_id,\n  client_name: s11.client_name,\n  approval_email: s11.approval_email,\n  sheet_id: s11.sheet_id,\n  period_start: s11.period_start,\n  period_end: s11.period_end,\n  run_timestamp: s11.run_timestamp,\n  magic_token: magic_token,\n  token_expires_at: exp_str,\n  total_records: s11.total_records,\n  avg_star_rating: s11.avg_star_rating,\n  platform_counts: s11.platform_counts,\n  sla_compliance_rate: s11.sla_compliance_rate,\n  t_negative_count: s11.t_negative_count,\n  t_ambiguous_count: s11.t_ambiguous_count,\n  t_positive_count: s11.t_positive_count,\n  top_domains: s11.top_domains,\n  tier_breakdown: s11.tier_breakdown,\n  trend_signals: s11.trend_signals,\n  seo_keyword_hits: s11.seo_keyword_hits,\n  seo_top_keyword: s11.seo_top_keyword,\n  seo_coverage_rate: s11.seo_coverage_rate,\n  seo_response_rate: s11.seo_response_rate,\n  seo_avg_velocity_hrs: s11.seo_avg_velocity_hrs,\n  all_time_pending: s11.all_time_pending,\n  nocodb_body: JSON.stringify(record)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        1184
+      ],
+      "id": "653ad457-c232-4738-8558-38087e97c809",
+      "name": "Step 12 - Build MRA Record"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s12 = $('Step 12 - Build MRA Record').first().json;\n\nconst result = {};\nresult.mra_run_id = s12.mra_run_id;\nresult.report_type = s12.report_type;\nresult.client_id = s12.client_id;\nresult.client_name = s12.client_name;\nresult.approval_email = s12.approval_email;\nresult.sheet_id = s12.sheet_id;\nresult.period_start = s12.period_start;\nresult.period_end = s12.period_end;\nresult.run_timestamp = s12.run_timestamp;\nresult.magic_token = s12.magic_token;\nresult.token_expires_at = s12.token_expires_at;\nresult.total_records = s12.total_records;\nresult.avg_star_rating = s12.avg_star_rating;\nresult.platform_counts = s12.platform_counts;\nresult.sla_compliance_rate = s12.sla_compliance_rate;\nresult.t_negative_count = s12.t_negative_count;\nresult.t_ambiguous_count = s12.t_ambiguous_count;\nresult.t_positive_count = s12.t_positive_count;\nresult.top_domains = s12.top_domains;\nresult.tier_breakdown = s12.tier_breakdown;\nresult.trend_signals = s12.trend_signals;\nresult.seo_keyword_hits = s12.seo_keyword_hits;\nresult.seo_top_keyword = s12.seo_top_keyword;\nresult.seo_coverage_rate = s12.seo_coverage_rate;\nresult.seo_response_rate = s12.seo_response_rate;\nresult.seo_avg_velocity_hrs = s12.seo_avg_velocity_hrs;\nresult.all_time_pending = s12.all_time_pending;\nresult.nocodb_body = s12.nocodb_body;\nresult.skip_nocodb = s12.report_type === 'daily' ? true : false;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        1184
+      ],
+      "id": "2c2a2be8-a7f0-47bc-b877-e7d4ec51b03b",
+      "name": "Step 13 - Check Report Type"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m5yektnbtxf8evk?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2000,
+        1184
+      ],
+      "id": "da026db0-9c3e-4a84-a995-873613c7116a",
+      "name": "Step 10c - Fetch ESS Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy?where=(Client%20ID,eq,' + $('Step 5 - Extract Client Config').first().json.client_id + ')&limit=1000' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2192,
+        1184
+      ],
+      "id": "576cf1a4-816f-49b7-be3a-706c323c8c46",
+      "name": "Step 10d - Fetch EIP Records",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 11 - Process SIA and SEO": {
+      "main": [
+        [
+          {
+            "node": "Step 12 - Build MRA Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12 - Build MRA Record": {
+      "main": [
+        [
+          {
+            "node": "Step 13 - Check Report Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 13 - Check Report Type": {
+      "main": [
+        []
+      ]
+    },
+    "Step 10c - Fetch ESS Records": {
+      "main": [
+        [
+          {
+            "node": "Step 10d - Fetch EIP Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10d - Fetch EIP Records": {
+      "main": [
+        [
+          {
+            "node": "Step 11 - Process SIA and SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
