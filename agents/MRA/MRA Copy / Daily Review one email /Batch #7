@@ -1,0 +1,195 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s16 = $input.first().json;\n\nconst client_name = s16.client_name || s16.client_id || 'Client';\nconst client_id_str = s16.client_id || '';\nconst period_start = s16.period_start ? s16.period_start.slice(0, 10) : '';\nconst period_end = s16.period_end ? s16.period_end.slice(0, 10) : '';\nconst magic_token = s16.magic_token || '';\nconst dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;\nconst sheet_id = s16.sheet_id || '';\nconst sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheet_id + '/edit';\n\nconst platform_counts = s16.platform_counts || {};\nconst top_domains = s16.top_domains || [];\nconst expression_modes = s16.expression_modes || {};\nconst tier_breakdown = s16.tier_breakdown || [];\nconst trend_signals = s16.trend_signals || [];\nconst avg_star_rating = s16.avg_star_rating || 0;\nconst total_records = s16.total_records || 0;\nconst all_time_pending = s16.all_time_pending || 0;\n\nconst emailStyles = `\n  body { \n    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; \n    line-height: 1.6; \n    color: #384653; \n    background-color: #F6F6F6; \n    margin: 0; \n    padding: 0; \n  }\n  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }\n  .header { \n    background-color: #64B8CE;\n    color: #2E304E; \n    padding: 32px 24px; \n    text-align: center; \n  }\n  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }\n  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }\n  .content { padding: 24px; }\n  .section { margin-bottom: 24px; }\n  .section-title { \n    font-size: 16px; \n    font-weight: 600; \n    color: #2E304E; \n    margin: 0 0 12px 0; \n  }\n  .metric-card { \n    background-color: #C7E0E7; \n    border-left: 4px solid #64B8CE; \n    padding: 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }\n  .metric-row:last-child { margin-bottom: 0; }\n  .metric-label { font-size: 14px; color: #384653; font-weight: 500; }\n  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }\n  .metric-large { font-size: 32px; font-weight: 700; color: #2E304E; margin: 8px 0; line-height: 1; }\n  .domain-list { margin: 0; padding: 0; list-style: none; }\n  .domain-list li { \n    background-color: #C7E0E7; \n    padding: 10px 14px; \n    border-radius: 6px; \n    margin-bottom: 6px; \n    display: flex; \n    justify-content: space-between; \n    align-items: center; \n  }\n  .domain-name { font-size: 13px; color: #2E304E; font-weight: 500; }\n  .domain-count { \n    font-size: 13px; \n    font-weight: 700; \n    color: #2E304E; \n    background-color: rgba(100,184,206,0.2); \n    padding: 3px 10px; \n    border-radius: 10px; \n  }\n  .trend-item { \n    background-color: #C7E0E7; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 8px; \n    display: flex; \n    align-items: center; \n    border: 1px solid #64B8CE; \n  }\n  .trend-badge { \n    font-size: 11px; \n    text-transform: uppercase; \n    font-weight: 700; \n    padding: 4px 8px; \n    border-radius: 4px; \n    margin-right: 12px; \n    white-space: nowrap; \n  }\n  .trend-negative { \n    background-color: rgba(195,100,61,0.15); \n    color: #C3643D; \n    border: 1px solid #C3643D; \n  }\n  .trend-positive { \n    background-color: rgba(100,184,206,0.15); \n    color: #64B8CE; \n    border: 1px solid #64B8CE; \n  }\n  .trend-ambiguous { \n    background-color: rgba(233,207,201,0.3); \n    color: #C3643D; \n    border: 1px solid #E9CFC9; \n  }\n  .cta-button { \n    display: inline-block; \n    background-color: #64B8CE;\n    color: #FFFFFF !important; \n    padding: 14px 28px; \n    text-decoration: none; \n    border-bottom: none; \n    border-radius: 6px; \n    font-weight: 600; \n    font-size: 14px; \n    margin: 16px 0 8px 0; \n    box-shadow: 0 2px 4px rgba(100,184,206,0.3); \n  }\n  .footer { \n    background-color: #C7E0E7; \n    padding: 20px 24px; \n    text-align: center; \n    font-size: 12px; \n    color: #A8A9AD; \n    border-top: 1px solid #64B8CE; \n  }\n  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }\n  a { color: #3A6B7E; text-decoration: none; }\n`;\n\nconst email_subject = 'Weekly Intelligence Brief — ' + client_id_str + ' — Week of ' + period_start;\n\nconst total_sig = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);\nconst neg_pct = total_sig > 0 ? Math.round(((s16.t_negative_count || 0) / total_sig) * 100) : 0;\nconst amb_pct = total_sig > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_sig) * 100) : 0;\nconst pos_pct = total_sig > 0 ? Math.round(((s16.t_positive_count || 0) / total_sig) * 100) : 0;\n\nconst total_expr = (expression_modes.Explicit || 0) + (expression_modes.Implicit || 0) + (expression_modes.Masked || 0) + (expression_modes.Performative || 0) + (expression_modes.Conflicted || 0) + (expression_modes.Absent || 0);\n\nconst expr_pct = {};\nexpr_pct.Explicit = total_expr > 0 ? Math.round(((expression_modes.Explicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Implicit = total_expr > 0 ? Math.round(((expression_modes.Implicit || 0) / total_expr) * 100) : 0;\nexpr_pct.Masked = total_expr > 0 ? Math.round(((expression_modes.Masked || 0) / total_expr) * 100) : 0;\nexpr_pct.Performative = total_expr > 0 ? Math.round(((expression_modes.Performative || 0) / total_expr) * 100) : 0;\nexpr_pct.Conflicted = total_expr > 0 ? Math.round(((expression_modes.Conflicted || 0) / total_expr) * 100) : 0;\nexpr_pct.Absent = total_expr > 0 ? Math.round(((expression_modes.Absent || 0) / total_expr) * 100) : 0;\n\nlet total_drafts = 0;\nfor (let i = 0; i < tier_breakdown.length; i++) {\n  total_drafts += tier_breakdown[i].total || 0;\n}\n\nlet email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\nemail_body += '<div class=\"header\"><h1>Weekly Intelligence Brief</h1><p>' + client_id_str + ' • from ' + period_start + ' – ' + period_end + '</p></div>';\nemail_body += '<div class=\"content\">';\n\nemail_body += '<h2 style=\"font-size: 18px; color: #2E304E; margin: 0 0 16px 0; font-weight: 600;\">THIS WEEK\\'S SNAPSHOT</h2>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">REVIEW VOLUME</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + total_records + '</div>';\nemail_body += '<div class=\"metric-label\">Total reviews this week</div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PLATFORMS BREAKDOWN</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Google</span><span class=\"metric-value\">' + (platform_counts.Google || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">OpenTable</span><span class=\"metric-value\">' + (platform_counts.OpenTable || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Yelp</span><span class=\"metric-value\">' + (platform_counts.Yelp || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">TripAdvisor</span><span class=\"metric-value\">' + (platform_counts.TripAdvisor || 0) + '</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">DRAFT GENERATED COUNT</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + total_drafts + '</div>';\nemail_body += '<div class=\"metric-label\">Total drafts generated this week</div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">AVERAGE STAR RATING</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">This week</span><span class=\"metric-value\">' + avg_star_rating.toFixed(1) + ' stars</span></div>';\nemail_body += '</div></div>';\n\nconst sig_items = [];\nif ((s16.t_positive_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Positive</span><span class=\"metric-value\" style=\"color: #64B8CE;\">' + s16.t_positive_count + ' (' + pos_pct + '%)</span></div>');\n}\nif ((s16.t_ambiguous_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Ambiguous</span><span class=\"metric-value\" style=\"color: #E9CFC9;\">' + s16.t_ambiguous_count + ' (' + amb_pct + '%)</span></div>');\n}\nif ((s16.t_negative_count || 0) > 0) {\n  sig_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Negative</span><span class=\"metric-value\" style=\"color: #C3643D;\">' + s16.t_negative_count + ' (' + neg_pct + '%)</span></div>');\n}\nif (sig_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">SIGNAL DIRECTION</h3><div class=\"metric-card\">' + sig_items.join('') + '</div></div>';\n}\n\nconst expr_items = [];\nif ((expression_modes.Explicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Explicit</span><span class=\"metric-value\">' + expression_modes.Explicit + ' (' + expr_pct.Explicit + '%)</span></div>');\n}\nif ((expression_modes.Implicit || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Implicit</span><span class=\"metric-value\">' + expression_modes.Implicit + ' (' + expr_pct.Implicit + '%)</span></div>');\n}\nif ((expression_modes.Masked || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Masked</span><span class=\"metric-value\">' + expression_modes.Masked + ' (' + expr_pct.Masked + '%)</span></div>');\n}\nif ((expression_modes.Performative || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Performative</span><span class=\"metric-value\">' + expression_modes.Performative + ' (' + expr_pct.Performative + '%)</span></div>');\n}\nif ((expression_modes.Conflicted || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Conflicted</span><span class=\"metric-value\">' + expression_modes.Conflicted + ' (' + expr_pct.Conflicted + '%)</span></div>');\n}\nif ((expression_modes.Absent || 0) > 0) {\n  expr_items.push('<div class=\"metric-row\"><span class=\"metric-label\">Absent</span><span class=\"metric-value\">' + expression_modes.Absent + ' (' + expr_pct.Absent + '%)</span></div>');\n}\nif (expr_items.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">EXPRESSION MODE BREAKDOWN</h3><div class=\"metric-card\">' + expr_items.join('') + '</div></div>';\n}\n\nif (top_domains && top_domains.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">TOP PAIN POINT DOMAINS</h3>';\n  email_body += '<ul class=\"domain-list\">';\n  for (let i = 0; i < top_domains.length; i++) {\n    let dom = top_domains[i];\n    email_body += '<li><span class=\"domain-name\">' + dom.domain + '</span><span class=\"domain-count\">' + dom.total + ' signals</span></li>';\n  }\n  email_body += '</ul></div>';\n}\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">THREE PRIORITY SIGNALS</h3><div class=\"metric-card\">';\nemail_body += '<p style=\"margin: 0; font-size: 13px; color: #384653;\">Top 3 signals requiring attention this week based on tier and frequency.</p>';\nemail_body += '</div></div>';\n\nif (trend_signals && trend_signals.length > 0) {\n  email_body += '<div class=\"section\"><h3 class=\"section-title\">TREND ANALYSIS</h3>';\n  for (let i = 0; i < trend_signals.length; i++) {\n    let ts = trend_signals[i];\n    let badge_class = 'trend-ambiguous';\n    if (ts.tier === 'T-NEGATIVE') badge_class = 'trend-negative';\n    else if (ts.tier === 'T-POSITIVE') badge_class = 'trend-positive';\n    \n    let prior_str = 'new';\n    if (ts.prior_n !== null && ts.prior_n !== undefined) {\n      let arrow = '→';\n      if (ts.trend_direction === 'UP') arrow = '↑';\n      else if (ts.trend_direction === 'DOWN') arrow = '↓';\n      prior_str = arrow + ' from ' + ts.prior_n;\n    }\n    \n    email_body += '<div class=\"trend-item\"><span class=\"trend-badge ' + badge_class + '\">' + ts.tier + '</span><span style=\"flex: 1; color: #2E304E;\">' + ts.domain + ' — <strong>' + ts.n + '</strong> signal(s) <em style=\"color: #A8A9AD;\">(' + prior_str + ')</em></span></div>';\n  }\n  email_body += '</div>';\n}\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PERFORMANCE METRICS</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">SLA Compliance (48-hour response)</span><span class=\"metric-value\">' + (s16.sla_compliance_rate || 0) + '%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Response Coverage</span><span class=\"metric-value\">100%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Avg Response Time</span><span class=\"metric-value\">' + (s16.seo_avg_velocity_hrs || 0) + ' hours</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">SEO IMPACT</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Keywords placed</span><span class=\"metric-value\">' + (s16.seo_keyword_hits || 0) + ' responses</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Top keyword</span><span class=\"metric-value\">' + (s16.seo_top_keyword || 'none') + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Coverage</span><span class=\"metric-value\">' + (s16.seo_coverage_rate || 0) + '%</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">NEXT WEEK FOCUS</h3><div class=\"metric-card\">';\nemail_body += '<p style=\"margin: 0; font-size: 13px; color: #384653;\">Where signals point for your team\\'s attention based on this week\\'s patterns.</p>';\nemail_body += '</div></div>';\n\nemail_body += '<div class=\"section\"><h3 class=\"section-title\">PENDING APPROVAL</h3><div class=\"metric-card\">';\nemail_body += '<div class=\"metric-large\">' + all_time_pending + '</div>';\nemail_body += '<div class=\"metric-label\">Draft(s) awaiting your review (all time)</div>';\nemail_body += '</div>';\nemail_body += '<a href=\"' + sheet_url + '\" class=\"cta-button\" style=\"color: #FFFFFF; text-decoration: none;\">View & Approve Drafts →</a>';\nemail_body += '</div>';\n\nemail_body += '</div>';\nemail_body += '<div class=\"footer\">' +\n  '<div style=\"margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;\">VRYOH</div>' +\n  '<div style=\"margin-bottom: 12px; font-size: 11px; color: #94A3B8;\">Governed Review Responses & Guest Signal Intelligence</div>' +\n  '<div class=\"footer-note\" style=\"margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;\">' +\n    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\\'t see in raw reviews.' +\n  '</div>' +\n  '<div style=\"margin-top: 12px; font-size: 10px; color: #94A3B8;\">' +\n    '<a href=\"https://vryoh.com\" style=\"color: #3A6B7E; text-decoration: none;\">vryoh.com</a> | ' +\n    '<a href=\"https://vryoh.com/archive\" style=\"color: #3A6B7E; text-decoration: none;\">Archive</a><br/>' +\n    '© 2026 VRYOH. All rights reserved.<br/>' +\n    'This is an automated message. Please do not reply to this email.' +\n  '</div>' +\n'</div>';\nemail_body += '</div></body></html>';\n\nconst raw_emails = s16.approval_email || 'miguel@solofella.com';\nconst email_list = raw_emails.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0);\n\nconst brevo_to_arr = [];\nfor (let i = 0; i < email_list.length; i++) {\n  const recipient = {};\n  recipient['email'] = email_list[i];\n  recipient['name'] = client_name;\n  brevo_to_arr.push(recipient);\n}\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH Intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  mra_run_id: s16.mra_run_id,\n  report_type: 'weekly',\n  client_id: client_id_str,\n  approval_email: s16.approval_email,\n  nocodb_record_id: s16.nocodb_record_id || null,\n  email_subject: email_subject,\n  email_body: email_body,\n  magic_token: magic_token,\n  dashboard_url: dashboard_url,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        1664
+      ],
+      "id": "801aa655-d73a-43bb-ac69-54b4862936f8",
+      "name": "Step 17b - Build Weekly Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s16 = $input.first().json;\n\nconst client_name = s16.client_name || s16.client_id || 'Client';\nconst period_start = s16.period_start ? s16.period_start.slice(0, 10) : '';\nconst magic_token = s16.magic_token || '';\nconst client_id_str = s16.client_id || '';\nconst dashboard_url = 'https://subtextcx.solofella.com/' + client_id_str + '?token=' + magic_token;\n\nconst tier_breakdown = s16.tier_breakdown || [];\nconst platform_counts = s16.platform_counts || {};\nconst top_domains = s16.top_domains || [];\n\nlet t3_total = 0;\nfor (let i = 0; i < tier_breakdown.length; i++) {\n  if (tier_breakdown[i].tier === 'T3 Dignity-restoration') {\n    t3_total = tier_breakdown[i].total || 0;\n  }\n}\n\nconst emailStyles = `\n  body { \n    font-family: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; \n    line-height: 1.6; \n    color: #384653; \n    background-color: #F6F6F6; \n    margin: 0; \n    padding: 0; \n  }\n  .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }\n  .header { \n    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); \n    color: #2E304E; \n    padding: 32px 24px; \n    text-align: center; \n  }\n  .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #2E304E; }\n  .header p { margin: 0; font-size: 14px; opacity: 0.95; color: #384653; }\n  .content { padding: 24px; }\n  .section { margin-bottom: 24px; }\n  .section-title { \n    font-size: 16px; \n    font-weight: 600; \n    color: #2E304E; \n    margin: 0 0 12px 0; \n    display: flex; \n    align-items: center; \n  }\n  .section-title .emoji { margin-right: 8px; font-size: 18px; }\n  .metric-card { \n    background-color: #C7E0E7; \n    border-left: 4px solid #64B8CE; \n    padding: 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; }\n  .metric-label { font-size: 14px; color: #A8A9AD; }\n  .metric-value { font-size: 14px; font-weight: 600; color: #2E304E; }\n  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }\n  .platform-item { \n    background-color: #C7E0E7; \n    padding: 12px; \n    border-radius: 6px; \n    text-align: center; \n    border: 1px solid #64B8CE; \n  }\n  .platform-name { \n    font-size: 12px; \n    color: #A8A9AD; \n    margin-bottom: 4px; \n    text-transform: uppercase; \n    font-weight: 600; \n    letter-spacing: 0.5px; \n  }\n  .platform-count { font-size: 20px; font-weight: 700; color: #2E304E; }\n  .domain-item { \n    background-color: #C7E0E7; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 8px; \n    display: flex; \n    justify-content: space-between; \n    align-items: center; \n    border-left: 3px solid #64B8CE; \n  }\n  .domain-name { font-size: 14px; color: #2E304E; font-weight: 500; }\n  .domain-count { \n    font-size: 14px; \n    font-weight: 700; \n    color: #2E304E; \n    background-color: rgba(100,184,206,0.2); \n    padding: 4px 12px; \n    border-radius: 12px; \n  }\n  .alert-box { \n    background-color: #fff5f0; \n    border-left: 4px solid #C3643D; \n    padding: 12px 16px; \n    border-radius: 6px; \n    margin-bottom: 12px; \n  }\n  .alert-text { color: #C3643D; font-size: 14px; margin: 0; font-weight: 500; }\n  .cta-button { \n    display: inline-block; \n    background: linear-gradient(135deg, #C7E0E7 0%, #64B8CE 99%); \n    color: #FFFFFF !important; \n    padding: 14px 28px; \n    text-decoration: none; \n    border-bottom: none; \n    border-radius: 6px; \n    font-weight: 600; \n    font-size: 14px; \n    margin: 16px 0; \n    box-shadow: 0 2px 4px rgba(100,184,206,0.3); \n  }\n  .footer { \n    background-color: #C7E0E7; \n    padding: 20px 24px; \n    text-align: center; \n    font-size: 12px; \n    color: #A8A9AD; \n    border-top: 1px solid #64B8CE; \n  }\n  .footer-note { margin: 8px 0; font-style: italic; color: #2E304E; }\n  a { color: #3A6B7E; text-decoration: none; }\n`;\n\nconst monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];\nconst startDate = new Date(period_start);\nconst monthName = monthNames[startDate.getMonth()];\nconst yearName = startDate.getFullYear();\n\nconst total_signals = (s16.t_negative_count || 0) + (s16.t_ambiguous_count || 0) + (s16.t_positive_count || 0);\nconst neg_pct = total_signals > 0 ? Math.round(((s16.t_negative_count || 0) / total_signals) * 100) : 0;\nconst amb_pct = total_signals > 0 ? Math.round(((s16.t_ambiguous_count || 0) / total_signals) * 100) : 0;\nconst pos_pct = total_signals > 0 ? Math.round(((s16.t_positive_count || 0) / total_signals) * 100) : 0;\n\nconst email_subject = 'Monthly Pattern Report — ' + client_id_str + ' — ' + monthName + ' ' + yearName;\n\nlet summary_html = '';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">Total reviews processed</span><span class=\"metric-value\">' + (s16.total_records || 0) + '</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">Average star rating</span><span class=\"metric-value\">' + (s16.avg_star_rating || 0) + ' ⭐</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-NEGATIVE</span><span class=\"metric-value\" style=\"color: #C3643D; font-weight: 700;\">' + (s16.t_negative_count || 0) + ' (' + neg_pct + '%)</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-AMBIGUOUS</span><span class=\"metric-value\" style=\"color: #E9CFC9; font-weight: 700;\">' + (s16.t_ambiguous_count || 0) + ' (' + amb_pct + '%)</span></div>';\nsummary_html += '<div class=\"metric-row\"><span class=\"metric-label\">T-POSITIVE</span><span class=\"metric-value\" style=\"color: #64B8CE; font-weight: 700;\">' + (s16.t_positive_count || 0) + ' (' + pos_pct + '%)</span></div>';\n\nlet domain_cards_html = '';\nlet domain_limit = top_domains.length > 5 ? 5 : top_domains.length;\nfor (let i = 0; i < domain_limit; i++) {\n  let dom = top_domains[i];\n  domain_cards_html += '<div class=\"domain-item\"><span class=\"domain-name\">' + (i + 1) + '. ' + dom.domain + '</span><span class=\"domain-count\">' + dom.total + '</span></div>';\n}\n\nlet platform_cards_html = '';\nconst platform_order = ['Google', 'OpenTable', 'Yelp', 'TripAdvisor'];\nfor (let i = 0; i < platform_order.length; i++) {\n  let plat = platform_order[i];\n  let count = platform_counts[plat] || 0;\n  platform_cards_html += '<div class=\"platform-item\"><div class=\"platform-name\">' + plat + '</div><div class=\"platform-count\">' + count + '</div></div>';\n}\n\nlet alert_html = '';\nif (t3_total > 0) {\n  alert_html = '<div class=\"alert-box\"><p class=\"alert-text\">⚠️ ' + t3_total + ' dignity-risk event(s) this month — elevated reviews requiring special attention</p></div>';\n}\n\nlet email_body = '<!DOCTYPE html><html><head><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\nemail_body += '<div class=\"header\"><h1>Monthly Pattern Report</h1><p>' + client_id_str + ' • ' + monthName + ' ' + yearName + '</p></div>';\nemail_body += '<div class=\"content\">';\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📊</span>30-Day Signal Summary</h2>';\nemail_body += '<div class=\"metric-card\">' + summary_html + '</div></div>';\n\nif (domain_cards_html) {\n  email_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">🔍</span>Top 5 Pain Point Domains</h2>' + domain_cards_html + '</div>';\n}\n\nif (alert_html) {\n  email_body += alert_html;\n}\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📈</span>Platform Performance</h2>';\nemail_body += '<div class=\"platform-grid\">' + platform_cards_html + '</div></div>';\n\nemail_body += '<div class=\"section\"><h2 class=\"section-title\"><span class=\"emoji\">📊</span>Response Metrics</h2>';\nemail_body += '<div class=\"metric-card\">';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Total drafts generated</span><span class=\"metric-value\">' + (s16.total_records || 0) + '</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Approved within 48hr SLA</span><span class=\"metric-value\">' + (s16.sla_compliance_rate || 0) + '%</span></div>';\nemail_body += '<div class=\"metric-row\"><span class=\"metric-label\">Average approval time</span><span class=\"metric-value\">' + (s16.seo_avg_velocity_hrs || 0) + ' hours</span></div>';\nemail_body += '</div></div>';\n\nemail_body += '<a href=\"' + dashboard_url + '\" class=\"cta-button\" style=\"color: #FFFFFF; text-decoration: none; border-bottom: none;\">View Dashboard →</a>';\n\nemail_body += '</div>';\nemail_body += '<div class=\"footer\">' +\n  '<div style=\"margin-bottom: 12px; font-weight: 600; color: #2E304E; font-size: 13px;\">VRYOH</div>' +\n  '<div style=\"margin-bottom: 12px; font-size: 11px; color: #94A3B8;\">Governed Review Responses & Guest Signal Intelligence</div>' +\n  '<div class=\"footer-note\" style=\"margin: 12px 0; padding: 12px; background-color: #F1F5F9; border-left: 3px solid #3A6B7E; border-radius: 4px; font-size: 11px;\">' +\n    '<strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions. Your team applies operational judgment. We provide the intelligence you can\\'t see in raw reviews.' +\n  '</div>' +\n  '<div style=\"margin-top: 12px; font-size: 10px; color: #94A3B8;\">' +\n    '<a href=\"https://vryoh.com\" style=\"color: #3A6B7E; text-decoration: none;\">vryoh.com</a> | ' +\n    '<a href=\"https://vryoh.com/archive\" style=\"color: #3A6B7E; text-decoration: none;\">Archive</a><br/>' +\n    '© 2026 VRYOH. All rights reserved.<br/>' +\n    'This is an automated message. Please do not reply to this email.' +\n  '</div>' +\n'</div>';\nemail_body += '</div></body></html>';\n\nconst raw_emails = s16.approval_email || 'miguel@solofella.com';\nconst email_list = raw_emails.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0);\n\nconst brevo_to_arr = [];\nfor (let i = 0; i < email_list.length; i++) {\n  const recipient = {};\n  recipient['email'] = email_list[i];\n  recipient['name'] = client_name;\n  brevo_to_arr.push(recipient);\n}\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH Intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  mra_run_id: s16.mra_run_id,\n  report_type: 'monthly',\n  client_id: client_id_str,\n  approval_email: s16.approval_email,\n  nocodb_record_id: s16.nocodb_record_id || null,\n  email_subject: email_subject,\n  email_body: email_body,\n  magic_token: magic_token,\n  dashboard_url: dashboard_url,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        1904
+      ],
+      "id": "4699e65d-17c7-42fc-9b5c-043ae78880d1",
+      "name": "Step 17c - Build Monthly Email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b3b5593-7b04-4561-9b59-3252362e9455",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "daily",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3760,
+        1440
+      ],
+      "id": "dd7e7e8c-5e44-4216-a24a-a4f4b6af7820",
+      "name": "Step 16b - Route to Daily"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "82609055-63c9-485f-99d7-83bc7e9fecbd",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "weekly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3760,
+        1680
+      ],
+      "id": "938c511d-30c5-49a9-aff9-e75275efb74c",
+      "name": "Step 16c - Route to Weekly"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41a43ae6-f23d-4ce0-9da7-26b8b7bbe398",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "monthly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3776,
+        1920
+      ],
+      "id": "14fdfd82-f7ce-4316-9b72-6f98fa614d93",
+      "name": "Step 16d - Route to Monthly"
+    },
+    {
+      "parameters": {
+        "jsCode": "const locationResults = $('Step 4d - Split Locations for Processing').all().map(item => item.json);\n\nlet total_reviews = 0;\nlet weighted_rating_sum = 0;\nlet total_drafts = 0;\nlet total_pending = 0;\n\nfor (let i = 0; i < locationResults.length; i++) {\n  const loc = locationResults[i];\n  const reviewCount = loc.total_records || 0;\n  const avgRating = loc.avg_star_rating || 0;\n  total_reviews += reviewCount;\n  weighted_rating_sum += avgRating * reviewCount;\n  total_pending += loc.all_time_pending || 0;\n  total_drafts += (loc.t_negative_count || 0) + (loc.t_ambiguous_count || 0) + (loc.t_positive_count || 0);\n}\n\nlet blended_avg_rating = 0;\nif (total_reviews > 0) {\n  blended_avg_rating = weighted_rating_sum / total_reviews;\n} else if (locationResults.length > 0) {\n  blended_avg_rating = locationResults[0].avg_star_rating || 0;\n}\nblended_avg_rating = Math.round(blended_avg_rating * 10) / 10;\n\nconst result = {};\nresult['parent_account_id'] = locationResults[0] ? locationResults[0].parent_account_id : null;\nresult['total_reviews_24h'] = total_reviews;\nresult['blended_avg_rating'] = blended_avg_rating;\nresult['total_drafts_generated_24h'] = total_drafts;\nresult['total_pending_all_locations'] = total_pending;\nresult['locations'] = locationResults;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4064,
+        416
+      ],
+      "id": "b58e30eb-ad58-43d8-b22e-1cb24386e978",
+      "name": "16e - Aggregate Account Metrics"
+    }
+  ],
+  "connections": {
+    "Step 17b - Build Weekly Email": {
+      "main": [
+        []
+      ]
+    },
+    "Step 17c - Build Monthly Email": {
+      "main": [
+        []
+      ]
+    },
+    "Step 16b - Route to Daily": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Step 16c - Route to Weekly": {
+      "main": [
+        [
+          {
+            "node": "Step 17b - Build Weekly Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 16d - Route to Monthly": {
+      "main": [
+        [
+          {
+            "node": "Step 17c - Build Monthly Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16e - Aggregate Account Metrics": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
