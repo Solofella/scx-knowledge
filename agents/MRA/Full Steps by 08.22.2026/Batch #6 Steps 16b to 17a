@@ -1,0 +1,228 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b3b5593-7b04-4561-9b59-3252362e9455",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "daily",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3760,
+        1440
+      ],
+      "id": "dd7e7e8c-5e44-4216-a24a-a4f4b6af7820",
+      "name": "Step 16b - Route to Daily"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "82609055-63c9-485f-99d7-83bc7e9fecbd",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "weekly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3760,
+        1680
+      ],
+      "id": "938c511d-30c5-49a9-aff9-e75275efb74c",
+      "name": "Step 16c - Route to Weekly"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41a43ae6-f23d-4ce0-9da7-26b8b7bbe398",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "monthly",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3776,
+        1920
+      ],
+      "id": "14fdfd82-f7ce-4316-9b72-6f98fa614d93",
+      "name": "Step 16d - Route to Monthly"
+    }
+  ],
+  "connections": {
+    "Step 16b - Route to Daily": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Step 16c - Route to Weekly": {
+      "main": [
+        []
+      ]
+    },
+    "Step 16d - Route to Monthly": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const s16e = $input.first().json;\n\nconst locations = s16e.locations || [];\nconst parent_account_id = s16e.parent_account_id || 'UNKNOWN';\nconst total_reviews = s16e.total_reviews_24h || 0;\nconst blended_avg_rating = s16e.blended_avg_rating || 0;\nconst total_drafts = s16e.total_drafts_generated_24h || 0;\nconst total_pending = s16e.total_pending_all_locations || 0;\n\nconst account_display_name = parent_account_id;\nconst period_end = locations[0] && locations[0].period_end ? locations[0].period_end.slice(0, 10) : '';\nconst location_count_label = locations.length > 1 ? 'All ' + locations.length + ' locations' : '1 location';\n\nconst emailStyles = `\n  body { font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; color: #50352B; background-color: #FBF6EE; margin: 0; padding: 0; }\n  .container { max-width: 640px; margin: 0 auto; background-color: #FBF6EE; border: 1px solid #D7C2AA; border-radius: 10px; overflow: hidden; }\n  .brand-bar { background-color: #50352B; padding: 22px 28px; display: flex; justify-content: space-between; align-items: center; }\n  .brand-bar .wordmark { font-size: 14px; font-weight: 700; letter-spacing: 0.1em; color: #FBF6EE; }\n  .brand-bar .sender { font-size: 11px; color: #D7C2AA; }\n  .title-band { background-color: #B57152; padding: 26px 28px 30px; }\n  .title-band h1 { font-size: 22px; font-weight: 700; color: #FBF6EE; margin: 0 0 6px 0; }\n  .title-band p { font-size: 13px; color: #F3E4D4; margin: 0; }\n  .content { padding: 24px 28px 6px; }\n  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #B39A7D; margin-bottom: 12px; text-transform: uppercase; }\n  .kpi-grid { display: flex; gap: 6px; margin-bottom: 8px; }\n  .kpi-card { flex: 1; border-radius: 8px; padding: 13px 8px; text-align: center; }\n  .kpi-card.linen { background-color: #EADBC7; }\n  .kpi-card.greige { background-color: #D7C2AA; }\n  .kpi-table { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 8px; }\n  .kpi-table td { border-radius: 8px; padding: 13px 8px; text-align: center; width: 25%; }\n  .kpi-table td.linen { background-color: #EADBC7; }\n  .kpi-table td.greige { background-color: #D7C2AA; }\n  .kpi-num { font-size: 22px; font-weight: 700; color: #50352B; }\n  .kpi-num.accent { color: #B57152; }\n  .kpi-sub { font-size: 8px; color: #8A6A50; letter-spacing: 0.05em; margin-top: 4px; text-transform: uppercase; }\n  .by-location-label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: #B57152; padding-top: 20px; margin-top: 16px; border-top: 1px solid #D7C2AA; text-transform: uppercase; }\n\n  .loc-table { width: 100%; border-collapse: collapse; border: 1px solid #D7C2AA; border-radius: 10px; margin: 9px 0; overflow: hidden; background-color: #FFFFFF; }\n  .loc-table td { padding: 24px 16px; vertical-align: top; }\n  .loc-status-td, .loc-action-td { vertical-align: middle !important; }\n  .loc-stripe-td { width: 6px; padding: 0 !important; }\n  .loc-identity-td { text-align: left; width: 46%; }\n  .loc-status-td { border-left: 1px solid #EADBC7; text-align: center; }\n  .loc-action-td { width: 140px; border-left: 1px solid #EADBC7; text-align: center; }\n\n  .loc-name { font-size: 16px; font-weight: 700; color: #50352B; }\n  .loc-meta { font-size: 13px; color: #8A7862; margin-top: 7px; }\n  .loc-tier { font-size: 11px; color: #B39A7D; margin-top: 5px; }\n  .loc-domain { font-size: 11px; color: #B39A7D; margin-top: 2px; }\n  .loc-signal { font-size: 13px; font-weight: 700; }\n  .loc-pending { font-size: 13px; color: #B57152; font-weight: 700; margin-top: 10px; }\n\n  .btn-outline { display: inline-block; font-size: 12px; font-weight: 700; color: #B57152 !important; text-decoration: none !important; border: 1px solid #B57152; border-radius: 6px; padding: 10px 14px; white-space: nowrap; }\n  .btn-solid { display: inline-block; font-size: 12px; font-weight: 700; color: #FBF6EE !important; text-decoration: none !important; background-color: #A5453A; border: 1px solid #A5453A; border-radius: 6px; padding: 10px 14px; white-space: nowrap; }\n  .btn-solid-full { display: inline-block; font-size: 13px; font-weight: 700; color: #FBF6EE !important; text-decoration: none !important; background-color: #B57152; border-radius: 8px; padding: 12px 16px; text-align: center; line-height: 1.3; }\n\n  .footer { background-color: #D7C2AA; padding: 16px 28px; text-align: center; }\n  .footer .wordmark { font-size: 13px; font-weight: 700; color: #50352B; }\n  .footer .tagline { font-size: 10px; color: #8A6A50; margin-top: 4px; }\n  .footer-note { background: #FBF6EE; border-left: 3px solid #B57152; border-radius: 0 4px 4px 0; padding: 10px 14px; margin-top: 12px; text-align: center; font-size: 9.5px; font-style: italic; color: #50352B; }\n  .footer-links-main { font-size: 9px; color: #8A6A50; margin-top: 10px; }\n  .footer-links-main a { color: #8A6A50; text-decoration: none; }\n  .footer-links-copy { font-size: 8px; color: #B39A7D; margin-top: 4px; }\n\n  @media only screen and (max-width: 600px) {\n    .loc-table, .loc-table tbody, .loc-table tr, .loc-table td { display: block !important; width: 100% !important; box-sizing: border-box !important; }\n    .loc-stripe-td { display: none !important; }\n    .loc-identity-td { padding: 16px 16px 8px 16px !important; }\n    .loc-status-td, .loc-action-td { border-left: none !important; border-top: 1px solid #EADBC7 !important; text-align: left !important; padding: 14px 16px !important; }\n    .btn-outline, .btn-solid, .btn-solid-full { display: block !important; text-align: center !important; }\n  }\n`;\n\nconst email_subject = '24-Hour Review Summary — ' + account_display_name + ' — ' + period_end + ' (' + total_reviews + ' reviews)';\n\nfunction getSignalInfo(loc) {\n  const negCount = loc.t_negative_count || 0;\n  const ambCount = loc.t_ambiguous_count || 0;\n  const posCount = loc.t_positive_count || 0;\n  const totalSig = negCount + ambCount + posCount;\n\n  if (totalSig === 0) {\n    return { label: 'No change', color: '#B39A7D', isNegative: false };\n  }\n  const posPct = Math.round((posCount / totalSig) * 100);\n  const negPct = Math.round((negCount / totalSig) * 100);\n  if (posPct > 50) {\n    return { label: 'Positive ' + posPct + '%', color: '#7A9B76', isNegative: false };\n  }\n  if (negPct > 50) {\n    return { label: 'Negative ' + negPct + '%', color: '#A5453A', isNegative: true };\n  }\n  return { label: 'Mixed ' + posPct + '% / ' + negPct + '%', color: '#C9A24A', isNegative: false };\n}\n\nlet loc_rows_html = '';\nfor (let i = 0; i < locations.length; i++) {\n  const loc = locations[i];\n  const reviewCount = loc.total_records || 0;\n  const avgRating = loc.avg_star_rating || 0;\n  const pending = loc.all_time_pending || 0;\n  const clientId = loc.client_id || '';\n  const clientName = loc.client_name || clientId;\n  const sheetUrl = 'https://docs.google.com/spreadsheets/d/' + (loc.sheet_id || '') + '/edit';\n\n  const signalInfo = getSignalInfo(loc);\n\n  const platformCounts = loc.platform_counts || {};\n  const platformParts = [];\n  const platformKeys = Object.keys(platformCounts);\n  for (let pk = 0; pk < platformKeys.length; pk++) {\n    if (platformCounts[platformKeys[pk]] > 0) {\n      platformParts.push(platformKeys[pk] + ' ' + platformCounts[platformKeys[pk]]);\n    }\n  }\n  const platformLine = platformParts.length > 0 ? ' · ' + platformParts.join(', ') : '';\n\n  const metaLine = reviewCount > 0\n    ? reviewCount + (reviewCount === 1 ? ' review' : ' reviews') + ' · ' + avgRating.toFixed(1) + '★' + platformLine\n    : '0 reviews';\n\n  let tierLine = '';\n  const tierBreakdown = loc.tier_breakdown || [];\n  let topTierLabel = '';\n  let topTierTotal = 0;\n  for (let t = 0; t < tierBreakdown.length; t++) {\n    if ((tierBreakdown[t].total || 0) > topTierTotal) {\n      topTierTotal = tierBreakdown[t].total;\n      topTierLabel = tierBreakdown[t].tier;\n    }\n  }\n  if (topTierTotal > 0) {\n    const shortTier = topTierLabel.replace(' Standard', '').replace(' Calibrated', '').replace(' Dignity-restoration', '');\n    tierLine = topTierTotal + ' draft(s) (' + shortTier + ')';\n  }\n\n  let domainLine = '';\n  const topDomains = loc.top_domains || [];\n  if (topDomains.length > 0) {\n    domainLine = topDomains[0].domain + ' — ' + topDomains[0].total + ' signal(s)';\n  } else if (reviewCount === 0) {\n    domainLine = 'No new signal in the last 24 hours';\n  }\n\n  const btnClass = signalInfo.isNegative ? 'btn-solid' : 'btn-outline';\n  const btnHtml = locations.length === 1\n    ? '<a href=\"' + sheetUrl + '\" class=\"btn-solid-full\">View &amp; Approve<br/>Drafts →</a>'\n    : '<a href=\"' + sheetUrl + '\" class=\"' + btnClass + '\">View &amp; Approve →</a>';\n\n  loc_rows_html += '<table class=\"loc-table\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>';\n  loc_rows_html += '<td class=\"loc-stripe-td\" style=\"background:' + signalInfo.color + ';\"></td>';\n  loc_rows_html += '<td class=\"loc-identity-td\">';\n  loc_rows_html += '<div class=\"loc-name\">' + clientId + ' · ' + clientName + '</div>';\n  loc_rows_html += '<div class=\"loc-meta\">' + metaLine + '</div>';\n  if (tierLine) { loc_rows_html += '<div class=\"loc-tier\">' + tierLine + '</div>'; }\n  if (domainLine) { loc_rows_html += '<div class=\"loc-domain\">' + domainLine + '</div>'; }\n  loc_rows_html += '</td>';\n  loc_rows_html += '<td class=\"loc-status-td\">';\n  loc_rows_html += '<div class=\"loc-signal\" style=\"color:' + signalInfo.color + ';\">' + signalInfo.label + '</div>';\n  loc_rows_html += '<div class=\"loc-pending\">' + pending + ' pending</div>';\n  loc_rows_html += '</td>';\n  loc_rows_html += '<td class=\"loc-action-td\">' + btnHtml + '</td>';\n  loc_rows_html += '</tr></table>';\n}\n\nlet email_body = '<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>' + emailStyles + '</style></head><body>';\nemail_body += '<div class=\"container\">';\n\nemail_body += '<div class=\"brand-bar\"><div class=\"wordmark\">VRYOH INTELLIGENCE</div><div class=\"sender\"><a href=\"mailto:intelligence@vryoh.com\" style=\"color:#D7C2AA !important; text-decoration:none !important;\">intelligence@vryoh.com</a></div></div>';\n\nemail_body += '<div class=\"title-band\"><h1>24-Hour Review Summary</h1><p>' + account_display_name + ' · ' + location_count_label + ' · ' + period_end + '</p></div>';\n\nemail_body += '<div class=\"content\">';\nemail_body += '<div class=\"kpi-label\">ACROSS ALL LOCATIONS — LAST 24 HOURS</div>';\nemail_body += '<table class=\"kpi-table\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>';\nemail_body += '<td class=\"linen\"><div class=\"kpi-num\">' + total_reviews + '</div><div class=\"kpi-sub\">New reviews</div></td>';\nemail_body += '<td class=\"greige\"><div class=\"kpi-num\">' + blended_avg_rating.toFixed(1) + '</div><div class=\"kpi-sub\">Avg rating</div></td>';\nemail_body += '<td class=\"linen\"><div class=\"kpi-num\">' + total_drafts + '</div><div class=\"kpi-sub\">Drafts generated</div></td>';\nemail_body += '<td class=\"greige\"><div class=\"kpi-num accent\">' + total_pending + '</div><div class=\"kpi-sub\">Pending (all time)</div></td>';\nemail_body += '</tr></table>';\n\nif (locations.length > 1) {\n  email_body += '<div class=\"by-location-label\">BY LOCATION</div>';\n}\nemail_body += loc_rows_html;\nemail_body += '</div>';\n\nemail_body += '<div class=\"footer\">';\nemail_body += '<div class=\"wordmark\">VRYOH</div>';\nemail_body += '<div class=\"tagline\">Governed Review Responses &amp; Guest Signal Intelligence</div>';\nemail_body += '<div class=\"footer-note\"><strong>Governance:</strong> VRYOH detects and interprets signals only. It never prescribes operational actions.</div>';\nemail_body += '<div class=\"footer-links-main\"><a href=\"https://vryoh.com\">vryoh.com</a> | <a href=\"https://vryoh.com/archive\">Archive</a></div>';\nemail_body += '<div class=\"footer-links-copy\">© 2026 VRYOH. All rights reserved.<br/>This is an automated message. Please do not reply to this email.</div>';\nemail_body += '</div>';\n\nemail_body += '</div></body></html>';\n\nconst raw_emails_set = {};\nfor (let i = 0; i < locations.length; i++) {\n  const raw = locations[i].approval_email || '';\n  const parts = raw.split(/[,;]/).map(function(e) { return e.trim(); }).filter(function(e) { return e.length > 0; });\n  for (let p = 0; p < parts.length; p++) {\n    raw_emails_set[parts[p]] = true;\n  }\n}\nconst email_list = Object.keys(raw_emails_set);\nif (email_list.length === 0) {\n  email_list.push('miguel@solofella.com');\n}\n\nconst brevo_to_arr = [];\nfor (let i = 0; i < email_list.length; i++) {\n  const recipient = {};\n  recipient['email'] = email_list[i];\n  recipient['name'] = account_display_name;\n  brevo_to_arr.push(recipient);\n}\n\nconst brevo_sender = {};\nbrevo_sender['name'] = 'VRYOH Intelligence';\nbrevo_sender['email'] = 'intelligence@vryoh.com';\n\nconst brevo_obj = {};\nbrevo_obj['sender'] = brevo_sender;\nbrevo_obj['to'] = brevo_to_arr;\nbrevo_obj['subject'] = email_subject;\nbrevo_obj['htmlContent'] = email_body;\n\nreturn [{ json: {\n  parent_account_id: parent_account_id,\n  report_type: 'daily',\n  nocodb_record_id: null,\n  email_subject: email_subject,\n  email_body: email_body,\n  brevo_body: JSON.stringify(brevo_obj)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        400
+      ],
+      "id": "5385a685-9b54-4b8d-ba50-41c53a848313",
+      "name": "Step 17a - Build Daily Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "let all4c = [];\ntry {\n  all4c = $('Step 4c - Explode Locations for Account').all().map(function(item) { return item.json; });\n} catch (e) {\n  return [{ json: { error: '4c failed: ' + e.message } }];\n}\n\nlet allLoopResults = [];\ntry {\n  allLoopResults = $('Step 4d - Split Locations for Processing').all().map(function(item) { return item.json; });\n} catch (e) {\n  return [{ json: { error: '4d failed: ' + e.message } }];\n}\n\nconst currentAccountId = all4c.length > 0 ? all4c[all4c.length - 1].parent_account_id : null;\n\nconst expectedClientIds = {};\nfor (let i = 0; i < all4c.length; i++) {\n  if (all4c[i].parent_account_id === currentAccountId) {\n    expectedClientIds[all4c[i].client_id] = true;\n  }\n}\n\nconst locationResults = [];\nfor (let i = 0; i < allLoopResults.length; i++) {\n  const item = allLoopResults[i];\n  if (expectedClientIds[item.client_id]) {\n    locationResults.push(item);\n  }\n}\n\nlet total_reviews = 0;\nlet weighted_rating_sum = 0;\nlet total_drafts = 0;\nlet total_pending = 0;\n\nfor (let i = 0; i < locationResults.length; i++) {\n  const loc = locationResults[i];\n  const reviewCount = loc.total_records || 0;\n  const avgRating = loc.avg_star_rating || 0;\n  total_reviews += reviewCount;\n  weighted_rating_sum += avgRating * reviewCount;\n  total_pending += loc.all_time_pending || 0;\n  total_drafts += (loc.t_negative_count || 0) + (loc.t_ambiguous_count || 0) + (loc.t_positive_count || 0);\n}\n\nlet blended_avg_rating = 0;\nif (total_reviews > 0) {\n  blended_avg_rating = weighted_rating_sum / total_reviews;\n} else if (locationResults.length > 0) {\n  blended_avg_rating = locationResults[0].avg_star_rating || 0;\n}\nblended_avg_rating = Math.round(blended_avg_rating * 10) / 10;\n\nconst result = {};\nresult['parent_account_id'] = currentAccountId;\nresult['total_reviews_24h'] = total_reviews;\nresult['blended_avg_rating'] = blended_avg_rating;\nresult['total_drafts_generated_24h'] = total_drafts;\nresult['total_pending_all_locations'] = total_pending;\nresult['locations'] = locationResults;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        400
+      ],
+      "id": "b58e30eb-ad58-43d8-b22e-1cb24386e978",
+      "name": "16e - Aggregate Account Metrics"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e5a230c2-2ee6-400b-8e0c-b6c90f9ad882",
+              "leftValue": "={{ $json.report_type }}",
+              "rightValue": "daily",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1552,
+        416
+      ],
+      "id": "02063777-9120-4978-805b-47479f901f79",
+      "name": "16e-gate"
+    }
+  ],
+  "connections": {
+    "Step 17a - Build Daily Email": {
+      "main": [
+        []
+      ]
+    },
+    "16e - Aggregate Account Metrics": {
+      "main": [
+        [
+          {
+            "node": "Step 17a - Build Daily Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16e-gate": {
+      "main": [
+        [
+          {
+            "node": "16e - Aggregate Account Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
