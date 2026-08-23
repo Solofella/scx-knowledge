@@ -1,0 +1,169 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\nconst stability_axis = rec.temporal_signal_insight || \"No temporal context available\";\nconst pain_axis = rec.enriched_pain_point || \"Unclassified operational pain\";\nconst recurrence = rec.pattern_type_recurrence || \"Sporadic\";\nconst intensity = rec.intensity_level || \"\";\nlet urgency_level_default;\nif (recurrence === \"Systemic\" || intensity === \"Critical\") {\n  urgency_level_default = \"Immediate\";\n} else if (intensity === \"High\") {\n  urgency_level_default = \"Standard\";\n} else {\n  urgency_level_default = \"Monitoring\";\n}\nconst commercial_risk_preflag = [\"Dignity-Risk Signal\", \"Masked Negative Signal\"].includes(rec.signal_type || \"\");\nreturn [{ json: {\n  hsi_record_id: rec.hsi_record_id,\n  preliminary_response_tier: rec.preliminary_response_tier,\n  human_review_required: rec.human_review_required,\n  signal_synthesis_summary: rec.signal_synthesis_summary,\n  contextual_linguistic_framing: rec.contextual_linguistic_framing,\n  temporal_signal_insight: rec.temporal_signal_insight,\n  masked_emotion_hypothesis: rec.masked_emotion_hypothesis,\n  interpretation_confidence: rec.interpretation_confidence,\n  pattern_type_recurrence: rec.pattern_type_recurrence,\n  prior_record_count: rec.prior_record_count,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  dominant_pole: rec.dominant_pole,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  lang: rec.lang,\n  reviewer_handle: rec.reviewer_handle,\n  client_id: rec.client_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords,\n  templates: rec.templates,\n  stability_axis: stability_axis,\n  pain_axis: pain_axis,\n  urgency_level_default: urgency_level_default,\n  commercial_risk_preflag: commercial_risk_preflag\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "3cac717e-6afa-4459-973f-fb9393079c9a",
+      "name": "Step 7 - Pre-derive Decision Axes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5fbc1a9a-6d0b-47f0-a1f1-5c1d55708c0f",
+              "leftValue": "={{$json.preliminary_response_tier}}",
+              "rightValue": "T1",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "da7d6fd8-af16-4f7c-aa9e-709dd3bda7f5",
+      "name": "Step 8 - Tier Routing"
+    }
+  ],
+  "connections": {
+    "Step 7 - Pre-derive Decision Axes": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Tier Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Tier Routing": {
+      "main": [
+        [],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst templates = inp.templates || [];\nfunction hashId(id) {\n  let h = 0;\n  const s = String(id);\n  for (let i = 0; i < s.length; i++) {\n    h = Math.imul(31, h) + s.charCodeAt(i) | 0;\n  }\n  return Math.abs(h);\n}\nconst seed = hashId(inp.hsi_record_id);\nconst pole = inp.dominant_pole || \"Negative\";\nconst filtered = templates.filter(t => t[\"Signal Category\"] === pole);\nconst pool = filtered.length > 0 ? filtered : templates;\nconst selected = pool[seed % pool.length];\nreturn [{ json: {\n  hsi_record_id: inp.hsi_record_id,\n  preliminary_response_tier: inp.preliminary_response_tier,\n  human_review_required: inp.human_review_required,\n  signal_synthesis_summary: inp.signal_synthesis_summary,\n  contextual_linguistic_framing: inp.contextual_linguistic_framing,\n  temporal_signal_insight: inp.temporal_signal_insight,\n  masked_emotion_hypothesis: inp.masked_emotion_hypothesis,\n  interpretation_confidence: inp.interpretation_confidence,\n  pattern_type_recurrence: inp.pattern_type_recurrence,\n  prior_record_count: inp.prior_record_count,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  dominant_pole: inp.dominant_pole,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  lang: inp.lang,\n  reviewer_handle: inp.reviewer_handle,\n  client_id: inp.client_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  templates: inp.templates,\n  stability_axis: inp.stability_axis,\n  pain_axis: inp.pain_axis,\n  urgency_level_default: inp.urgency_level_default,\n  commercial_risk_preflag: inp.commercial_risk_preflag,\n  solution_type: selected?.[\"Template Name\"] || \"Standard Response\",\n  emotional_axis: inp.enriched_emotion_tag || \"Standard operational feedback\",\n  signal_based_consideration: selected?.[\"Signal-Based Consideration\"] || \"Review and respond per standard protocol\",\n  tone_style: \"Empathetic-Warm\",\n  urgency_level: inp.urgency_level_default,\n  commercial_risk_flag: false,\n  governance_flag: \"None\",\n  behavioral_interpretation: null,\n  t1_template_id: selected?.Id || null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        -96
+      ],
+      "id": "86197f60-ae45-4bce-83e1-dcf62d975cd7",
+      "name": "Step 9a - T1 Template Selection"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst isDignityRisk = (row.signal_type || \"\") === \"Dignity-Risk Signal\";\nconst isDignityDomain = (row.pain_point_sub_category || \"\").includes(\"Trust, Dignity\");\nconst governance_flag = (isDignityRisk || isDignityDomain) ? \"Flag\" : \"None\";\nreturn [{ json: {\n  hsi_record_id: row.hsi_record_id,\n  preliminary_response_tier: row.preliminary_response_tier,\n  human_review_required: row.human_review_required,\n  signal_synthesis_summary: row.signal_synthesis_summary,\n  contextual_linguistic_framing: row.contextual_linguistic_framing,\n  temporal_signal_insight: row.temporal_signal_insight,\n  masked_emotion_hypothesis: row.masked_emotion_hypothesis,\n  interpretation_confidence: row.interpretation_confidence,\n  pattern_type_recurrence: row.pattern_type_recurrence,\n  prior_record_count: row.prior_record_count,\n  enriched_pain_point: row.enriched_pain_point,\n  pain_point_sub_category: row.pain_point_sub_category,\n  signal_type: row.signal_type,\n  intensity_level: row.intensity_level,\n  dominant_pole: row.dominant_pole,\n  enriched_emotion_tag: row.enriched_emotion_tag,\n  ambiguity_flag: row.ambiguity_flag,\n  masked_emotion_flag: row.masked_emotion_flag,\n  collapse_flag: row.collapse_flag,\n  lang: row.lang,\n  reviewer_handle: row.reviewer_handle,\n  client_id: row.client_id,\n  ess_record_id: row.ess_record_id,\n  eip_record_id: row.eip_record_id,\n  ala_record_id: row.ala_record_id,\n  prior_run_id: row.prior_run_id,\n  emotion_hypothesis: row.emotion_hypothesis,\n  keywords: row.keywords,\n  templates: row.templates,\n  stability_axis: row.stability_axis,\n  pain_axis: row.pain_axis,\n  urgency_level_default: row.urgency_level_default,\n  commercial_risk_preflag: row.commercial_risk_preflag,\n  solution_type: row.solution_type,\n  emotional_axis: row.emotional_axis,\n  signal_based_consideration: row.signal_based_consideration,\n  tone_style: row.tone_style,\n  urgency_level: row.urgency_level,\n  commercial_risk_flag: row.commercial_risk_flag,\n  governance_flag: governance_flag,\n  behavioral_interpretation: row.behavioral_interpretation,\n  t1_template_id: row.t1_template_id\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        -96
+      ],
+      "id": "cf2ff8ba-9889-4c49-a8db-345f15be1164",
+      "name": "Step 9b - T1 Governance Screen"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $input.first().json;\nconst bra_system_prompt = `You are the BRA (Brand Response Architect) agent for Subtext CX.\nYour role: determine what the hospitality business should do with this guest signal.\nYou reason about response strategy. You do not draft language. You do not classify emotion.\nGOVERNANCE PRINCIPLE: SubtextCX never prescribes operational actions.\nYour Signal-Based Consideration is internal guidance — not a directive.\nReturn ONLY a valid JSON object with exactly these fields. No other text.\n{\n\"emotional_axis\": \"short phrase — the emotional dimension to address\",\n\"signal_based_consideration\": \"what the operations team should consider internally\",\n\"tone_style\": \"Empathetic-Formal / Empathetic-Warm / Neutral-Professional / Dignity-Restorative\",\n\"urgency_level\": \"Immediate / Standard / Monitoring\",\n\"commercial_risk_flag\": true or false,\n\"governance_flag\": \"None / Flag / Halt\",\n\"behavioral_interpretation\": \"2-3 sentences — what this signal means for the business\"\n}\nPROHIBITED in signal_based_consideration: refund amounts, vouchers, discounts, unauthorized promises, operational prescriptions.\ntone_style: T3 use Dignity-Restorative. T2 Masked/Conflicted use Empathetic-Formal. T2 Ambiguous use Neutral-Professional.\ngovernance_flag Halt triggers: discrimination/legal language, explicit escalation threat, unauthorized commitment.\nLANGUAGE: If lang=es, produce emotional_axis, signal_based_consideration, behavioral_interpretation in Spanish.`;\nconst bra_user_prompt =\n  `Determine the response strategy for this guest signal.\\n\\n` +\n  `RESPONSE TIER: ${rec.preliminary_response_tier}\\n` +\n  `SIGNAL TYPE: ${rec.signal_type}\\n` +\n  `INTENSITY: ${rec.intensity_level}\\n` +\n  `RECURRENCE: ${rec.pattern_type_recurrence}\\n` +\n  `PRIOR RECORDS: ${rec.prior_record_count || 0}\\n` +\n  (rec.lang ? `lang: ${rec.lang}\\n` : \"\") +\n  `\\nPRE-DERIVED AXES:\\n stability_axis: ${rec.stability_axis}\\n pain_axis: ${rec.pain_axis}\\n\\n` +\n  `HSI INTERPRETATION: ${rec.signal_synthesis_summary}\\n\\n` +\n  `LINGUISTIC: ${rec.contextual_linguistic_framing}\\n\\n` +\n  (rec.masked_emotion_hypothesis ? `MASKED: ${rec.masked_emotion_hypothesis}\\n\\n` : \"\") +\n  `Return JSON only. No preamble.`;\nreturn [{ json: {\n  hsi_record_id: rec.hsi_record_id,\n  preliminary_response_tier: rec.preliminary_response_tier,\n  human_review_required: rec.human_review_required,\n  signal_synthesis_summary: rec.signal_synthesis_summary,\n  contextual_linguistic_framing: rec.contextual_linguistic_framing,\n  temporal_signal_insight: rec.temporal_signal_insight,\n  masked_emotion_hypothesis: rec.masked_emotion_hypothesis,\n  interpretation_confidence: rec.interpretation_confidence,\n  pattern_type_recurrence: rec.pattern_type_recurrence,\n  prior_record_count: rec.prior_record_count,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  dominant_pole: rec.dominant_pole,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  ambiguity_flag: rec.ambiguity_flag,\n  masked_emotion_flag: rec.masked_emotion_flag,\n  collapse_flag: rec.collapse_flag,\n  lang: rec.lang,\n  reviewer_handle: rec.reviewer_handle,\n  client_id: rec.client_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords,\n  templates: rec.templates,\n  stability_axis: rec.stability_axis,\n  pain_axis: rec.pain_axis,\n  urgency_level_default: rec.urgency_level_default,\n  commercial_risk_preflag: rec.commercial_risk_preflag,\n  bra_system_prompt: bra_system_prompt,\n  bra_user_prompt: bra_user_prompt\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        96
+      ],
+      "id": "b4d51be3-97a4-4b5c-8e82-1783e5a2f0b5",
+      "name": "Step 9c - Build Claude Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst body = JSON.stringify({\n  model: \"claude-sonnet-4-6\",\n  max_tokens: 500,\n  temperature: 0.3,\n  system: inp.bra_system_prompt,\n  messages: [{ role: \"user\", content: inp.bra_user_prompt }]\n});\nreturn [{ json: {\n  hsi_record_id: inp.hsi_record_id,\n  preliminary_response_tier: inp.preliminary_response_tier,\n  human_review_required: inp.human_review_required,\n  signal_synthesis_summary: inp.signal_synthesis_summary,\n  contextual_linguistic_framing: inp.contextual_linguistic_framing,\n  temporal_signal_insight: inp.temporal_signal_insight,\n  masked_emotion_hypothesis: inp.masked_emotion_hypothesis,\n  interpretation_confidence: inp.interpretation_confidence,\n  pattern_type_recurrence: inp.pattern_type_recurrence,\n  prior_record_count: inp.prior_record_count,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  dominant_pole: inp.dominant_pole,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  ambiguity_flag: inp.ambiguity_flag,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  collapse_flag: inp.collapse_flag,\n  lang: inp.lang,\n  reviewer_handle: inp.reviewer_handle,\n  client_id: inp.client_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  templates: inp.templates,\n  stability_axis: inp.stability_axis,\n  pain_axis: inp.pain_axis,\n  urgency_level_default: inp.urgency_level_default,\n  commercial_risk_preflag: inp.commercial_risk_preflag,\n  bra_system_prompt: inp.bra_system_prompt,\n  bra_user_prompt: inp.bra_user_prompt,\n  claude_request_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        96
+      ],
+      "id": "527c6654-4dd4-4664-9db9-0a40f7fbd542",
+      "name": "Step 9d - Build Claude Request Body"
+    }
+  ],
+  "connections": {
+    "Step 9a - T1 Template Selection": {
+      "main": [
+        [
+          {
+            "node": "Step 9b - T1 Governance Screen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9b - T1 Governance Screen": {
+      "main": [
+        []
+      ]
+    },
+    "Step 9c - Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 9d - Build Claude Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9d - Build Claude Request Body": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
