@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?where=(Client%20ID,eq,{{$('Step 2 - Payload Validation').first().json.client_id}})~and(lang,eq,es)&limit=2&sort=-RDA%20Timestamp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4832,
+        464
+      ],
+      "id": "7b810dd8-ad96-49b5-9c33-7d93f4d4886c",
+      "name": "Step 9a-2-ES - Fetch Recent RDA Drafts (ES)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const alaRecord = $('Step 9a-ES - Fetch ALA Record (ES)').first().json;\nconst rawText = alaRecord['Raw Tex'] || alaRecord['Raw Text'] || 'No disponible';\n\nconst recentRecords = $('Step 9a-2-ES - Fetch Recent RDA Drafts (ES)').first().json;\nconst recentList = recentRecords.list || [];\nconst recentOpenings = [];\nfor (let i = 0; i < recentList.length; i++) {\n  const draft = recentList[i]['Public Response Draft'];\n  if (draft && draft.length > 10) {\n    const firstSentence = draft.split(/[.!—]/)[0].trim();\n    if (firstSentence.length > 5) recentOpenings.push(firstSentence);\n  }\n}\n\nconst inp = $('Step 8a-ES - Build Final Draft Output (ES)').first().json;\nif (!inp.public_response_draft || inp.public_response_draft.length < 20)\n  throw new Error('public_response_draft ausente o demasiado corto desde Step 8a-ES. ala_record_id: ' + inp.ala_record_id);\n\nconst audit_system_prompt =\n'Rol: Audita la respuesta pública contra la reseña original del huésped. Preserva la calidad humana. Si todas las verificaciones aprueban, devuelve sin cambios. Si alguna falla, corrige SOLO el elemento que falló. Nunca reescribas contenido que ya aprobó ni inventes detalles.\\n\\n' +\n\n'CUMPLIMIENTO:\\n' +\n'1. PERSONAL MENCIONADO: Si la reseña nombra a un miembro del personal, el nombre exacto debe aparecer en el borrador; nunca lo reemplaces por una referencia genérica.\\n' +\n'2. PROFUNDIDAD DE RESEÑA: Reseñas de más de 80 palabras deben referenciar al menos 2 elementos específicos mencionados por el huésped. Reseñas cortas no deben recibir respuestas infladas.\\n' +\n'3. CIERRE: El cierre debe derivarse de la reseña: ocasión, plato, palabras del huésped, o frecuencia de visita. Reprueba cierres genéricos o vagos como \"todo eso\", \"ambas cosas\", \"esa misma experiencia\". Para reseñas muy cortas, cierra con un reconocimiento breve y sincero, no una fórmula.\\n' +\n'4. LEALTAD: Si el huésped señala visitas repetidas o frecuentes (siempre, cada vez, semanalmente, regularmente, ya he estado aquí antes), reconoce la relación continua.\\n' +\n'5. SUGERENCIA: Si el huésped hace una sugerencia positiva específica, reconócela por su nombre.\\n' +\n'6. PROHIBIDO: Elimina direcciones de correo, URLs, métodos o canales de contacto nombrados, marcadores de posición, y \"lamentamos cualquier inconveniente\".\\n\\n' +\n\n'REPETICIÓN:\\n' +\n'7. Si la misma expresión idiomática, verbo de reconocimiento específico, o frase distintiva aparece dos veces DENTRO DE LA MISMA ORACIÓN o en oraciones inmediatamente adyacentes, reprueba y reemplaza solo la segunda aparición con una alternativa natural. Si la repetición ocurre a mayor distancia en el borrador (por ejemplo, una vez en la apertura y otra vez en el cierre, como eco retórico deliberado), NO la marques como falla — puede ser una repetición intencional que refuerza el mensaje. No apliques esta regla a palabras funcionales comunes (artículos, preposiciones, conectores).\\n' +\n'8. FRASES DE MARCA: Como máximo una de las siguientes puede aparecer: \"Gracias por habernos elegido\", \"Nos encantaría volver a recibir su visita\", \"Su experiencia es importante para nosotros\", \"Nos enorgullece saber de una experiencia positiva de cada cliente\", \"Nos alegra que nos haya elegido\", \"Nuestro equipo se esfuerza por hacer que cada visita sea memorable\", \"Nos gustaría tener la oportunidad de solucionarlo\", \"Esperamos volver a verle\", \"Cada cliente merece lo mejor\", \"Esta no es la experiencia que deseamos para usted\". Conserva solo la más natural para el contexto, o ninguna si no encaja.\\n\\n' +\n\n'APERTURA:\\n' +\n'9. REPETICIÓN: Si se proporcionan aperturas recientes, reprueba si esta apertura repite su palabra inicial o estructura gramatical. Reescribe solo la apertura.\\n\\n' +\n\n'Reglas de corrección: Corrige solo los elementos que fallaron. Preserva el tone_style, el nivel de formalidad y la voz de marca. El borrador final debe aprobar todos los elementos del checklist.\\n';\n\nconst recentOpeningsBlock = recentOpenings.length > 0\n  ? '\\n\\nAPERTURAS RECIENTES USADAS — no repitas estas estructuras:\\n' +\n    recentOpenings.map((o, i) => (i + 1) + '. \"' + o + '\"').join('\\n')\n  : '';\n\nconst closingBlock =\n'\\n\\nREGLAS JSON:\\n' +\n'- Devuelve solo JSON válido. Sin preámbulo, explicación, ni bloques de código.\\n' +\n'- failed_items debe contener los NOMBRES del checklist como strings, nunca números.\\n' +\n'- Usa solo comillas dobles rectas.\\n' +\n'- No trunques final_public_response_draft.\\n\\n' +\n'DEVUELVE exactamente:\\n' +\n'{\\n' +\n'  \"audit_passed\": true,\\n' +\n'  \"failed_items\": [],\\n' +\n'  \"final_public_response_draft\": \"borrador público corregido o sin cambios aquí\"\\n' +\n'}';\n\nconst audit_system_prompt_final = audit_system_prompt + recentOpeningsBlock + closingBlock;\n\nconst audit_user_prompt =\n'RESEÑA ORIGINAL DEL HUÉSPED:\\n' + rawText + '\\n\\n' +\n'BORRADOR DE RESPUESTA PÚBLICA PROPUESTO:\\n' + inp.public_response_draft + '\\n\\n' +\n'NOMBRE DEL HUÉSPED: ' + ((inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().includes('reseña') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous') && !inp.reviewer_handle.toLowerCase().startsWith('anonimo')) ? inp.reviewer_handle : 'No disponible') + '\\n' +\n'NIVEL DE RESPUESTA: ' + inp.confirmed_response_tier + '\\n' +\n'ESTILO DE TONO: ' + inp.tone_style + '\\n\\n' +\n'Ejecuta el checklist de auditoría. Devuelve solo JSON.';\n\nconst audit_request_body = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 1500,\n  temperature: 0,\n  system: audit_system_prompt_final,\n  messages: [{ role: 'user', content: audit_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  lang_resolved: inp.lang_resolved,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  generation_draft: inp.public_response_draft,\n  seo_keywords_used: inp.seo_keywords_used,\n  audit_request_body: audit_request_body\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5056,
+        464
+      ],
+      "id": "ba24c358-189d-46ce-9ec0-61559d847134",
+      "name": "Step 9b-ES - Build Audit Prompt (ES)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.audit_request_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5280,
+        464
+      ],
+      "id": "fd527ac4-9afb-406c-a183-a8b86a2e4b95",
+      "name": "Step 9c-ES - Audit Claude API Call (ES)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uMahlx4nOC5YJh0Z",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nconst inp = $('Step 9b-ES - Build Audit Prompt (ES)').first().json;\nlet auditPassed = false;\nlet auditFailedItems = null;\nlet publicDraft = inp.generation_draft;\n\nif (raw) {\n  let clean = raw.replace(/`{1,3}json/gi, '').replace(/`{1,3}/g, '').trim();\n  try {\n    const parsed = JSON.parse(clean);\n    if (parsed.final_public_response_draft && parsed.final_public_response_draft.length >= 20) {\n      publicDraft = parsed.final_public_response_draft;\n      auditPassed = parsed.audit_passed === true || parsed.audit_passed === 'true';\n      const failedCount = (parsed.failed_items || []).length;\n      auditFailedItems = failedCount >= 3\n        ? 'FULL REVIEW REQUIRED — ' + (parsed.failed_items || []).join(', ')\n        : (parsed.failed_items || []).join(', ') || null;\n    } else {\n      auditFailedItems = 'AUDIT PARSE ERROR — draft field missing';\n    }\n  } catch(e) {\n    auditFailedItems = 'AUDIT PARSE ERROR — invalid JSON from audit call';\n  }\n} else {\n  auditFailedItems = 'AUDIT PARSE ERROR — empty audit response';\n}\n\nif (!publicDraft || publicDraft.length < 20)\n  throw new Error('No valid public_response_draft available from generation or audit (ES).');\n\nconst closings = inp.confirmed_response_tier === 'T1'\n  ? ['Un saludo afectuoso', '¡Saludos!', '¡Que tengas un día excelente!']\n  : ['Un cordial saludo', 'Con mucho aprecio'];\n\nconst rdaRecordId = inp.bra_record_id;\nconst closingIndex = rdaRecordId % closings.length;\nconst closing = closings[closingIndex];\n\nconst bv = typeof inp.brand_voice === 'string'\n  ? JSON.parse(inp.brand_voice)\n  : inp.brand_voice;\nconst brandSignature = bv?.['Client Name'] || inp.client_id || 'VRYOH Intelligence';\n\nconst finalDraft = publicDraft.trim() + '\\n\\n' + closing + ',\\n' + brandSignature;\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  lang_resolved: inp.lang_resolved,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  seo_keywords_used: inp.seo_keywords_used,\n  audit_passed: auditPassed,\n  audit_failed_items: auditFailedItems,\n  public_response_draft: finalDraft\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5504,
+        464
+      ],
+      "id": "1a0742e2-2455-49b3-b755-710a3e768edd",
+      "name": "Step 9d-ES - Parse Audit Output (ES)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nlet draft = inp.public_response_draft;\nconst tier = inp.confirmed_response_tier;\nconst deterministicFailures = [];\n\nlet humanReviewRequired = inp.human_review_required;\n\nif (tier === 'T2') {\n  const contactRegex = /contáctenos|comuníquese con nosotros|escríbanos|háblenos|póngase en contacto/i;\n  if (!contactRegex.test(draft)) {\n    deterministicFailures.push('T2 FALTA INVITACIÓN DE CONTACTO (marcado — no autocorregido)');\n    humanReviewRequired = true;\n  }\n}\n\nlet auditFailedItems = inp.audit_failed_items;\nif (deterministicFailures.length > 0) {\n  const newItems = deterministicFailures.join(' | ');\n  auditFailedItems = auditFailedItems\n    ? auditFailedItems + ' | DETERMINISTIC: ' + newItems\n    : 'DETERMINISTIC: ' + newItems;\n}\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: humanReviewRequired,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  lang_resolved: inp.lang_resolved,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  audit_passed: inp.audit_passed,\n  seo_keywords_used: inp.seo_keywords_used,\n  audit_failed_items: auditFailedItems,\n  public_response_draft: draft\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5696,
+        464
+      ],
+      "id": "ea31fe61-d46c-4a45-b4e8-7be8f98556b2",
+      "name": "Step 9e-ES - Deterministic Compliance Check (ES)"
+    }
+  ],
+  "connections": {
+    "Step 9a-2-ES - Fetch Recent RDA Drafts (ES)": {
+      "main": [
+        [
+          {
+            "node": "Step 9b-ES - Build Audit Prompt (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9b-ES - Build Audit Prompt (ES)": {
+      "main": [
+        [
+          {
+            "node": "Step 9c-ES - Audit Claude API Call (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9c-ES - Audit Claude API Call (ES)": {
+      "main": [
+        [
+          {
+            "node": "Step 9d-ES - Parse Audit Output (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9d-ES - Parse Audit Output (ES)": {
+      "main": [
+        [
+          {
+            "node": "Step 9e-ES - Deterministic Compliance Check (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9e-ES - Deterministic Compliance Check (ES)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
