@@ -2,54 +2,16 @@
   "nodes": [
     {
       "parameters": {
-        "method": "POST",
-        "url": "=https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "=application/json",
-        "body": "={{$json.opening_prompt_body_es}}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        3184,
-        464
-      ],
-      "id": "25e54fd5-37e4-45b2-b467-928b8032f287",
-      "name": "Step 7b-ES - Opening Claude Call (ES)",
-      "retryOnFail": true,
-      "waitBetweenTries": 5000,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "uMahlx4nOC5YJh0Z",
-          "name": "x-api-key"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 5)\n  throw new Error('Llamada de apertura a Claude devolvió respuesta vacía o demasiado corta. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst opening_sentence = raw.trim();\nconst inp = $('Step 7a-ES - Build Opening Prompt (ES)').first().json;\n\nconst body_system_prompt =\n'Rol: Completa una respuesta pública de hospitalidad usando la oración de apertura proporcionada como primera línea. Escribe como un profesional de hospitalidad: natural, específico y humano.\\n\\n' +\n\n'REGLA INELUDIBLE DE APERTURA:\\n' +\n'Comienza con la oración de apertura proporcionada, copiada EXACTAMENTE. No la parafrasees, mejores, reescribas, reordenes ni agregues nada antes de ella.\\n\\n' +\n\n'REGLAS POR NIVEL:\\n' +\n'T1: Si la reseña es puramente positiva sin ninguna crítica, agrega 1-2 oraciones después de la apertura; total 2-3 oraciones, y detente ahí si una oración basta. Si aparece una crítica menor y concreta dentro de una reseña mayormente positiva, usa hasta 2-3 oraciones después de la apertura (total 3-4): nombra el problema específico directamente, agradece brevemente que el huésped lo haya señalado, y cuando corresponda, establece brevemente cuál era el estándar esperado (ej. \"lo solicitado debía haberse servido así\"). No trates una crítica menor como si requiriera una invitación a contacto — sigue siendo T1, no T2. Si la apertura menciona a un miembro del personal, menciónalo de nuevo en el cuerpo.\\n' +\n'T2: Agrega 1-3 oraciones después de la apertura; total 2-4 oraciones — usa el extremo superior cuando el problema específico merezca reconocimiento y establecimiento del estándar esperado, no solo cuando sea ambiguo. Nombra el problema específico. Cuando corresponda, establece brevemente cuál era el estándar esperado (ej. \"lo solicitado debía haberse servido así\"). Termina con una invitación a contacto directo SOLO si queda ambigüedad genuina que requiera seguimiento — si el problema ya quedó completamente claro y reconocido, la invitación de contacto no es necesaria. Sin correo, URL, ni canal nombrado. Usa un salto de párrafo entre el reconocimiento del problema y el cierre.\\n' +\n'T3: Agrega 2-3 oraciones después de la apertura; total 3-4 oraciones. Reconoce el daño específico, restaura la dignidad, evita una disculpa genérica, y ofrece contacto privado genérico únicamente. Sin correo, URL, ni canal nombrado. Usa un salto de párrafo entre el reconocimiento del daño y la parte de resolución/invitación.\\n\\n' +\n\n'AGRADECIMIENTO POR LA RETROALIMENTACIÓN (T2/T3):\\n' +\n'Antes de pasar a la resolución o invitación de contacto, incluye una oración breve y conversacional que reconozca el valor de que el huésped haya comunicado el problema. Mantenla corta — un reconocimiento simple suena más sincero que uno explicado extensamente. Esta oración va antes del cierre, nunca reemplaza el reconocimiento específico del problema.\\n\\n' +\n\n'ORDEN DE SELECCIÓN DE CONTENIDO:\\n' +\n'1. Primero descarta cualquier detalle comercial o sensible al tiempo de la reseña.\\n' +\n'2. Luego elige el detalle elegible más fuerte de la experiencia del huésped.\\n' +\n'3. Usa ese detalle elegible para reforzar el cuerpo y dar forma al cierre.\\n\\n' +\n\n'NO USAR COMO REFERENCIAS DE CONTENIDO:\\n' +\n'- Precios, descuentos, niveles de menú, menús de precio fijo, semanas de restaurante, happy hour, menús de temporada, menús festivos, artículos por tiempo limitado, promociones, eventos de marketing, ofertas temporales, u opciones futuras de menú.\\n' +\n'- No los repitas, no des a entender que están disponibles actualmente, ni invites al huésped a volver por ellos.\\n' +\n'- Si la reseña los menciona, traduce ese significado en valor, disfrute o experiencia general sin nombrar el detalle comercial.\\n\\n' +\n\n'REFERENCIAS DE CONTENIDO PERMITIDAS, EN ORDEN DE PRIORIDAD:\\n' +\n'1. Ocasión del huésped: cumpleaños, aniversario, celebración, cita, día festivo, o visita personal especial.\\n' +\n'2. Relación o lealtad del huésped: huésped recurrente, visitante habitual, huésped que regresa, o conexión con la marca.\\n' +\n'3. Experiencia general de la visita: comida, servicio, ambiente, hospitalidad, o la visita en su conjunto.\\n' +\n'4. Plato o bebida favorita, solo si no es promocional ni temporal.\\n' +\n'5. Palabras del huésped, solo si no son comerciales ni sensibles al tiempo.\\n\\n' +\n\n'LÓGICA DEL CUERPO DE LA RESPUESTA:\\n' +\n'- Refuerza la experiencia del huésped, no cada detalle factual de la reseña.\\n' +\n'- Detecta Ocasión y Pertenencia solo cuando agreguen contexto significativo.\\n' +\n'- Trata todos los detalles de la reseña como históricos, a menos que la entrada confirme explícitamente que siguen vigentes.\\n' +\n'- Cada oración después de la apertura debe agregar significado nuevo; elimina repetición o relleno.\\n' +\n'- Para T2/T3, nombra la experiencia del huésped directamente en el cuerpo, no solo en la apertura.\\n' +\n'- Respuestas cortas y específicas son más sólidas que las largas, pero no sacrifiques especificidad solo por acortar.\\n' +\n'- Prefiere expresiones idiomáticas naturales del español sobre descripciones analíticas de la situación (ej. \"no estuvimos a la altura\" en vez de una descripción indirecta del mismo hecho).\\n' +\n'- Usa oraciones cortas y directas para T2/T3, especialmente en la parte que reconoce el problema. Evita cláusulas subordinadas largas o encadenadas.\\n\\n' +\n\n'TONO:\\n' +\n'- Empático-Formal: cálido, estructurado, formal, sin contracciones coloquiales.\\n' +\n'- Empático-Cercano: conversacional, humano, genuino.\\n' +\n'- Neutral-Profesional: mesurado, factual, sin amplificación.\\n' +\n'- Restaurativo de Dignidad: específico, humano, no formulaico; reconoce la experiencia real.\\n' +\n'Aplica el tone_style exactamente.\\n\\n' +\n\n'VOZ DE MARCA:\\n' +\n'- Usa primera persona plural y el person_preference de forma consistente.\\n' +\n'- Ajusta al formality_level: 1 = muy casual, 5 = muy formal.\\n' +\n'- Usa como máximo UNA frase de brand_phrases_include, solo si suena natural.\\n' +\n'- Nunca uses brand_phrases_avoid.\\n\\n' +\n\n'ESTILO:\\n' +\n'- Iguala la calidad de los ejemplos, pero nunca copies su redacción exacta.\\n' +\n'- Varía la estructura de la oración y evita repetir frases entre huéspedes.\\n' +\n'- Escribe como hablante nativo del español de hospitalidad; evita cualquier estructura que suene traducida del inglés.\\n\\n' +\n\n'Formato de salida: Devuelve el borrador completo como texto plano únicamente. Sin JSON, preámbulo, ni explicación.';\n\nconst body_user_prompt =\n`ORACIÓN DE APERTURA — CÓPIALA EXACTAMENTE COMO TU PRIMERA LÍNEA:\\n\"${opening_sentence}\"\\n\\n` +\n`NIVEL DE RESPUESTA: ${inp.confirmed_response_tier}\\n` +\n`ESTILO DE TONO: ${inp.tone_style}\\n\\n` +\n`RESUMEN DE VOZ DE MARCA:\\n${inp.brand_voice_brief || ''}\\n\\n` +\n`ESTRATEGIA DE RESPUESTA:\\n` +\n` Eje emocional: ${inp.emotional_axis}\\n` +\n` Eje de dolor: ${inp.pain_axis}\\n` +\n` Eje de estabilidad: ${inp.stability_axis}\\n` +\n` Consideración basada en señal: ${inp.signal_based_consideration}\\n` +\n` Tipo de solución: ${inp.solution_type}\\n\\n` +\n`DETALLE DE SEÑAL:\\n` +\n` Hipótesis emocional: ${inp.emotion_hypothesis || 'No disponible'}\\n` +\n` Palabras clave: ${inp.keywords || 'No disponible'}\\n` +\n` Enriquecimiento de señal: ${inp.signal_enrichment_brief || 'No disponible'}\\n\\n` +\n(inp.behavioral_interpretation ? `CONTEXTO CONDUCTUAL: ${inp.behavioral_interpretation}\\n\\n` : '') +\n`Completa la respuesta. Devuelve solo texto plano. Tu primera línea debe ser la oración de apertura anterior.`;\n\nconst body_prompt_body_es = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 500,\n  temperature: 0.3,\n  system: body_system_prompt,\n  messages: [{ role: 'user', content: body_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  signal_enrichment_brief: inp.signal_enrichment_brief,\n  opening_sentence: opening_sentence,\n  body_prompt_body_es: body_prompt_body_es\n} }];"
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('Llamada de cuerpo a Claude devolvió respuesta vacía o demasiado corta. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst raw_body_draft = raw.trim();\nconst inp = $('Step 7c-ES - Build Body Prompt (ES)').first().json;\nconst bv = inp.brand_voice;\n\nconst guestName = (inp.reviewer_handle && !inp.reviewer_handle.toLowerCase().includes('review') && !inp.reviewer_handle.toLowerCase().includes('reseña') && !inp.reviewer_handle.toLowerCase().startsWith('anonymous') && !inp.reviewer_handle.toLowerCase().startsWith('anonimo') && !inp.reviewer_handle.toLowerCase().startsWith('anónimo'))\n  ? inp.reviewer_handle : null;\n\nconst nameAlreadyInDraft = guestName\n  ? raw_body_draft.toLowerCase().includes(guestName.toLowerCase())\n  : false;\n\nconst nameMissingFlag = !!(guestName && !nameAlreadyInDraft);\nconst human_review_required = inp.human_review_required || nameMissingFlag;\nconst pre_audit_flags = nameMissingFlag\n  ? 'NOMBRE DEL HUÉSPED AUSENTE DE LA APERTURA — requiere inserción manual'\n  : null;\n\nconst seo_system_prompt =\n'Rol: Última revisión de SEO y cumplimiento para una respuesta de hospitalidad ya completada. Preserva la calidad humana del borrador; si el SEO la debilita, omítelo. NO reescribas, reordenes ni agregues texto a la apertura bajo ninguna circunstancia — esa oración ya fue construida deliberadamente en una etapa anterior y debe permanecer exactamente igual.\\n\\n' +\n\n'SEO: seo_keywords incluye términos descriptivos (nombre del negocio, nombres de platos) y afirmaciones promocionales (ej. \"Best Peruvian Restaurant,\" \"chef-driven dining\"). Los términos descriptivos pueden usarse libremente. Los promocionales solo funcionan cuando la reseña da una apertura natural — que coincida con lo que el huésped realmente dijo (elogio a la cocina, una ocasión mencionada, un plato específico). Cuando exista esa apertura, prefiere un término promocional sobre uno descriptivo, ya que los descriptivos ya aparecen en otras partes de la respuesta. Integra las palabras clave solo dentro de oraciones reales del cuerpo — nunca en la apertura. Nunca fuerces uno promocional si suena a publicidad — omítelo.\\n\\n' +\n\n'Cumplimiento: Elimina o reemplaza direcciones de correo, URLs, marcadores de posición como [contacto]/[nombre]/[correo], frases como \"lamentamos cualquier inconveniente\" o \"lamentamos los inconvenientes\", compromisos financieros (reembolso, cupón, descuento), y canales de contacto nombrados como \"nuestro sitio web\", \"nuestro perfil\", o \"nuestra mensajería directa\". Conserva invitaciones genéricas de contacto para T2/T3 solo donde ya existan en el borrador.\\n\\n' +\n\n'Formato de salida: Devuelve solo texto plano. Sin JSON, preámbulo, ni explicación. Si no se necesitan cambios, devuelve el borrador exactamente como lo recibiste.';\n\nconst seo_user_prompt =\n`BORRADOR A REVISAR:\\n${raw_body_draft}\\n\\n` +\n`NIVEL DE RESPUESTA: ${inp.confirmed_response_tier}\\n` +\n`PALABRAS CLAVE SEO: ${bv.seo_keywords || 'ninguna especificada'}\\n\\n` +\n`Aplica las tareas. Devuelve solo texto plano.`;\n\nconst seo_prompt_body_es = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 600,\n  temperature: 0,\n  system: seo_system_prompt,\n  messages: [{ role: 'user', content: seo_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id:              inp.bra_record_id,\n  confirmed_response_tier:    inp.confirmed_response_tier,\n  governance_flag:            inp.governance_flag,\n  human_review_required:      human_review_required,\n  solution_type:               inp.solution_type,\n  emotional_axis:              inp.emotional_axis,\n  pain_axis:                   inp.pain_axis,\n  stability_axis:              inp.stability_axis,\n  signal_based_consideration:  inp.signal_based_consideration,\n  tone_style:                  inp.tone_style,\n  urgency_level:               inp.urgency_level,\n  commercial_risk_flag:        inp.commercial_risk_flag,\n  behavioral_interpretation:   inp.behavioral_interpretation,\n  lang:                        inp.lang,\n  client_id:                   inp.client_id,\n  enriched_emotion_tag:        inp.enriched_emotion_tag,\n  enriched_pain_point:         inp.enriched_pain_point,\n  pain_point_sub_category:     inp.pain_point_sub_category,\n  signal_type:                 inp.signal_type,\n  intensity_level:             inp.intensity_level,\n  hsi_record_id:               inp.hsi_record_id,\n  ess_record_id:               inp.ess_record_id,\n  eip_record_id:               inp.eip_record_id,\n  ala_record_id:               inp.ala_record_id,\n  prior_run_id:                inp.prior_run_id,\n  reviewer_handle:             inp.reviewer_handle,\n  emotion_hypothesis:          inp.emotion_hypothesis,\n  keywords:                    inp.keywords,\n  brand_voice:                 inp.brand_voice,\n  brand_voice_brief:           inp.brand_voice_brief,\n  signal_enrichment_brief:     inp.signal_enrichment_brief,\n  opening_sentence:            inp.opening_sentence,\n  pre_audit_flags:             pre_audit_flags,\n  raw_body_draft:              raw_body_draft,\n  seo_prompt_body_es:          seo_prompt_body_es\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3392,
+        3824,
         464
       ],
-      "id": "6d5892ac-ab4e-4456-8b06-e2cfd028d364",
-      "name": "Step 7c-ES - Build Body Prompt (ES)"
+      "id": "94d49801-2a89-4265-aaf8-005353055cd4",
+      "name": "Step 7e-ES - Build SEO/Governance Prompt (ES)"
     },
     {
       "parameters": {
@@ -69,17 +31,17 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{$json.body_prompt_body_es}}",
+        "body": "={{$json.seo_prompt_body_es}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3600,
+        4096,
         464
       ],
-      "id": "77a290b6-7def-4727-955a-bb6890f1f69a",
-      "name": "Step 7d-ES - Body Claude Call (ES)",
+      "id": "1f945b7c-c0b4-4766-87f5-716f58f503e5",
+      "name": "Step 7f-ES - SEO Governance Claude Call (ES)",
       "retryOnFail": true,
       "waitBetweenTries": 5000,
       "credentials": {
@@ -91,55 +53,79 @@
     },
     {
       "parameters": {
-        "jsCode": "const rec = $input.first().json;\nconst bv = rec.brand_voice;\n\nconst tier = rec.confirmed_response_tier;\nconst guestName = (rec.reviewer_handle &&\n  !rec.reviewer_handle.toLowerCase().includes('review') &&\n  !rec.reviewer_handle.toLowerCase().includes('reseña') &&\n  !rec.reviewer_handle.toLowerCase().startsWith('anonymous') &&\n  !rec.reviewer_handle.toLowerCase().startsWith('anonimo') &&\n  !rec.reviewer_handle.toLowerCase().startsWith('anónimo'))\n  ? rec.reviewer_handle : null;\n\nconst opening_system_prompt =\n'Rol: Genera UNA sola oración de apertura para una respuesta pública a una reseña de hospitalidad. No escribas el cuerpo de la respuesta.\\n\\n' +\n\n'Voz de marca: Usa el Registro, el Motor Central, el Acento Regional, la Personalidad, el Diferenciador y el Sentimiento del Huésped objetivo para dar forma al tono, ritmo y vocabulario. Escribe de forma natural, como lo haría la marca, nunca de forma genérica. Expresa el sentimiento deseado mediante lenguaje específico, no nombrándolo directamente.\\n\\n' +\n\n'IMPORTANTE — Naturalidad: Escribe como hablante nativo del español de restaurantes y hospitalidad, no como una traducción del inglés. Evita estructuras, modismos o construcciones que suenen traducidas literalmente.\\n\\n' +\n\n'El nivel de respuesta (T1, T2 o T3) ya fue determinado y se te proporciona en NIVEL DE RESPUESTA. No lo determines tú mismo — aplica únicamente las reglas del nivel indicado.\\n\\n' +\n\n'T1 (Positiva):\\n' +\n'- Si hay un nombre de huésped disponible, la oración de apertura DEBE comenzar con exactamente uno de estos patrones: \"Muchas gracias, [Nombre],\" o \"Le agradecemos mucho, [Nombre],\" No comiences solo con el nombre ni uses otra fórmula de agradecimiento.\\n' +\n'- Prioridad: Personal mencionado → Detalle específico → Agradecimiento.\\n' +\n'- Personal mencionado: Si la reseña menciona a un miembro del personal, usa el nombre exacto y reconoce lo que el huésped valoró de esa persona.\\n' +\n'- Detalle específico: Si no se menciona personal, reconoce el plato, bebida o experiencia más destacada y perdurable.\\n' +\n'- Agradecimiento: Si ninguna de las anteriores aplica, escribe un agradecimiento sincero y específico para ese huésped.\\n' +\n'- Si no hay nombre de huésped disponible, comienza igualmente con un agradecimiento genuino y específico, incorporando el detalle más fuerte de la reseña dentro de esa misma oración — nunca omitas el agradecimiento solo porque falta el nombre.\\n\\n' +\n\n'T2 (Mixta):\\n' +\n'- Si hay un nombre de huésped disponible, la oración de apertura DEBE comenzar con exactamente \"Hola, [Nombre],\" o \"Estimado/a [Nombre],\" No uses otra estructura de saludo.\\n' +\n'- Refleja la señal específica del huésped con un tono mesurado y reflexivo.\\n' +\n'- Si se menciona a un miembro del personal, usa el nombre exacto y conéctalo con la experiencia del huésped.\\n' +\n'- Si no hay nombre de huésped disponible, comienza con el detalle más fuerte de la señal.\\n\\n' +\n\n'T3 (Negativa):\\n' +\n'- Si hay un nombre de huésped disponible, la oración de apertura DEBE comenzar con exactamente \"Estimado/a [Nombre],\" No uses otra estructura de saludo.\\n' +\n'- Usa un tono serio y humano que reconozca el daño específico sin sonar transaccional.\\n' +\n'- Si se menciona a un miembro del personal, menciona el nombre exacto solo si ayuda a reconocer apropiadamente la experiencia del huésped.\\n' +\n'- Si no hay nombre de huésped disponible, comienza con la naturaleza específica del daño.\\n\\n' +\n\n'Reglas:\\n' +\n'- Devuelve solo una oración.\\n' +\n'- Sin JSON, preámbulo ni explicación.\\n' +\n'- Termina con puntuación natural.\\n' +\n'- Varía la estructura de la oración de forma natural; evita aperturas repetitivas o predecibles.';\n\nconst opening_user_prompt =\n`NIVEL DE RESPUESTA: ${tier}\\n` +\n`NOMBRE DEL HUÉSPED: ${guestName || 'No disponible'}\\n` +\n`TIPO DE SEÑAL: ${rec.signal_type}\\n` +\n`ESTILO DE TONO: ${rec.tone_style}\\n` +\n`HIPÓTESIS EMOCIONAL: ${rec.emotion_hypothesis || 'No disponible'}\\n` +\n`PALABRAS CLAVE DE LA RESEÑA: ${rec.keywords || 'No disponible'}\\n` +\n`EMOCIÓN ENRIQUECIDA: ${rec.enriched_emotion_tag || 'No disponible'}\\n` +\n`ENRIQUECIMIENTO DE SEÑAL: ${rec.signal_enrichment_brief || 'No disponible'}\\n` +\n(rec.behavioral_interpretation ? `CONTEXTO CONDUCTUAL: ${rec.behavioral_interpretation}\\n` : '') +\n`\\nRESUMEN DE VOZ DE MARCA:\\n${rec.brand_voice_brief || ''}\\n` +\n`\\nProduce solo una oración de apertura. Sin preámbulo.`;\n\nconst opening_prompt_body_es = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 150,\n  temperature: 0,\n  system: opening_system_prompt,\n  messages: [{ role: 'user', content: opening_user_prompt }]\n});\n\nreturn [{ json: {\n  bra_record_id: rec.bra_record_id,\n  confirmed_response_tier: rec.confirmed_response_tier,\n  governance_flag: rec.governance_flag,\n  human_review_required: rec.human_review_required,\n  solution_type: rec.solution_type,\n  emotional_axis: rec.emotional_axis,\n  pain_axis: rec.pain_axis,\n  stability_axis: rec.stability_axis,\n  signal_based_consideration: rec.signal_based_consideration,\n  tone_style: rec.tone_style,\n  urgency_level: rec.urgency_level,\n  commercial_risk_flag: rec.commercial_risk_flag,\n  behavioral_interpretation: rec.behavioral_interpretation,\n  lang: rec.lang,\n  client_id: rec.client_id,\n  enriched_emotion_tag: rec.enriched_emotion_tag,\n  enriched_pain_point: rec.enriched_pain_point,\n  pain_point_sub_category: rec.pain_point_sub_category,\n  signal_type: rec.signal_type,\n  intensity_level: rec.intensity_level,\n  hsi_record_id: rec.hsi_record_id,\n  ess_record_id: rec.ess_record_id,\n  eip_record_id: rec.eip_record_id,\n  ala_record_id: rec.ala_record_id,\n  prior_run_id: rec.prior_run_id,\n  reviewer_handle: rec.reviewer_handle,\n  emotion_hypothesis: rec.emotion_hypothesis,\n  keywords: rec.keywords,\n  brand_voice: rec.brand_voice,\n  brand_voice_brief: rec.brand_voice_brief,\n  signal_enrichment_brief: rec.signal_enrichment_brief,\n  opening_prompt_body_es: opening_prompt_body_es\n} }];"
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content?.[0]?.text;\nif (!raw || raw.trim().length < 20)\n  throw new Error('SEO/Governance Claude call (ES) returned empty or too short. Response: ' + JSON.stringify(response).substring(0, 200));\n\nconst public_response_draft = raw.trim();\nconst inp = $('Step 7e-ES - Build SEO/Governance Prompt (ES)').first().json;\nconst bv = typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice;\n\nconst configuredKeywords = (bv?.seo_keywords || '')\n  .split(',')\n  .map(k => k.trim())\n  .filter(k => k.length > 0);\n\nconst keywords_used = configuredKeywords\n  .filter(k => public_response_draft.toLowerCase().includes(k.toLowerCase()));\n\nconst seo_keywords_used = keywords_used.join(', ') || null;\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  lang_resolved: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  opening_sentence: inp.opening_sentence,\n  public_response_draft: public_response_draft,\n  seo_keywords_used: seo_keywords_used\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2976,
+        4352,
         464
       ],
-      "id": "e2e49ad3-94d1-4b27-9f4d-310c0843745b",
-      "name": "Step 7a-ES - Build Opening Prompt (ES)"
+      "id": "5ef8cc56-35ca-417f-b436-e59a9b1a459e",
+      "name": "Step 8a-ES - Build Final Draft Output (ES)"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/m57efwbtrvwohhr/{{$json.ala_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4592,
+        464
+      ],
+      "id": "709da1f4-b09c-4ec7-9c06-d97b59ce5aaa",
+      "name": "Step 9a-ES - Fetch ALA Record (ES)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
     }
   ],
   "connections": {
-    "Step 7b-ES - Opening Claude Call (ES)": {
+    "Step 7e-ES - Build SEO/Governance Prompt (ES)": {
       "main": [
         [
           {
-            "node": "Step 7c-ES - Build Body Prompt (ES)",
+            "node": "Step 7f-ES - SEO Governance Claude Call (ES)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 7c-ES - Build Body Prompt (ES)": {
+    "Step 7f-ES - SEO Governance Claude Call (ES)": {
       "main": [
         [
           {
-            "node": "Step 7d-ES - Body Claude Call (ES)",
+            "node": "Step 8a-ES - Build Final Draft Output (ES)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 7d-ES - Body Claude Call (ES)": {
+    "Step 8a-ES - Build Final Draft Output (ES)": {
+      "main": [
+        [
+          {
+            "node": "Step 9a-ES - Fetch ALA Record (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9a-ES - Fetch ALA Record (ES)": {
       "main": [
         []
-      ]
-    },
-    "Step 7a-ES - Build Opening Prompt (ES)": {
-      "main": [
-        [
-          {
-            "node": "Step 7b-ES - Opening Claude Call (ES)",
-            "type": "main",
-            "index": 0
-          }
-        ]
       ]
     }
   },
