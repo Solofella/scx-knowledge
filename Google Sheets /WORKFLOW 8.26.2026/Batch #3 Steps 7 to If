@@ -1,0 +1,179 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const sheet_input = $input.all();\n\nconst existing_rda_ids = {};\n\nfor (let i = 0; i < sheet_input.length; i++) {\n  let row = sheet_input[i].json;\n  \n  // Column K = RDA Record ID (index 10 in 12-column layout)\n  let rda_id = String(row['RDA Record ID'] || row[10] || '').trim();\n  \n  if (rda_id !== '' && rda_id !== 'RDA Record ID') {\n    existing_rda_ids[rda_id] = true;\n  }\n}\n\nreturn [{ json: {\n  existing_rda_ids: existing_rda_ids,\n  existing_total: Object.keys(existing_rda_ids).length\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -496
+      ],
+      "id": "423fd204-87e0-41a9-aaa6-279cfd71d54a",
+      "name": "Step 7 - Build Dedup Map"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2480,
+        -256
+      ],
+      "id": "616264e4-a6a1-4941-a0a6-588668a6c344",
+      "name": "Step 8 - Loop RDA Records"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst rda = input.rda_record;\nconst ala_map = input.ala_map || {};\nconst existing_rda_ids = input.existing_rda_ids || {};\n\nconst rda_record_id = String(rda['Id'] || '');\n\n// DEDUP CHECK\nif (existing_rda_ids[rda_record_id]) {\n  return [];\n}\n\n// ALA LOOKUP\nconst ala_id_raw = rda['ALA Record ID'];\nconst ala = ala_map[ala_id_raw] || ala_map[String(ala_id_raw)] || ala_map[parseInt(ala_id_raw)] || {};\n\n// NORMALIZE LINE BREAKS (fixes literal \\n text not rendering in Spanish drafts)\nconst cleanProposedResponse = String(rda['Public Response Draft'] || '').replace(/\\\\n/g, '\\n');\n\n// BUILD ROW VALUES AS INDIVIDUAL FIELDS\nreturn [{ json: {\n  scx_date: (rda['RDA Timestamp'] || '').slice(0, 10),\n  review_date: ala.review_date || '',\n  platform: ala.platform || '',\n  star_rating: ala.star_rating || '',\n  reviewer_handle: ala.reviewer_handle || String(rda['Reviewer Handle'] || ''),\n  review_text: ala.review_text || '',\n  proposed_response: cleanProposedResponse,\n  status: rda['Approval Status'] || 'Pending',\n  edited_response: '',\n  ala_record_id: String(ala_id_raw),\n  rda_record_id: rda_record_id,\n  sync_status: 'pending_sync',\n  client_id: input.client_id || '',\n  sheet_id: input.sheet_id || '',\n  tab_name: input.tab_name || ''\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -48
+      ],
+      "id": "55d110e2-6442-434f-890f-6ff8c1d3dc09",
+      "name": "Step 9 - Consolidated Logic",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const s7_data = $input.first().json;\nconst s3_data = $('Step 3 - Check Records Exist').first().json;\nconst s5_data = $('Step 5 - Build ALA Map').first().json;\nconst s3c_data = $('STEP 3c — BUILD SHEET MAP').first().json;\n\nconst rda_list = s3_data.list || [];\nconst ala_map = s5_data.ala_map || {};\nconst existing_rda_ids = s7_data.existing_rda_ids || {};\nconst clientSheetMap = s3c_data.client_sheet_map || {};\n\nconst output = [];\nfor (let i = 0; i < rda_list.length; i++) {\n  const rda = rda_list[i];\n  const clientId = rda['Client ID'] || '';\n  const sheetInfo = clientSheetMap[clientId] || {};\n\n  output.push({\n    json: {\n      rda_record: rda,\n      ala_map: ala_map,\n      existing_rda_ids: existing_rda_ids,\n      client_id: clientId,\n      sheet_id: sheetInfo.sheet_id || '',\n      tab_name: sheetInfo.tab_name || ''\n    }\n  });\n}\n\nreturn output;\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        -496
+      ],
+      "id": "944a15f2-8dea-40fe-8691-78e5a1faaf38",
+      "name": "Step 7b - Merge All Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 8a - Pre-Loop Platform Counter\n// Count platforms BEFORE the loop starts\n\nconst items = $input.all();\n\nlet googleCount = 0;\nlet openTableCount = 0;\nlet yelpCount = 0;\nlet tripAdvisorCount = 0;\nlet otherCount = 0;\nlet t3Count = 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i].json;\n  if (!item) continue;\n  \n  const platform = (item.platform || '').toLowerCase();\n  if (platform === 'google') googleCount++;\n  else if (platform === 'opentable') openTableCount++;\n  else if (platform === 'yelp') yelpCount++;\n  else if (platform === 'tripadvisor') tripAdvisorCount++;\n  else if (platform !== '') otherCount++;\n  \n  const approvalStatus = item['Approval Status'] || item.status || '';\n  if (approvalStatus === 'Pending-Elevated') t3Count++;\n}\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    summary_stats: {\n      total_google: googleCount,\n      total_opentable: openTableCount,\n      total_yelp: yelpCount,\n      total_tripadvisor: tripAdvisorCount,\n      total_other: otherCount,\n      total_t3: t3Count,\n      total_records: items.length\n    }\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        -496
+      ],
+      "id": "ee3cf69f-17c5-4f97-afc3-81b59bf509b0",
+      "name": "Step 8a - Pre-Loop Platform Counter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a676ced-f4ed-4572-9830-b44fb0a27353",
+              "leftValue": "={{ $json.rda_record_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3312,
+        -48
+      ],
+      "id": "8ed7b30a-4960-46b0-91c0-81a48af82886",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "Step 7 - Build Dedup Map": {
+      "main": [
+        [
+          {
+            "node": "Step 7b - Merge All Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8 - Loop RDA Records": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Step 9 - Consolidated Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9 - Consolidated Logic": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7b - Merge All Data": {
+      "main": [
+        [
+          {
+            "node": "Step 8a - Pre-Loop Platform Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8a - Pre-Loop Platform Counter": {
+      "main": [
+        [
+          {
+            "node": "Step 8 - Loop RDA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Step 8 - Loop RDA Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
