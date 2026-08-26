@@ -1,0 +1,176 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const fetchData = $input.first().json;\nconst all_rda = fetchData.list || [];\n\nconst step11aData = $('Step 11a - Ensure Output').first().json;\nconst clientCounts = step11aData.client_counts || {};\n\n// Count pending per client\nconst pendingByClient = {};\nfor (let i = 0; i < all_rda.length; i++) {\n  const rec = all_rda[i];\n\n  const approvalStatus = rec['Approval Status'];\n  const publishedTimestamp = rec['Published Timestamp'];\n  const clientId = rec['Client ID'];\n\n  const isPending = (approvalStatus === 'Pending' || approvalStatus === 'Pending-Elevated');\n  const isNotPublished = (publishedTimestamp === null || publishedTimestamp === undefined);\n  const hasClient = (clientId !== null && clientId !== undefined && clientId !== '');\n\n  if (isPending && isNotPublished && hasClient) {\n    if (!pendingByClient[clientId]) {\n      pendingByClient[clientId] = 0;\n    }\n    pendingByClient[clientId]++;\n  }\n}\n\n// Calculate previous pending per client\nconst resultByClient = {};\nconst clientKeys = Object.keys(pendingByClient);\nfor (let i = 0; i < clientKeys.length; i++) {\n  const cid = clientKeys[i];\n  const totalPending = pendingByClient[cid];\n  const newToday = (clientCounts[cid] && clientCounts[cid].records_processed) ? clientCounts[cid].records_processed : 0;\n  const previousPending = totalPending - newToday;\n\n  resultByClient[cid] = {\n    total_pending: totalPending,\n    pending_previous_days: previousPending,\n    new_today: newToday\n  };\n}\n\nreturn [{ json: {\n  pending_by_client: resultByClient\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3632,
+        -1024
+      ],
+      "id": "7ffd6cf4-7bed-462c-a7c9-38ba2eb4359a",
+      "name": "Step 12b-filter - Filter Previous Pending"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dateData = $('Step 12a - Count Platform Records').first().json;\nconst pendingData = $('Step 12b-filter - Filter Previous Pending').first().json;\nconst step11aData = $('Step 11a - Ensure Output').first().json;\nconst clientConfig = $('STEP 3c — BUILD SHEET MAP').first().json;\n\nconst clientCounts = step11aData.client_counts || {};\nconst pendingByClient = pendingData.pending_by_client || {};\nconst clientMap = clientConfig.client_sheet_map || {};\nconst clientKeys = Object.keys(clientMap);\n\nconst output = [];\nfor (let i = 0; i < clientKeys.length; i++) {\n  var cid = clientKeys[i];\n  var info = clientMap[cid];\n  var counts = clientCounts[cid] || {};\n  var pending = pendingByClient[cid] || {};\n\n  output.push({\n    json: {\n      date: dateData.date,\n      prior_date: dateData.prior_date,\n\n      google_count: counts.google_count || 0,\n      opentable_count: counts.opentable_count || 0,\n      yelp_count: counts.yelp_count || 0,\n      tripadvisor_count: counts.tripadvisor_count || 0,\n      other_count: counts.other_count || 0,\n      t3_count: counts.t3_count || 0,\n      records_processed_today: counts.records_processed || 0,\n\n      pending_previous_days: pending.pending_previous_days || 0,\n      total_pending: pending.total_pending || 0,\n\n      approval_contact_email: 'miguel@solofella.com',\n      from_email: 'intelligence@vryoh.com',\n\n      client_name: info.client_name || cid,\n      client_id: cid,\n      sheet_url: 'https://docs.google.com/spreadsheets/d/' + info.sheet_id + '/edit'\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3824,
+        -1024
+      ],
+      "id": "ce6bde11-ddb3-4c3a-a0a7-fcfeb362bc1c",
+      "name": "Step 12c - Merge Counts Build Email Variables"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst output = [];\n\nfor (let idx = 0; idx < allItems.length; idx++) {\nconst vars = allItems[idx].json;\n\n// Build platform lines (only show if count > 0)\nlet platformLines = '';\nif (vars.google_count > 0) {\n  platformLines += `<div class=\"platform-line\"><strong>Google:</strong> ${vars.google_count} response(s)</div>`;\n}\nif (vars.opentable_count > 0) {\n  platformLines += `<div class=\"platform-line\"><strong>OpenTable:</strong> ${vars.opentable_count} response(s)</div>`;\n}\nif (vars.yelp_count > 0) {\n  platformLines += `<div class=\"platform-line\"><strong>Yelp:</strong> ${vars.yelp_count} response(s)</div>`;\n}\nif (vars.tripadvisor_count > 0) {\n  platformLines += `<div class=\"platform-line\"><strong>TripAdvisor:</strong> ${vars.tripadvisor_count} response(s)</div>`;\n}\n\n// Build elevated warning (only show if t3_count > 0)\nconst elevatedBlock = vars.t3_count > 0 \n  ? `<div class=\"elevated\">⚠️ <strong>${vars.t3_count} require elevated attention</strong> (T3 — dignity-risk signals)</div>`\n  : '';\n\n// Build complete HTML email body\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<style>\nbody{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.6;color:#1f2937;max-width:600px;margin:0 auto;padding:20px;background-color:#f9fafb}\n.container{background-color:#fff;border-radius:8px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)}\nh2{color:#111827;margin-top:0;font-size:20px;font-weight:600}\n.summary{background-color:#f3f4f6;padding:16px;border-radius:6px;margin:16px 0}\n.platform-line{padding:6px 0;border-left:3px solid #3b82f6;padding-left:12px;margin:4px 0}\n.elevated{background-color:#fef3c7;padding:12px;border-left:4px solid #f59e0b;border-radius:4px;margin:12px 0;font-size:14px}\n.total-pending{background-color:#dbeafe;padding:14px;border-radius:6px;margin:16px 0;font-size:16px;font-weight:600;text-align:center;color:#1e40af}\n.button{display:inline-block;background-color:#3b82f6;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;margin:16px 0;font-weight:500}\n.sla-reminder{background-color:#fef3c7;padding:12px;border-left:4px solid #f59e0b;border-radius:4px;margin:16px 0;font-size:14px}\n.governance{font-size:13px;color:#6b7280;font-style:italic;margin:16px 0;padding:12px;background-color:#f9fafb;border-radius:4px}\n.footer{margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280}\n</style>\n</head>\n<body>\n<div class=\"container\">\n<h2>Daily Review Response Summary</h2>\n<p>Good morning,</p>\n<p>Here is your daily platform reviews summary from <strong>${vars.prior_date}</strong>.</p>\n<div class=\"summary\">\n<div style=\"font-weight:600;margin-bottom:12px\">📊 New Responses Added Today:</div>\n${platformLines}\n<div style=\"margin-top:12px;padding-top:12px;border-top:1px solid #d1d5db;font-size:15px\">\n<strong>Total new responses:</strong> ${vars.records_processed_today}\n</div>\n</div>\n${elevatedBlock}\n<div style=\"margin:16px 0;font-size:14px\">\n📋 <strong>${vars.pending_previous_days} pending from previous days</strong> (still awaiting approval)\n</div>\n<div class=\"total-pending\">\nTotal Pending Your Review: ${vars.total_pending}\n</div>\n<div class=\"governance\">\nVRYOH Intelligence detects and interprets signals only. Operational decisions remain with your team.\n</div>\n<center>\n<a href=\"${vars.sheet_url}\" class=\"button\">👉 Review & Approve Responses</a>\n</center>\n<div class=\"sla-reminder\">\n<strong>⏱️ SLA Reminder:</strong> 48-hour approval window from first notification\n</div>\n<p style=\"margin-top:20px\">Questions? Reply to this email.</p>\n<div class=\"footer\">\n<div><strong>VRYOH Intelligence</strong> by Solofella LLC</div>\n<div>${vars.client_name} (${vars.client_id})</div>\n<div style=\"margin-top:8px;font-size:11px\">Sent: ${vars.date} at 05:00 UTC</div>\n</div>\n</div>\n</body>\n</html>`;\n\n// Build Brevo API payload object\nconst brevoPayload = {\n  sender: {\n    name: 'VRYOH Intelligence',\n    email: vars.from_email\n  },\n  to: [{\n    email: vars.approval_contact_email,\n    name: vars.client_name\n  }],\n  subject: `${vars.client_name} — New Review Responses Ready (${vars.date})`,\n  htmlContent: htmlContent\n};\n\n// CRITICAL: Stringify the payload for RAW body mode (matching MRA pattern)\nconst brevoBodyStringified = JSON.stringify(brevoPayload);\n\n// Push to output array\noutput.push({ json: {\n  brevo_body: brevoBodyStringified,\n  // Pass through for logging\n  date: vars.date,\n  client_id: vars.client_id,\n  total_pending: vars.total_pending,\n  recipient_email: vars.approval_contact_email\n} });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        -1024
+      ],
+      "id": "ccba99df-5762-4c6a-a2fe-3363715b0b11",
+      "name": "Step 12d - Build Email Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.brevo_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4224,
+        -1024
+      ],
+      "id": "b1090b5d-e9a3-4c64-9c65-bd6321196aaf",
+      "name": "Step 12e - HTTP Send Email",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uJbXCL9WY5rfhkcv",
+          "name": "api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const emailResponse = $input.first().json;\n\nconst deliveryLog = {\n  workflow_name: 'SCX-Sheet-Sync',\n  email_sent_at: new Date().toISOString(),\n  recipient: emailResponse.recipient_email || 'unknown',\n  subject: `VRYOH Intelligence — New Review Responses Ready (${emailResponse.date})`,\n  brevo_message_id: emailResponse.messageId || null,\n  delivery_status: emailResponse.messageId ? 'sent' : 'failed',\n  client_id: emailResponse.client_id || 'UNKNOWN',\n  total_pending_count: emailResponse.total_pending || 0\n};\n\nreturn [{ json: deliveryLog }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4432,
+        -1024
+      ],
+      "id": "cdf5da58-c23f-4aca-94a8-5f7c7e33c422",
+      "name": "Step 12f - Log Email Delivery"
+    },
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns?limit=500",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3424,
+        -1024
+      ],
+      "id": "ab0ceddf-00b7-470b-800d-27e7a6a920ae",
+      "name": "Step 12b1 - Fetch Previous Pending RDA",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Step 12b-filter - Filter Previous Pending": {
+      "main": [
+        [
+          {
+            "node": "Step 12c - Merge Counts Build Email Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12c - Merge Counts Build Email Variables": {
+      "main": [
+        [
+          {
+            "node": "Step 12d - Build Email Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12d - Build Email Body": {
+      "main": [
+        [
+          {
+            "node": "Step 12e - HTTP Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12e - HTTP Send Email": {
+      "main": [
+        [
+          {
+            "node": "Step 12f - Log Email Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12b1 - Fetch Previous Pending RDA": {
+      "main": [
+        [
+          {
+            "node": "Step 12b-filter - Filter Previous Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
