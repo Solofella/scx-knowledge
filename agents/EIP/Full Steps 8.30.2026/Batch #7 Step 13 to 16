@@ -1,0 +1,124 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst now = new Date();\nconst pad = (n, l=2) => String(n).padStart(l, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst ms = pad(now.getMilliseconds(), 3);\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: inp.ambiguity_flag,\n  below_certainty_threshold: inp.below_certainty_threshold,\n  eip_run_id: `EIP-${d}-${t}-${ms}`,\n  eip_timestamp: now.toISOString()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3856,
+        896
+      ],
+      "id": "41aaef5e-a81d-45e2-93a6-de03b00afd28",
+      "name": "STEP 13 — RUN ID + TIMESTAMP"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mhicpnrahaesxmy",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.nocodb_post_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4208,
+        896
+      ],
+      "id": "6c9e6185-e9bc-463c-900b-9c06af5879b9",
+      "name": "STEP 15 — NOCODB POST — WRITE EIP RECORD",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst eip_record_id = inp.Id || inp.id;\nif (!eip_record_id) throw new Error('NocoDB POST did not return record Id. Response: ' + JSON.stringify(inp).substring(0,200));\nreturn [{ json: {\n  eip_record_id: eip_record_id,\n  ala_record_id: $('Step 14 - Build NocoDB Body').first().json.ala_record_id,\n  ala_run_id: $('Step 14 - Build NocoDB Body').first().json.ala_run_id,\n  prior_run_id: $('Step 14 - Build NocoDB Body').first().json.prior_run_id,\n  lang: $('Step 14 - Build NocoDB Body').first().json.lang,\n  client_id: $('Step 14 - Build NocoDB Body').first().json.client_id,\n  raw_text: $('Step 14 - Build NocoDB Body').first().json.raw_text,\n  review_date: $('Step 14 - Build NocoDB Body').first().json.review_date,\n  platform: $('Step 14 - Build NocoDB Body').first().json.platform,\n  star_rating: $('Step 14 - Build NocoDB Body').first().json.star_rating,\n  ala_keywords: $('Step 14 - Build NocoDB Body').first().json.ala_keywords,\n  reviewer_handle: $('Step 14 - Build NocoDB Body').first().json.reviewer_handle,\n  eip_run_id: $('Step 14 - Build NocoDB Body').first().json.eip_run_id,\n  enriched_emotion_tag: $('Step 14 - Build NocoDB Body').first().json.enriched_emotion_tag,\n  core_emotion: $('Step 14 - Build NocoDB Body').first().json.core_emotion,\n  intensity_level: $('Step 14 - Build NocoDB Body').first().json.intensity_level,\n  polarity_balance: $('Step 14 - Build NocoDB Body').first().json.polarity_balance,\n  dominant_pole: $('Step 14 - Build NocoDB Body').first().json.dominant_pole,\n  certainty_score: $('Step 14 - Build NocoDB Body').first().json.certainty_score,\n  ambiguity_flag: $('Step 14 - Build NocoDB Body').first().json.ambiguity_flag,\n  collapse_flag: $('Step 14 - Build NocoDB Body').first().json.collapse_flag,\n  masked_emotion_flag: $('Step 14 - Build NocoDB Body').first().json.masked_emotion_flag,\n  cognitive_driver: $('Step 14 - Build NocoDB Body').first().json.cognitive_driver,\n  need_state: $('Step 14 - Build NocoDB Body').first().json.need_state,\n  signal_type: $('Step 14 - Build NocoDB Body').first().json.signal_type,\n  signal_weight: $('Step 14 - Build NocoDB Body').first().json.signal_weight,\n  emotion_hypothesis: $('Step 14 - Build NocoDB Body').first().json.emotion_hypothesis,\n  pain_point_domain_confirmed: $('Step 14 - Build NocoDB Body').first().json.pain_point_domain_confirmed,\n  pain_point_sub_category: $('Step 14 - Build NocoDB Body').first().json.pain_point_sub_category,\n  pain_hypothesis: $('Step 14 - Build NocoDB Body').first().json.pain_hypothesis\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4416,
+        896
+      ],
+      "id": "1eb6e8a2-afe9-4fea-b35d-db45c2ff138d",
+      "name": "Step 16 - Capture EIP Record ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst body = JSON.stringify({\n  \"EIP Run ID\":          inp.eip_run_id,\n  \"ALA Record ID\":       inp.ala_record_id,\n  \"EIP Timestamp\":       inp.eip_timestamp,\n  \"Enriched Emotion Tag\": inp.core_emotion,\n  \"Enriched Pain Point\": inp.pain_point_sub_category,\n  \"Domain\":              inp.pain_point_domain_confirmed,\n  \"Intensity Level\":     inp.intensity_level,\n  \"Polarity Balance\":    inp.polarity_balance,\n  \"Dominant Pole\":       inp.dominant_pole,\n  \"Certainty Score\":     inp.certainty_score,\n  \"Ambiguity Flag\":      inp.ambiguity_flag,\n  \"Collapse flag\":       inp.collapse_flag,\n  \"Masked Emotion Flag\": inp.masked_emotion_flag,\n  \"Cognitive Driver\":    inp.cognitive_driver,\n  \"Need State\":          inp.need_state,\n  \"Signal Type\":         inp.signal_type,\n  \"Emotion Hypothesis\":  inp.emotion_hypothesis,\n  \"Pain Hypothesis\":     inp.pain_hypothesis,\n  \"Keywords\":            inp.ala_keywords,\n  \"Signal Weight\":       inp.signal_weight,\n  \"Client ID\":           inp.client_id,\n  \"ESS Status\":          \"Pending\",\n  \"Error Log\":           null\n});\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: inp.ambiguity_flag,\n  eip_run_id: inp.eip_run_id,\n  eip_timestamp: inp.eip_timestamp,\n  nocodb_post_body: body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        896
+      ],
+      "id": "964ccc17-eaad-4f7a-b50d-4609ecb34dfa",
+      "name": "Step 14 - Build NocoDB Body"
+    }
+  ],
+  "connections": {
+    "STEP 13 — RUN ID + TIMESTAMP": {
+      "main": [
+        [
+          {
+            "node": "Step 14 - Build NocoDB Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STEP 15 — NOCODB POST — WRITE EIP RECORD": {
+      "main": [
+        [
+          {
+            "node": "Step 16 - Capture EIP Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 16 - Capture EIP Record ID": {
+      "main": [
+        []
+      ]
+    },
+    "Step 14 - Build NocoDB Body": {
+      "main": [
+        [
+          {
+            "node": "STEP 15 — NOCODB POST — WRITE EIP RECORD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
