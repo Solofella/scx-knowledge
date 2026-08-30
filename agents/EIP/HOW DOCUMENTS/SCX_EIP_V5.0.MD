@@ -1,1 +1,411 @@
+# SCX_EIP_HOW_v5.0
+
+**Agent Name:** EIP — Emotional Intelligence Processor
+**Version:** 5.0
+**Last Updated:** Chat #88 · June 29, 2026
+**Model:** GPT gpt-5.2
+**Status:** Operational — 29 nodes — English + Spanish dual-language
+**Previous Version:** v4.0 (Chat #74, April 4, 2026) — English-only, now superseded
+
+> v5.0 is a ground-truth reconciliation against the live n8n workflow JSON (all 29 nodes read node-by-node) and direct NocoDB table audit. Where v4.0 and the live workflow conflict, the live workflow is authoritative. Explicit open gaps are listed in Section 9 rather than silently estimated.
+
+---
+
+## 1. Purpose
+
+EIP is the **knowledge injection and canonical classification layer** of the SubtextCX pipeline. It receives a minimal trigger from ALA, re-fetches the full review record from NocoDB, loads the appropriate language dictionary pair, injects both complete dictionaries into a single GPT call, and resolves all emotion, pain point, and signal classifications.
+
+All downstream agents (ESS, HSI, SIA, BRA, RDA) inherit EIP's classifications. EIP pays the full dictionary cost once per record. No downstream agent re-queries the dictionaries.
+
+---
+
+## 2. Input Contract
+
+**Upstream Agent:** ALA (Audience Listener Agent)
+**Trigger:** Webhook POST to `/webhook/scx-eip`
+
+⚠️ **v4.0 CORRECTION:** ALA does NOT push full review content in the webhook payload. The payload is a minimal trigger only. EIP re-fetches the full ALA record itself via NocoDB GET in Step 3.
+
+**Webhook Payload — 5 fields only:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `ala_record_id` | Integer | YES | Must be positive integer. Hard fail if missing or invalid. |
+| `prior_run_id` | String | NO | ALA Run ID for trace continuity. |
+| `prior_table` | String | NO | Always "ALA". Trace field. |
+| `lang` | String | NO | "en" or "es". Null defaults to "en" in Step 5. |
+| `client_id` | String | NO | Client identifier. Passed through entire chain. |
+
+**ALA Record Fields Fetched by EIP (Step 3):**
+
+`Raw Tex` · `Platform` · `Date` · `Star Rating` · `Pain Point Domain` · `Preliminary Emotion Tag` · `Keywords` · `Reviewer Handle` · `Run ID` · `Lang` · `Client ID`
+
+> Note: `Raw Tex` is a Schema Registry truncation of "Raw Text" — do not rename until post-pilot cleanup.
+
+---
+
+## 3. Processing Logic — 29 Nodes
+
+```
+[01] Webhook
+     POST /webhook/scx-eip · Respond immediately (200)
+
+[02] Step 1 - Payload Validation
+     Extracts from .body · Validates ala_record_id is positive integer
+
+[03] Step 2 - Idempotency Check
+     NocoDB GET EIP table: filter ALA Record ID = ala_record_id, limit 1
+
+[04] Step 2 - Idempotency IF
+     Condition: pageInfo.totalRows > 0
+
+[04a] Step 2 - Skip Duplicate
+      TRUE branch → dead-end, no outgoing connection (see Gap #7)
+
+[04b] Step 2 - False Branch Gate
+      FALSE branch: return [] if totalRows > 0
+
+[05] Step 3 - Fetch ALA Record
+     NocoDB GET ALA table: filter Id = ala_record_id, limit 1
+
+[06] Step 3b - ALA Validation
+     Requires: Raw Tex, Platform, Date, Pain Point Domain, Preliminary Emotion Tag
+     Strips [N★] markers from raw text
+     Fallback note: record['lang'] (lowercase) does not match NocoDB field Lang
+     (capitalized) — low-risk dead code, primary source is Step 1 payload (see Issue 9.9)
+
+[07] Step 4 - Patch ALA Processing
+     NocoDB PATCH ALA: EIP Status = "Processing" (JSON body mode)
+
+[08] Step 5 - Dictionary Load Check
+     Resolves lang → selects emotion_table_id and pain_table_id (see Section 4)
+
+[09] Step 5 - INIT 1 Emotion Dict GET
+     NocoDB GET on emotion_table_id · limit 200
+
+[10] Step 5 - INIT 2 Emotion Dict Cache
+     Serializes emotion entries using language-branched field names
+     Carries pain_table_id forward in payload
+
+[11] Step 5 - INIT 3 Pain Master GET
+     NocoDB GET on pain_table_id · limit 400
+
+[12] Step 5 - INIT 4 Pain Master Cache
+     Serializes pain entries using language-branched field names
+     Builds signal_weight_map keyed on canonical pain point name
+
+[13] Step 6 - Build GPT Prompt
+     System prompt: full dictionaries injected
+     User prompt: review text + ALA seeds (context-only, not authoritative)
+     lang=es appended to user prompt when applicable
+
+[14] Step 7 - Build GPT Request Body
+     JSON.stringify() upstream — RAW body pattern
+     model: gpt-5.2 · temperature: 0.2 · max_completion_tokens: 600
+     response_format: json_object
+     ⚠️ No retry-on-fail configured (see Issue 9.5)
+
+[15] Step 8 - GPT Classification Call
+     HTTP POST to OpenAI /v1/chat/completions
+
+[16] Step 9 - Output Parsing
+     Validates emotion block fields and enums
+     Clamps polarity_balance and certainty_score to [0.0–1.0]
+     Caps certainty at 0.40 if enriched_emotion_tag looks numeric or bracketed
+     Looks up signal_weight from signal_weight_map
+     ⚠️ No domain validation for lang=es (see Issue 9.3)
+
+[17] Step 10 - Signal Type
+     Deterministic — 6-value taxonomy (see Section 5)
+
+[18] STEP 11 - Semantic Collapse Detection
+     ⚠️ Non-functional stub — always sets collapse_flag: false (see Issue 9.1)
+
+[19] Step 12 - Ambiguity Flag
+     ambiguity_flag = true if certainty_score < 0.65 OR masked_emotion_flag = true
+
+[20] STEP 13 - Run ID + Timestamp
+     Format: EIP-YYYYMMDD-HHMMSS-mmm · ISO 8601 timestamp
+
+[21] Step 14 - Build NocoDB Body
+     JSON.stringify() 23 fields (see Section 6)
+
+[22] STEP 15 - NocoDB POST
+     Writes EIP record to mhicpnrahaesxmy
+
+[23] Step 16 - Capture EIP Record ID
+     Throws if no Id returned from POST response
+     References Step 14 via $() node reference for all payload fields
+
+[24] Step 17a - Build Patch Body
+     JSON.stringify({"EIP Status": "Complete"})
+     ⚠️ ala_patch_body computed here but never referenced by Step 17 (dead code — see Issue 9.6)
+
+[25] Step 17 - Patch ALA Complete
+     NocoDB PATCH ALA: EIP Status = "Complete" (JSON body mode — hardcoded, not from 17a)
+
+[26] Step 18a - Build ESS Payload
+     Assembles full rich payload: all EIP outputs + ALA pass-throughs
+     (reviewer_handle, review_date, platform, star_rating, keywords, lang, client_id)
+
+[27] Step 18 - ESS Trigger
+     HTTP POST to /webhook/scx-ess · Timeout: 5000ms
+     ⚠️ No onError: continueRegularOutput (see Issue 9.4)
+```
+
+---
+
+## 4. Dual-Language Dictionary Routing
+
+Step 5 - Dictionary Load Check resolves `lang` and selects one of two table pairs. Both branches load full dictionaries — no pre-filtering.
+
+```
+lang = 'es'  →  Emotion Dictionary:  mhot4w62tupht71  (161 rows, audited clean June 2026)
+             →  Pain Point Master:   mwmiyyoucuhsms8  (253 rows, audited clean June 2026)
+
+lang = 'en'  →  Emotion Dictionary:  mrrscb955j1d2i7  (161 rows — see Gap #2)
+(default)    →  Pain Point Master:   meavqh37mdqgl4d  (336 rows — see Gap #2)
+```
+
+> **Resolved June 2026:** Spanish Pain Point Master had 3 column names with ñ corrupted (`Señal_Operacional`, `Señal_Emocional`, `Peso_Señal`) plus corrupted cell values. Columns renamed, cell values cleaned, 253 rows verified clean.
+
+**INIT 2 — Emotion Dictionary field names by language:**
+
+| Field concept | English | Spanish |
+|---|---|---|
+| Core name | `Core Emotion` | `Emoción Central` |
+| Definition | `Definition` | `Definición` |
+| Synonyms | `Synonyms` | `Sinónimos` |
+| Masked Forms | `Masked Forms` | `Formas Enmascaradas` |
+| Common Expressions | `Common Expressions` | `Expresiones Comunes` |
+| Need State | `Need_State` | `Estado de Necesidad` |
+| Neg Driver | `Negative Cognitive Driver` | `Impulsor Cognitivo Negativo` |
+
+**INIT 4 — Pain Point Master field names by language:**
+
+| Field concept | English | Spanish |
+|---|---|---|
+| Pain point name | `Enriched Pain Point` | `Punto_Dolor_Enriquecido` |
+| Signal weight | `Signal Weight` | `Peso_Señal` |
+| Description | `Description` | `Descripcion` |
+| Operational Signal | `Operational Signal` | `Señal_Operacional` |
+| Emotional Signal | `Emotional Signal` | `Señal_Emocional` |
+| Sample expression | `Sample User Expression` | `Ejemplo_Expresion_Usuario` |
+
+**signal_weight_map key:** `Enriched Pain Point` (EN) or `Punto_Dolor_Enriquecido` (ES). `Sub-Category` column does not exist in either table — this was a v4.0 error.
+
+---
+
+## 5. Signal Type Classification — Step 10
+
+⚠️ **v4.0 FULLY SUPERSEDED:** v4.0 documented T-NEGATIVE / T-AMBIGUOUS / T-POSITIVE. This does not match the live code. Actual taxonomy:
+
+| Signal Type | Condition |
+|---|---|
+| `Positive Signal` | `dominant_pole = "Positive"` |
+| `Masked Negative Signal` | `dominant_pole = "Negative"` AND `masked_emotion_flag = true` |
+| `Ambiguous Negative Signal` | `dominant_pole = "Negative"` AND `certainty_score < 0.65` |
+| `Dignity-Risk Signal` | `dominant_pole = "Negative"` AND `emotion_category` text-matches "Relational" / "Identity" / "Dignity" / "Trust" |
+| `Negative Signal` | `dominant_pole = "Negative"` — none of the above |
+| `Mixed Signal` | `dominant_pole = "Mixed"` |
+
+> **Open Issue:** Dignity-Risk detection matches English keywords. For `lang=es`, GPT outputs `emotion_category` in Spanish — Spanish dignity/trust-risk records cannot currently receive Dignity-Risk Signal. (See Issue 9.2)
+
+---
+
+## 6. NocoDB EIP Table Schema
+
+**Table ID:** `mhicpnrahaesxmy`
+
+⚠️ **v4.0 CORRECTION:** v4.0 listed "Enriched Emotion Breakdown", "Enriched Pain Point Breakdown" (JSON arrays), and standalone "Core Emotion" column. These do not appear in the actual Step 14 write payload. Status unclear — see Gap #3.
+
+**23 fields written by Step 14:**
+
+| Field | Type | Notes |
+|---|---|---|
+| EIP Run ID | SingleLineText | EIP-YYYYMMDD-HHMMSS-mmm |
+| ALA Record ID | Number | FK → ALA table |
+| EIP Timestamp | DateTime | ISO 8601 UTC |
+| Enriched Emotion Tag | **SingleLineText** | Stores `core_emotion` — see Gap #4 |
+| Enriched Pain Point | **SingleLineText** | `pain_point_sub_category` canonical name |
+| Domain | **SingleLineText** | `pain_point_domain_confirmed` cluster label |
+| Intensity Level | SingleSelect | Low / Moderate / High / Critical |
+| Polarity Balance | Decimal | 0.00–1.00 |
+| Dominant Pole | SingleSelect | Positive / Negative / Mixed |
+| Certainty Score | Decimal | 0.00–1.00 |
+| Ambiguity Flag | Checkbox | Boolean |
+| Collapse flag | Checkbox | Always false currently (stub) |
+| Masked Emotion Flag | Checkbox | Boolean |
+| Cognitive Driver | SingleLineText | |
+| Need State | SingleLineText | 6 controlled values |
+| Signal Type | SingleSelect | 6 values — see Section 5 |
+| Emotion Hypothesis | LongText | |
+| Pain Hypothesis | LongText | |
+| Keywords | SingleLineText | ALA pass-through, retained for SIA |
+| Signal Weight | Number | Integer or null |
+| Client ID | SingleLineText | |
+| ESS Status | SingleSelect | Pending / Processing / Complete / Error |
+| Error Log | LongText | null on clean write |
+
+> **Field type change June 2026:** `Enriched Emotion Tag`, `Enriched Pain Point`, `Domain` changed from SingleSelect to SingleLineText to support multilingual canonical names. English values unchanged.
+
+**Pass-through fields — NOT stored in EIP table:**
+`lang` · `reviewer_handle` · `review_date` · `platform` · `star_rating` · `raw_text` · `ala_run_id`
+
+---
+
+## 7. Dictionary Injection Strategy
+
+EIP injects ALL entries from the selected language pair on every record — no pre-filtering.
+
+| Component | Tokens | Notes |
+|---|---|---|
+| Dictionary content | ~14,750 | Eligible for OpenAI prompt caching (90% discount) |
+| Review + context | ~600 | Unique per record — never cached |
+| GPT output | ~250 | |
+| **Total** | **~15,600** | |
+| **Effective with caching** | **~2,075** | |
+| **Cost per record** | **~$0.0072** | Confirmed viable at all client volume tiers |
+
+Pre-filtering to ~10 entries was evaluated and rejected: requires a second GPT call, risks missing masked emotion entries, and saves fewer tokens than caching achieves without the quality risk.
+
+---
+
+## 8. Downstream Inheritance
+
+| Agent | Receives | Method |
+|---|---|---|
+| ESS | All 23 EIP fields + 7 pass-throughs | Step 18a/18 ESS trigger payload |
+| HSI | Same via ESS → HSI payload chain | Carried forward |
+| SIA | Domain, Signal Type, Enriched Pain Point, Enriched Emotion Tag | Direct NocoDB read on scheduled trigger |
+| BRA | Signal Type, Domain, Signal Weight | Via HSI → BRA payload |
+| RDA | Inherited from BRA payload | No direct EIP access |
+
+No downstream agent re-queries either dictionary. EIP pays the classification cost once.
+
+---
+
+## 9. Open Issues and Pending Fixes
+
+**9.1 STEP 11 Semantic Collapse Detection — Non-Functional Stub**
+Unconditionally sets `collapse_flag: false`, `collapse_warning: null`. No logic implemented. Field is written to NocoDB and forwarded to ESS but always false. Action: define spec and implement, or remove node and field.
+
+**9.2 Dignity-Risk Signal — Language Mismatch**
+Step 10 matches `emotion_category` against English strings. GPT outputs `emotion_category` in Spanish for `lang=es`. Spanish dignity/trust-risk records cannot receive Dignity-Risk Signal. Action: add Spanish keyword equivalents to the text-match list, or normalize `emotion_category` to English before Step 10.
+
+**9.3 Step 9 — No Pain Domain Validation for Spanish**
+English records validate `pain_point_domain_confirmed` against 13-item list. Spanish records have no presence or type check — a null domain would write to NocoDB silently. Action: add minimum presence + type check for Spanish at V1. Full domain list validation for V2.
+
+**9.4 Step 18 — No onError Fallback on ESS Trigger**
+ESS outage fails the entire EIP execution even though classification and NocoDB write already completed. Action: add `onError: continueRegularOutput` to Step 18.
+
+**9.5 Step 8 — No Retry on GPT Call**
+Transient OpenAI error fails the record. ALA's equivalent call has retry configured. Action: add retry-on-fail (3 attempts, 30s wait) to match ALA pattern.
+
+**9.6 Step 17a — Dead Code**
+`ala_patch_body` computed in Step 17a but Step 17 hardcodes its own body and never references it. Not a live bug but creates maintenance confusion. Action: either remove the computation from 17a or have Step 17 reference it.
+
+**9.7 emotion_category — Computed but Never Persisted**
+GPT produces `emotion_category`, carried through all nodes, dropped at Step 14. Not written to EIP table, not forwarded to ESS. Action: confirm if any downstream agent needs it. If yes, add to Step 14 and Step 18a. If no, remove from Step 9 and all pass-throughs.
+
+**9.8 enriched_emotion_tag — Never Persisted**
+Step 14 maps `core_emotion` (canonical dictionary name) to the "Enriched Emotion Tag" NocoDB column — not GPT's `enriched_emotion_tag` free-text label. The free-text label is never stored. Action: confirm design intent (see Gap #4).
+
+**9.9 Step 3b — Lowercase lang Fallback Mismatch**
+`record['lang']` (lowercase) does not match NocoDB ALA field `Lang` (capitalized). Fallback always returns undefined. Low-risk — primary source from Step 1 payload covers all real cases. Action: change `record['lang']` to `record['Lang']`.
+
+---
+
+## 10. Open Gaps — Require External Input
+
+| # | Gap | What is needed |
+|---|---|---|
+| 1 | Correct chat number for "Last Updated" field | Supply the session number for this update cycle |
+| 2 | English dictionaries not re-audited this cycle | Run NocoDB GET on `mrrscb955j1d2i7` and `meavqh37mdqgl4d` — confirm row counts and column names intact |
+| 3 | EIP NocoDB table may have unused columns (Enriched Emotion Breakdown, Enriched Pain Point Breakdown, Core Emotion, Emotion Category) | Pull direct schema on `mhicpnrahaesxmy` and list all existing columns |
+| 4 | Is it intentional that "Enriched Emotion Tag" column stores `core_emotion` rather than GPT's `enriched_emotion_tag`? | Confirm design intent from schema owner |
+| 5 | STEP 11 Semantic Collapse Detection — original design intent unknown | No spec exists to reconstruct from. Supply original intended detection logic |
+| 6 | No end-to-end live Spanish test confirmed | Submit one real Spanish review through ALA → EIP and confirm resulting NocoDB record has non-null `signal_weight` and coherent Spanish `emotion_hypothesis` / `pain_hypothesis` |
+| 7 | Step 2 Skip Duplicate dead-end — is silent halt intentional? | Duplicate `ala_record_id` silently halts with no log, no error, no notification. Confirm this is intended behavior |
+
+---
+
+## 11. Data Flow
+
+```
+ALA trigger (5 fields only)
+↓
+[Step 1] Payload validation
+↓
+[Step 2] Idempotency check — skip if already processed
+↓
+[Step 3/3b] Fetch + validate full ALA record from NocoDB
+↓
+[Step 4] Patch ALA: EIP Status = Processing
+↓
+[Step 5] Resolve lang → select EN or ES dictionary table pair
+↓
+[INIT 1–4] Fetch + serialize Emotion Dictionary + Pain Point Master
+           Build signal_weight_map
+↓
+[Step 6/7] Build GPT prompt + request body (full dict injection)
+↓
+[Step 8] GPT classification call (gpt-5.2, temp 0.2, 600 tokens)
+↓
+[Step 9] Parse + validate response, clamp scores, look up signal_weight
+↓
+[Step 10] Deterministic Signal Type (6-value taxonomy)
+↓
+[Step 11] Collapse Detection stub (always false — pending fix)
+↓
+[Step 12] Ambiguity Flag (threshold 0.65)
+↓
+[Step 13] EIP Run ID + Timestamp
+↓
+[Step 14] Build NocoDB POST body (23 fields)
+↓
+[Step 15] Write EIP record
+↓
+[Step 16] Capture EIP Record ID
+↓
+[Step 17a/17] Patch ALA: EIP Status = Complete
+↓
+[Step 18a/18] Fire ESS trigger (full rich payload)
+```
+
+---
+
+## 12. Key Design Decisions
+
+**Full dictionary injection vs pre-filter:** Pre-filter requires a second GPT call, risks missing masked emotion entries, and saves fewer tokens than OpenAI caching achieves. Full injection with caching is cheaper and eliminates classification risk.
+
+**GPT vs Claude for EIP:** OpenAI prompt caching has a longer effective TTL for batch processing than Anthropic's 5-minute TTL. For batches with gaps between records, Anthropic cache expires and full cost repeats. OpenAI caching is more reliable at pilot batch sizes.
+
+**Separate language tables vs bilingual fields:** Separate NocoDB tables per language keep each dictionary independently maintainable. Field name schemas differ between languages — a bilingual single table would require dual field names and complicate all INIT serialization code.
+
+**SingleLineText for Enriched Emotion Tag, Enriched Pain Point, Domain:** Changed from SingleSelect June 2026. Canonical names are governed by dictionary injection at the GPT prompt level — not by NocoDB field constraints. SingleLineText accepts canonical names in any language with zero maintenance overhead.
+
+---
+
+## 13. n8n Workflow Details
+
+**Workflow Name:** EIP — Emotional Intelligence Processor
+**n8n Version:** 2.4.6 self-hosted — do not upgrade until Fix 3 stabilisation gate passes
+**Node Count:** 29 as-built
+**Credentials:** `xc-token` (NocoDB) · `Subtext-CX-OpenAI` (OpenAI)
+
+**Critical build rules — apply to all future modifications:**
+- Webhook payload: `$input.first().json.body`
+- After IF branch: `$('Node Name').first().json`
+- IF condition: `pageInfo.totalRows` not `list.length`
+- No spread operator in Code Node returns
+- No `console.warn` or `console.log`
+- No `$workflow.staticData`
+- PATCH: JSON body mode not RAW
+- POST body: `JSON.stringify()` in Code Node + RAW in HTTP Request
+- No `for...of` loops — use index-based `for` loops throughout
+
+---
+
+*SCX_EIP_HOW_v5.0 · Chat #88 · June 29, 2026 · Solofella LLC*
 
