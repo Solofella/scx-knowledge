@@ -1,0 +1,77 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst THRESHOLD = 0.65;\n\nconst ambiguity_flag = inp.certainty_score < THRESHOLD || inp.masked_emotion_flag === true;\nconst below_certainty_threshold = inp.certainty_score < THRESHOLD;\n\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: inp.collapse_flag,\n  ambiguity_flag: ambiguity_flag,\n  below_certainty_threshold: below_certainty_threshold\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        896
+      ],
+      "id": "e9cf3e9c-9d2a-40e4-a269-9a6b1bdd7c2f",
+      "name": "Step 12 - Ambiguity Flag"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst pole = inp.dominant_pole;\nconst category = inp.emotion_category || '';\nconst masked = inp.masked_emotion_flag;\nconst certainty = inp.certainty_score;\nlet signal_type;\nif (pole === 'Positive') {\n  signal_type = 'Positive Signal';\n} else if (pole === 'Negative') {\n  if (masked) signal_type = 'Masked Negative Signal';\n  else if (certainty < 0.65) signal_type = 'Ambiguous Negative Signal';\n  else if (category.includes('Relational') || category.includes('Identity') ||\n           category.includes('Dignity') || category.includes('Trust')) {\n    signal_type = 'Dignity-Risk Signal';\n  } else signal_type = 'Negative Signal';\n} else {\n  signal_type = 'Mixed Signal';\n}\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id:inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: inp.pain_point_master_text,\n  signal_weight_map: inp.signal_weight_map,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: signal_type\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        720
+      ],
+      "id": "c5a2ab21-2fc0-464d-87da-9222442d213c",
+      "name": "Step 10 - Signal Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nreturn [{ json: {\n  ala_record_id: inp.ala_record_id,\n  ala_run_id: inp.ala_run_id,\n  prior_run_id: inp.prior_run_id,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  raw_text: inp.raw_text,\n  clean_text: inp.clean_text,\n  star_rating: inp.star_rating,\n  platform: inp.platform,\n  review_date: inp.review_date,\n  ala_keywords: inp.ala_keywords,\n  reviewer_handle: inp.reviewer_handle,\n  core_emotion: inp.core_emotion,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  emotion_category: inp.emotion_category,\n  intensity_level: inp.intensity_level,\n  polarity_balance: inp.polarity_balance,\n  dominant_pole: inp.dominant_pole,\n  certainty_score: inp.certainty_score,\n  masked_emotion_flag: inp.masked_emotion_flag,\n  cognitive_driver: inp.cognitive_driver,\n  need_state: inp.need_state,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  pain_point_domain_confirmed: inp.pain_point_domain_confirmed,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_hypothesis: inp.pain_hypothesis,\n  signal_weight: inp.signal_weight,\n  signal_type: inp.signal_type,\n  collapse_flag: false,\n  collapse_warning: null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3504,
+        896
+      ],
+      "id": "74942b34-79eb-4847-9fa6-1f83e79c2b80",
+      "name": "STEP 11 — SEMANTIC COLLAPSE DETECTION"
+    }
+  ],
+  "connections": {
+    "Step 12 - Ambiguity Flag": {
+      "main": [
+        []
+      ]
+    },
+    "Step 10 - Signal Type": {
+      "main": [
+        [
+          {
+            "node": "STEP 11 — SEMANTIC COLLAPSE DETECTION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STEP 11 — SEMANTIC COLLAPSE DETECTION": {
+      "main": [
+        [
+          {
+            "node": "Step 12 - Ambiguity Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
