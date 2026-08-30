@@ -1,0 +1,65 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/{{$json.pain_table_id}}?limit=400",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\"limit\": \"400\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2272,
+        560
+      ],
+      "id": "b9d9d522-47b0-45af-b7bc-08f7392fc96f",
+      "name": "Step 5 - INIT 3 Pain Master GET",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const painData = $input.first().json;\nconst entries = painData.list || [];\nconst inp = $('Step 5 - INIT 2 Emotion Dict Cache').first().json;\nconst lang = (inp.lang || 'en').toLowerCase().trim();\nconst client_lang = (inp.client_lang || 'en').toLowerCase().trim();\n\nif (entries.length === 0) {\n  throw new Error('Pain Point Master returned empty. lang: ' + lang);\n}\n\n// Domain normalization map — ES → EN\nconst DOMAIN_MAP_ES_EN = {\n  'Calidad y prestación del servicio':          'Service Quality & Delivery',\n  'Comportamiento e interacción del personal':  'Staff Behavior & Interaction',\n  'Calidad de alimentos y bebidas':             'Food & Beverage Quality',\n  'Entorno físico y ambiente':                  'Physical Environment & Ambiance',\n  'Percepción de valor y precios':              'Value & Pricing Perception',\n  'Experiencia de reserva':                     'Booking & Reservation Experience',\n  'Expectativas frente a la realidad':          'Expectation vs. Reality',\n  'Ocasiones especiales y personalización':     'Special Occasion & Personalization',\n  'Fallas operativas':                          'Operational Failures',\n  'Confianza, dignidad y pertenencia':          'Trust, Dignity & Belonging',\n  'Accesibilidad e inclusión':                  'Accessibility & Inclusion',\n  'Seguridad y protección':                     'Safety & Security',\n  'Experiencia digital y tecnología':           'Digital Experience & Technology'\n};\n\n// Domain normalization map — EN → ES (future-proofed)\nconst DOMAIN_MAP_EN_ES = {\n  'Service Quality & Delivery':           'Calidad y prestación del servicio',\n  'Staff Behavior & Interaction':         'Comportamiento e interacción del personal',\n  'Food & Beverage Quality':              'Calidad de alimentos y bebidas',\n  'Physical Environment & Ambiance':      'Entorno físico y ambiente',\n  'Value & Pricing Perception':           'Percepción de valor y precios',\n  'Booking & Reservation Experience':     'Experiencia de reserva',\n  'Expectation vs. Reality':              'Expectativas frente a la realidad',\n  'Special Occasion & Personalization':   'Ocasiones especiales y personalización',\n  'Operational Failures':                 'Fallas operativas',\n  'Trust, Dignity & Belonging':           'Confianza, dignidad y pertenencia',\n  'Accessibility & Inclusion':            'Accesibilidad e inclusión',\n  'Safety & Security':                    'Seguridad y protección',\n  'Digital Experience & Technology':      'Experiencia digital y tecnología'\n};\n\nfunction normalizeDomain(rawDomain, reviewLang, clientLang) {\n  if (reviewLang === clientLang) return rawDomain;\n  if (reviewLang === 'es' && clientLang === 'en') {\n    return DOMAIN_MAP_ES_EN[rawDomain] || rawDomain;\n  }\n  if (reviewLang === 'en' && clientLang === 'es') {\n    return DOMAIN_MAP_EN_ES[rawDomain] || rawDomain;\n  }\n  return rawDomain;\n}\n\nconst painLines = [];\nconst domainGroup = {};\nconst swMap = {};\n\nif (lang === 'es') {\n  for (let i = 0; i < entries.length; i++) {\n    const entry = entries[i];\n    const rawDomain = entry['Dominio'] || 'Desconocido';\n    const domain = normalizeDomain(rawDomain, 'es', client_lang);\n    const enrichedPP = entry['Punto_Dolor_Enriquecido'] || '';\n    const sw = parseInt(entry['Peso_Señal']);\n    if (enrichedPP && !isNaN(sw)) swMap[enrichedPP] = sw;\n    if (!domainGroup[domain]) domainGroup[domain] = [];\n    let block = '  ' + enrichedPP;\n    if (entry['Descripcion']) block += '\\n    Descripción: ' + entry['Descripcion'];\n    if (entry['Señal_Operacional']) block += '\\n    Señal Operacional: ' + entry['Señal_Operacional'];\n    if (entry['Señal_Emocional']) block += '\\n    Señal Emocional: ' + entry['Señal_Emocional'];\n    if (entry['Ejemplo_Expresion_Usuario']) block += '\\n    Expresión de Ejemplo: ' + entry['Ejemplo_Expresion_Usuario'];\n    domainGroup[domain].push(block);\n  }\n} else {\n  for (let i = 0; i < entries.length; i++) {\n    const entry = entries[i];\n    const rawDomain = entry['Domain'] || 'Unknown';\n    const domain = normalizeDomain(rawDomain, 'en', client_lang);\n    const enrichedPP = entry['Enriched Pain Point'] || '';\n    const sw = parseInt(entry['Signal Weight']);\n    if (enrichedPP && !isNaN(sw)) swMap[enrichedPP] = sw;\n    if (!domainGroup[domain]) domainGroup[domain] = [];\n    let block = '  ' + enrichedPP;\n    if (entry['Description']) block += '\\n    Description: ' + entry['Description'];\n    if (entry['Operational Signal']) block += '\\n    Operational Signal: ' + entry['Operational Signal'];\n    if (entry['Emotional Signal']) block += '\\n    Emotional Signal: ' + entry['Emotional Signal'];\n    if (entry['Sample User Expression']) block += '\\n    Sample Expression: ' + entry['Sample User Expression'];\n    domainGroup[domain].push(block);\n  }\n}\n\nconst domainKeys = Object.keys(domainGroup);\nfor (let i = 0; i < domainKeys.length; i++) {\n  const domain = domainKeys[i];\n  painLines.push(domain + ':');\n  const lines = domainGroup[domain];\n  for (let j = 0; j < lines.length; j++) {\n    painLines.push(lines[j]);\n  }\n}\n\nconst pain_point_master_text = painLines.join('\\n\\n');\n\nreturn [{ json: {\n  ala_record_id:          inp.ala_record_id,\n  ala_run_id:             inp.ala_run_id,\n  prior_run_id:           inp.prior_run_id,\n  lang:                   inp.lang,\n  client_lang:            inp.client_lang,\n  client_id:              inp.client_id,\n  raw_text:               inp.raw_text,\n  clean_text:             inp.clean_text,\n  star_rating:            inp.star_rating,\n  platform:               inp.platform,\n  review_date:            inp.review_date,\n  ala_pain_domain:        inp.ala_pain_domain,\n  ala_prelim_emotion:     inp.ala_prelim_emotion,\n  ala_keywords:           inp.ala_keywords,\n  reviewer_handle:        inp.reviewer_handle,\n  emotion_dictionary_text: inp.emotion_dictionary_text,\n  pain_point_master_text: pain_point_master_text,\n  signal_weight_map:      JSON.stringify(swMap),\n  dict_status:            'both_cached'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        560
+      ],
+      "id": "93ad9e7e-d48d-465d-88e7-39eb38e7e5bc",
+      "name": "Step 5 - INIT 4 Pain Master Cache"
+    }
+  ],
+  "connections": {
+    "Step 5 - INIT 3 Pain Master GET": {
+      "main": [
+        [
+          {
+            "node": "Step 5 - INIT 4 Pain Master Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5 - INIT 4 Pain Master Cache": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ee846c9cb6c42f0fccebbb73b8bef7922cf67a50bc68d3a82bb6fccc4e9887a"
+  }
+}
