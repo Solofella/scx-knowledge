@@ -1,4 +1,4 @@
-# SubtextCX Knowledge Base
+# VRYOH Knowledge Base
 
 This repository contains all documentation for the SubtextCX pipeline system.
 
