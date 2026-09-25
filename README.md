@@ -13,6 +13,6 @@ This repository contains all documentation for the SubtextCX pipeline system.
 
 ## How to Use
 
-When starting a chat with Claude about SubtextCX:
+When starting a chat with Claude about VRYOH:
 
 **For agent-specific work:**
