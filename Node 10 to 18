@@ -1,0 +1,146 @@
+{
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nif (!inp.public_response_draft || inp.public_response_draft.length < 20)\n  throw new Error('public_response_draft missing or too short.');\n\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  reviewer_handle: inp.reviewer_handle,\n  guest_name: inp.guest_name || null,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  audit_passed: inp.audit_passed,\n  audit_failed_items: inp.audit_failed_items,\n  seo_keywords_used: inp.seo_keywords_used,\n  public_response_draft: inp.public_response_draft\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6016,
+        832
+      ],
+      "id": "2052a301-3b80-4da4-b670-82f49189c378",
+      "name": "Step 10 - Output Parsing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst prohibitedEN = [\n  'refund', 'voucher', 'complimentary', 'discount', 'credit',\n  'compensation', 'reimburse', 'waive', 'free of charge', 'no charge'\n];\nconst prohibitedES = [\n  'reembolso', 'reembolsar', 'reintegro', 'cupon', 'descuento', 'cortesia',\n  'compensacion', 'compensar', 'gratis', 'sin costo', 'sin cargo', 'credito',\n  'devolucion', 'devolver su dinero'\n];\n\nconst norm = function(s) {\n  return String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n};\nconst bothDrafts = norm(row.public_response_draft) + ' ' + norm(row.internal_followup_draft);\n\nconst flaggedTerms = Array.from(new Set(\n  prohibitedEN.concat(prohibitedES).filter(term => bothDrafts.includes(term))\n));\nconst commercial_commitment_flag = flaggedTerms.length > 0;\n\nreturn [{ json: {\n  bra_record_id: row.bra_record_id,\n  confirmed_response_tier: row.confirmed_response_tier,\n  governance_flag: row.governance_flag,\n  human_review_required: row.human_review_required,\n  solution_type: row.solution_type,\n  emotional_axis: row.emotional_axis,\n  pain_axis: row.pain_axis,\n  stability_axis: row.stability_axis,\n  signal_based_consideration: row.signal_based_consideration,\n  urgency_level: row.urgency_level,\n  commercial_risk_flag: row.commercial_risk_flag,\n  behavioral_interpretation: row.behavioral_interpretation,\n  lang: row.lang,\n  client_id: row.client_id,\n  enriched_emotion_tag: row.enriched_emotion_tag,\n  enriched_pain_point: row.enriched_pain_point,\n  pain_point_sub_category: row.pain_point_sub_category,\n  signal_type: row.signal_type,\n  intensity_level: row.intensity_level,\n  hsi_record_id: row.hsi_record_id,\n  ess_record_id: row.ess_record_id,\n  eip_record_id: row.eip_record_id,\n  ala_record_id: row.ala_record_id,\n  prior_run_id: row.prior_run_id,\n  emotion_hypothesis: row.emotion_hypothesis,\n  keywords: row.keywords,\n  brand_voice: row.brand_voice,\n  brand_voice_brief: row.brand_voice_brief,\n  lang_resolved: row.lang_resolved,\n  reviewer_handle: row.reviewer_handle,\n  guest_name: row.guest_name || null,\n  audit_passed: row.audit_passed,\n  audit_failed_items: row.audit_failed_items,\n  public_response_draft: row.public_response_draft,\n  internal_followup_draft: row.internal_followup_draft,\n  seo_keywords_used: row.seo_keywords_used,\n  commercial_commitment_flag: commercial_commitment_flag,\n  flagged_terms: flaggedTerms.join(', ') || null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6816,
+        832
+      ],
+      "id": "c310667e-71fb-4454-9b71-048bd01313a3",
+      "name": "Step 11 - Commercial Commitment Scan"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst s2 = $('Step 2 - Payload Validation').first().json;\n\nconst approval_status = 'Pending';\n\nconst reasons = [];\nif (s2.hold_for_review) reasons.push('HIGH-LIABILITY: NON-PUBLISHABLE until elevated review' + (s2.response_contract.hold_reason ? ' (' + s2.response_contract.hold_reason + ')' : ''));\nif (row.commercial_commitment_flag) reasons.push('Commercial commitment detected');\nif (row.governance_flag === 'Flag') reasons.push('Governance Flag = Flag');\nif (row.human_review_required) reasons.push('Human Review Required');\nif (row.confirmed_response_tier === 'T3') reasons.push('T3 record');\n\nreturn [{ json: {\n  bra_record_id: row.bra_record_id,\n  confirmed_response_tier: row.confirmed_response_tier,\n  governance_flag: row.governance_flag,\n  human_review_required: row.human_review_required,\n  solution_type: row.solution_type,\n  emotional_axis: row.emotional_axis,\n  pain_axis: row.pain_axis,\n  stability_axis: row.stability_axis,\n  signal_based_consideration: row.signal_based_consideration,\n  urgency_level: row.urgency_level,\n  commercial_risk_flag: row.commercial_risk_flag,\n  behavioral_interpretation: row.behavioral_interpretation,\n  lang: row.lang,\n  client_id: row.client_id,\n  enriched_emotion_tag: row.enriched_emotion_tag,\n  enriched_pain_point: row.enriched_pain_point,\n  pain_point_sub_category: row.pain_point_sub_category,\n  signal_type: row.signal_type,\n  intensity_level: row.intensity_level,\n  hsi_record_id: row.hsi_record_id,\n  ess_record_id: row.ess_record_id,\n  eip_record_id: row.eip_record_id,\n  ala_record_id: row.ala_record_id,\n  prior_run_id: row.prior_run_id,\n  emotion_hypothesis: row.emotion_hypothesis,\n  keywords: row.keywords,\n  brand_voice: row.brand_voice,\n  brand_voice_brief: row.brand_voice_brief,\n  lang_resolved: row.lang_resolved,\n  reviewer_handle: row.reviewer_handle,\n  guest_name: row.guest_name || null,\n  audit_passed: row.audit_passed,\n  audit_failed_items: row.audit_failed_items,\n  public_response_draft: row.public_response_draft,\n  internal_followup_draft: row.internal_followup_draft,\n  commercial_commitment_flag: row.commercial_commitment_flag,\n  flagged_terms: row.flagged_terms,\n  seo_keywords_used: row.seo_keywords_used,\n  approval_status: approval_status,\n  elevation_reason: reasons.join(' | ') || null\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7024,
+        832
+      ],
+      "id": "69c39491-bc8c-43fd-87da-4855082fc355",
+      "name": "Step 12 - Approval Status Assignment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst now = new Date();\nconst pad = (n, l) => String(n).padStart(l || 2, '0');\nconst d = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;\nconst t = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst idx = String(($runIndex || 0) + 1).padStart(3, '0');\nconst rda_run_id = `RDA-${d}-${t}-${idx}`;\nconst rda_timestamp = now.toISOString();\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  reviewer_handle: inp.reviewer_handle,\n  guest_name: inp.guest_name || null,\n  audit_passed: inp.audit_passed,\n  audit_failed_items: inp.audit_failed_items,\n  public_response_draft: inp.public_response_draft,\n  internal_followup_draft: inp.internal_followup_draft,\n  commercial_commitment_flag: inp.commercial_commitment_flag,\n  flagged_terms: inp.flagged_terms,\n  approval_status: inp.approval_status,\n  elevation_reason: inp.elevation_reason,\n  seo_keywords_used: inp.seo_keywords_used,\n  rda_run_id: rda_run_id,\n  rda_timestamp: rda_timestamp\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7216,
+        832
+      ],
+      "id": "5ad633f9-8360-4d2d-b974-d2a6a670d3f6",
+      "name": "Step 13 - RDA Run ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\nconst bv = typeof inp.brand_voice === 'string'\n  ? JSON.parse(inp.brand_voice)\n  : inp.brand_voice;\n\nconst body = JSON.stringify({\n  'RDA Run ID':                inp.rda_run_id,\n  'BRA Record ID':             inp.bra_record_id,\n  'ALA Record ID':             inp.ala_record_id,\n  'RDA Timestamp':             inp.rda_timestamp,\n  'Confirmed Response Tier':   inp.confirmed_response_tier,\n  'Public Response Draft':     inp.public_response_draft,\n  'Reviewer Handle':           inp.reviewer_handle || null,\n  'Internal Follow-Up Draft':  inp.internal_followup_draft,\n  'Approval Status':           inp.approval_status,\n  'Commercial Commitment Flag': inp.commercial_commitment_flag,\n  'Elevation Reason':          inp.elevation_reason,\n  'Flagged Terms':             inp.flagged_terms,\n  'Client ID':                 inp.client_id,\n  'lang':                      inp.lang_resolved,\n  'SEO Keywords':              bv?.seo_keywords || null,\n  'SEO Keywords Used':         inp.seo_keywords_used || null,\n  'Audit Passed':              inp.audit_passed || false,\n  'Audit Failed Items':        inp.audit_failed_items || null,\n  'Published Timestamp':       null,\n  'Approval Notes':            null,\n  'Error Log':                 null\n});\n\nreturn [{ json: {\n  bra_record_id:              inp.bra_record_id,\n  confirmed_response_tier:    inp.confirmed_response_tier,\n  governance_flag:            inp.governance_flag,\n  human_review_required:      inp.human_review_required,\n  solution_type:              inp.solution_type,\n  emotional_axis:             inp.emotional_axis,\n  pain_axis:                  inp.pain_axis,\n  stability_axis:             inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style:                 inp.tone_style,\n  urgency_level:              inp.urgency_level,\n  commercial_risk_flag:       inp.commercial_risk_flag,\n  behavioral_interpretation:  inp.behavioral_interpretation,\n  lang:                       inp.lang,\n  client_id:                  inp.client_id,\n  enriched_emotion_tag:       inp.enriched_emotion_tag,\n  enriched_pain_point:        inp.enriched_pain_point,\n  pain_point_sub_category:    inp.pain_point_sub_category,\n  signal_type:                inp.signal_type,\n  intensity_level:            inp.intensity_level,\n  hsi_record_id:              inp.hsi_record_id,\n  ess_record_id:              inp.ess_record_id,\n  eip_record_id:              inp.eip_record_id,\n  ala_record_id:              inp.ala_record_id,\n  prior_run_id:               inp.prior_run_id,\n  emotion_hypothesis:         inp.emotion_hypothesis,\n  keywords:                   inp.keywords,\n  brand_voice:                inp.brand_voice,\n  brand_voice_brief:          inp.brand_voice_brief,\n  lang_resolved:              inp.lang_resolved,\n  reviewer_handle:            inp.reviewer_handle,\n  guest_name:                 inp.guest_name || null,\n  audit_passed:               inp.audit_passed,\n  audit_failed_items:         inp.audit_failed_items,\n  public_response_draft:      inp.public_response_draft,\n  internal_followup_draft:    inp.internal_followup_draft,\n  commercial_commitment_flag: inp.commercial_commitment_flag,\n  flagged_terms:              inp.flagged_terms,\n  approval_status:            inp.approval_status,\n  elevation_reason:           inp.elevation_reason,\n  rda_run_id:                 inp.rda_run_id,\n  rda_timestamp:              inp.rda_timestamp,\n  seo_keywords_used:          inp.seo_keywords_used,\n  nocodb_post_body:           body\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7424,
+        832
+      ],
+      "id": "06356de4-24ad-4ffe-b17e-3a2290ca4eb7",
+      "name": "Step 14 - Build NocoDB POST Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mr1v67cszcklwns",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.nocodb_post_body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        7632,
+        832
+      ],
+      "id": "1c5fb2cc-2bfa-4ad6-91fc-4dd2dfc22a89",
+      "name": "Step 15 - NocoDB POST RDA Record",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rdaId = $input.first().json?.Id;\nif (!rdaId) throw new Error('NocoDB RDA write returned no Record ID. bra_record_id: ' + $('Step 14 - Build NocoDB POST Body').first().json.bra_record_id);\nconst inp = $('Step 14 - Build NocoDB POST Body').first().json;\nreturn [{ json: {\n  bra_record_id: inp.bra_record_id,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  governance_flag: inp.governance_flag,\n  human_review_required: inp.human_review_required,\n  solution_type: inp.solution_type,\n  emotional_axis: inp.emotional_axis,\n  pain_axis: inp.pain_axis,\n  stability_axis: inp.stability_axis,\n  signal_based_consideration: inp.signal_based_consideration,\n  tone_style: inp.tone_style,\n  urgency_level: inp.urgency_level,\n  commercial_risk_flag: inp.commercial_risk_flag,\n  behavioral_interpretation: inp.behavioral_interpretation,\n  lang: inp.lang,\n  client_id: inp.client_id,\n  enriched_emotion_tag: inp.enriched_emotion_tag,\n  enriched_pain_point: inp.enriched_pain_point,\n  pain_point_sub_category: inp.pain_point_sub_category,\n  signal_type: inp.signal_type,\n  intensity_level: inp.intensity_level,\n  hsi_record_id: inp.hsi_record_id,\n  ess_record_id: inp.ess_record_id,\n  eip_record_id: inp.eip_record_id,\n  ala_record_id: inp.ala_record_id,\n  prior_run_id: inp.prior_run_id,\n  emotion_hypothesis: inp.emotion_hypothesis,\n  keywords: inp.keywords,\n  brand_voice: inp.brand_voice,\n  brand_voice_brief: inp.brand_voice_brief,\n  lang_resolved: inp.lang_resolved,\n  reviewer_handle: inp.reviewer_handle,\n  guest_name: inp.guest_name || null,\n  audit_passed: inp.audit_passed,\n  audit_failed_items: inp.audit_failed_items,\n  public_response_draft: inp.public_response_draft,\n  internal_followup_draft: inp.internal_followup_draft,\n  commercial_commitment_flag: inp.commercial_commitment_flag,\n  flagged_terms: inp.flagged_terms,\n  approval_status: inp.approval_status,\n  elevation_reason: inp.elevation_reason,\n  rda_run_id: inp.rda_run_id,\n  rda_timestamp: inp.rda_timestamp,\n  rda_record_id: rdaId\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7824,
+        832
+      ],
+      "id": "dc2c7c72-a516-47c8-9e2e-f4895549ce34",
+      "name": "Step 16 - Capture RDA Record ID"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://nocodb:8080/api/v1/db/data/noco/pq249fix22t3ofv/mwqejw7swhd2cf4/{{$json.bra_record_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"RDA Status\": \"Complete\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8016,
+        832
+      ],
+      "id": "7e7f21d2-8322-47f9-bafd-34b303eccdf7",
+      "name": "Step 17 - Patch BRA RDA Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DT9tnRgqYpPc3rXo",
+          "name": "xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $('Step 16 - Capture RDA Record ID').first().json;\nconst s2 = $('Step 2 - Payload Validation').first().json;\nconst contract = s2.response_contract;\n\nconst held = s2.hold_for_review === true;\nconst prefix = held\n  ? '[HOLD: NON-PUBLISHABLE] '\n  : (inp.elevation_reason ? '[ELEVATED: APPROVAL REQUIRED] ' : '[APPROVAL REQUIRED] ');\nconst subject = prefix + inp.confirmed_response_tier + ' Review Response --- ' + inp.rda_run_id;\n\nconst emailBody =\n  (held ? 'HOLD: this reply touches a high-liability issue. Do not publish until elevated review.\\n\\n' : '') +\n  'TIER: ' + inp.confirmed_response_tier + '\\n' +\n  'GUEST: ' + (inp.reviewer_handle || 'Anonymous') + '\\n' +\n  'APPROVAL STATUS: ' + inp.approval_status + '\\n' +\n  'AUDIT PASSED: ' + (inp.audit_passed ? 'Yes' : 'No, ' + (inp.audit_failed_items || 'unknown')) + '\\n' +\n  'URGENCY: ' + inp.urgency_level + '\\n' +\n  'EMOTIONAL AXIS: ' + inp.emotional_axis + '\\n' +\n  'PAIN AXIS: ' + inp.pain_axis + '\\n' +\n  'CONTRACT: posture ' + contract.strictest_epistemic_posture + ', claim type ' + contract.primary_claim_type + ', verification ' + contract.verification_state + ', closing ' + contract.closing_objective + '\\n\\n' +\n  'PUBLIC RESPONSE DRAFT:\\n' + inp.public_response_draft + '\\n\\n' +\n  'INTERNAL FOLLOW-UP DRAFT:\\n' + inp.internal_followup_draft + '\\n\\n' +\n  'SIGNAL-BASED CONSIDERATION:\\n' + inp.signal_based_consideration + '\\n\\n' +\n  (inp.behavioral_interpretation ? 'BEHAVIORAL CONTEXT:\\n' + inp.behavioral_interpretation + '\\n\\n' : '') +\n  (inp.elevation_reason ? 'ELEVATION REASON: ' + inp.elevation_reason + '\\n\\n' : '') +\n  'APPROVAL INSTRUCTIONS: Set the Status in the client Google Sheet (Approved, Modified or Not Accepted). Add a reason in Approval Notes for Not Accepted or Modified.\\n' +\n  '48-HOUR SLA APPLIES.';\n\nreturn [{ json: {\n  rda_run_id:             inp.rda_run_id,\n  rda_record_id:          inp.rda_record_id,\n  bra_record_id:          inp.bra_record_id,\n  ala_record_id:          inp.ala_record_id,\n  reviewer_handle:        inp.reviewer_handle || null,\n  audit_passed:           inp.audit_passed,\n  audit_failed_items:     inp.audit_failed_items,\n  approval_status:        inp.approval_status,\n  confirmed_response_tier: inp.confirmed_response_tier,\n  client_id:              inp.client_id,\n  approval_contact_email: (typeof inp.brand_voice === 'string' ? JSON.parse(inp.brand_voice) : inp.brand_voice)?.approval_contact_email || null,\n  email_subject:          subject,\n  email_body:             emailBody,\n  pipeline_complete:      true\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8192,
+        832
+      ],
+      "id": "fedbc8a6-706c-42b4-87fb-718d753cb4e7",
+      "name": "Step 18 - Approval Notification"
+    },
