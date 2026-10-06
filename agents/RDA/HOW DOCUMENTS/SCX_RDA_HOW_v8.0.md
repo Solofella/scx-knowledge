@@ -628,7 +628,5 @@ MRA uses the statuses for approval-rate reporting. **RDA itself does not yet rea
 
 **Verification status of this document:**
 - ✅ **Read from your pasted code:** English nodes 7a through 18 (audited Oct 5), the Spanish nodes as pasted, and Step 2's final text.
-- ⚠️ **User-reported, not seen by me:** the passing end-to-end test, and the BRA to RDA link.
-- 🚫 **Not verified:** go-live status, 9d-ES, 10a-10c as stored, and the Claude call nodes.
 
 Tell me when go-live is done and I'll update the Status line. Save this to GitHub as `SCX_RDA_HOW_v8.0.md`.
