@@ -1,0 +1,477 @@
+# SCX_BRA_HOW_v6.0
+
+**Agent Name:** BRA, Brand Response Architect
+**Version:** 6.0
+**Last Updated:** Chat #335 · October 6, 2026
+**Model:** Hybrid. T1 is a deterministic template engine with no AI by default. T2/T3 uses claude-sonnet-4-6. T1 records that trip the new escalation filter also go to Claude.
+**Node Count:** 24 in the live workflow, 29 in the build copy
+**Quality Baseline:** 87% (RDA audit layer). Not re-measured, and the effect of the new contract on it is unmeasured.
+
+**Marking convention:** ✅ seen in pasted code, output or screenshot. ⚠️ specified in chat but not yet confirmed applied or tested.
+
+## Build status (read first)
+
+| Piece | Status |
+|---|---|
+| Live BRA workflow | ✅ Unchanged since the Oct 2 read. It matches the v4.0 audit plus the Sep 9 Trust/Dignity fix. |
+| Copy: structure and wiring (29 nodes) | ✅ Confirmed by screenshot, Oct 4. |
+| Copy: contract logic in Steps 2, 4, 6, 7, 9a, 9b, 9b1, 9b1-IF, 9b2, 9c, 9g, 9g-IF, 13 | ✅ Pasted and confirmed by Miguel. |
+| Copy: `max_tokens` 2000 (Step 9d) and the new error message (Step 9f) | ✅ Confirmed done. |
+| Copy: Chat #333 fixes (edits to 9b2, 9c, 9d, 9f, 9g; rewrites of Steps 10, 11, 12) | ⚠️ Specified, not confirmed applied. |
+| Copy: first test, Oct 4 | The T1 path ran end to end. The T2/T3 path failed. See Section 12. |
+| A full contract run that reaches the RDA copy | ❌ Not yet. |
+
+---
+
+## 1. PURPOSE
+
+BRA is the fifth agent in the pipeline. It takes HSI's tier assignment and builds a **Response Contract**: strategy plus content boundaries that RDA must follow when it drafts. BRA does not write the public response. RDA does.
+
+**Why the contract exists.** RDA once confirmed a disputed, one-sided guest account as fact in a 1-star Spanish review (guest said they were denied bar seating and told to wait outside; staff disputed it). Nothing upstream told RDA to be careful. Two independent AI audits and Miguel's own analysis agreed that the fix belongs in BRA, because "decide response strategy" was already BRA's job.
+
+**What the contract tells RDA:** what it must mention (`must_reflect`), may mention (`may_reflect`), must never say (`must_not_introduce`), how risky the record is, how cautious to be, and how to close.
+
+**Hard rule, locked, no exceptions:** VRYOH never apologizes, admits fault, or assumes a cause. VRYOH has no operational visibility into a client's business and cannot verify any guest's account. This limit is structural, not a matter of confidence, and it does not improve with better AI. Positive content has no such limit.
+
+**Other locked principles:**
+- BRA never prescribes operational actions. `signal_based_consideration` is internal, never client-visible.
+- Reuse existing fields. Do not duplicate logic under new names.
+- Honest limit: this build makes bad drafts less likely. It does not make good drafts better. Wording quality belongs to RDA.
+
+**Hybrid design:**
+- **T1 (~70-80% of records):** deterministic template selection from a hash of `hsi_record_id`, plus a deterministic contract. Zero AI by default.
+- **T2/T3 (~20-30%):** one Claude call produces the strategy fields and the contract together. T1 records that trip the escalation filter join this path.
+
+Both paths meet at Step 9g (contract validator), then share Steps 10-19.
+
+---
+
+## 2. RELATIONSHIP TO PRECEDING AND SUBSEQUENT AGENTS
+
+**Position in the pipeline:** `ALA → EIP → ESS → HSI → BRA → RDA → MRA`. SIA is a separate scheduled trend branch and is not in the per-record chain. (v4.0 wrongly placed SIA between HSI and BRA. Corrected here.)
+
+**Upstream, HSI.** HSI decides the tier. BRA validates it but does not derive it. One exception: a T1 record that trips the escalation filter is re-routed to the Claude path and its tier field is set to T2 (Step 9b1). HSI also owns `BRA Status` on its table (`mb8nv8t3nk6xzed`). BRA patches it from "Pending" to "Complete" at Step 17.
+
+**Raw review text.** No agent had been carrying the guest's original text. Miguel added `raw_text` as a pass-through field in the live EIP and HSI workflows. ✅ HSI's Step 24 now sends `raw_text` and `star_rating` to BRA. The live BRA ignores them. The copy extracts them.
+
+**Downstream, RDA.** BRA sends a 40-field payload (Section 11). RDA writes the actual response. The three handoff items for RDA are:
+1. A guest-facing contact email per client, inserted into drafts.
+2. Removing any fault-admission or claim-verification judgment RDA makes on its own.
+3. Taking `tone_style` from the Client Config table, since BRA no longer sends it.
+
+The handoff document, with a Section 8 addendum on the water-policy review, was written Oct 3. An RDA copy exists (Miguel, Oct 4). Whether RDA's copy has implemented the three items is unconfirmed from BRA's window.
+
+---
+
+## 3. INPUT CONTRACT: UPSTREAM SOURCE (HSI WEBHOOK)
+
+**Trigger:** webhook POST from HSI. Live path: `/scx-bra`. Copy path: ⚠️ not confirmed in this window. Records did reach the copy on Oct 4, so confirm which URL HSI is sending to.
+
+**Step 2 extracts 31 fields.** The live workflow extracts 29. The copy adds `raw_text` and `star_rating`.
+
+| Group | Fields | Fallback |
+|---|---|---|
+| Required | hsi_record_id, preliminary_response_tier | Throws if `hsi_record_id` is not a positive integer or the tier is not T1/T2/T3 |
+| Text and enums | signal_synthesis_summary, contextual_linguistic_framing, temporal_signal_insight, masked_emotion_hypothesis, interpretation_confidence, pattern_type_recurrence, enriched_pain_point, pain_point_sub_category, signal_type, pain_point_domain_confirmed, intensity_level, dominant_pole, enriched_emotion_tag, lang, reviewer_handle, client_id, prior_run_id, emotion_hypothesis, keywords, **raw_text**, **star_rating** | null |
+| Flags | human_review_required, ambiguity_flag, masked_emotion_flag, collapse_flag | false |
+| Count | prior_record_count | 0 |
+| IDs | ess_record_id, eip_record_id, ala_record_id | parsed as integers, else null |
+
+`pain_point_domain_confirmed` was added Sep 9. HSI also sends core_emotion, polarity_balance, certainty_score, cognitive_driver, need_state, pain_hypothesis, review_date, platform and prior_table. BRA does not extract them.
+
+**Pass-through rule.** Incoming fields are never changed. BRA derives many more as it runs. ⚠️ Lesson from the Oct 4 test: every node that rebuilds the record from a fixed field list drops any new field it does not list. Nodes 9d, 9f, 10, 11 and 12 all had to be updated for this reason.
+
+---
+
+## 4. PROCESSING LOGIC: NODE BY NODE (29 NODES IN THE COPY)
+
+### Execution path (copy)
+
+```
+Webhook → Step 2 → 3 → 4 → 5 → 6 → 7 → 8 (Tier Routing)
+
+T1 (Step 8 true):   Step 9a → 9b → 9b1 (Escalation Filter) → 9b1-IF
+     IF false → Step 9b2 (T1 Contract Builder) ─────────────┐
+     IF true  → Step 9c  (tier set to T2, Claude path)       │
+T2/T3 (Step 8 false): Step 9c → 9d → 9e → 9f ────────────────┤
+                                                              ▼
+                                       Step 9g (Validator) → Step 9g-IF
+     IF true ("retry")  → back to Step 9c (one time only)
+     IF false           → Step 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19
+```
+
+### Intake and idempotency (nodes 1-6)
+
+| Node | What it does | Change vs v4.0 |
+|---|---|---|
+| 1. Webhook | Receives the HSI payload. Returns `{"status":"received"}`. | None |
+| 2. Step 2, Payload Validation | Parses the body. Validates ID and tier. Extracts 31 fields. | Adds `raw_text`, `star_rating`. Uses `p.` (the variable-name fix from the Oct 2 incident). |
+| 3. Step 3, Idempotency Check | GET on the BRA table (`mwqejw7swhd2cf4`), filtered by `HSI Record ID`, limit 1. | None |
+| 4. Step 4, Already Processed | If `totalRows > 0` the record is dropped silently. Otherwise it is rebuilt from Step 2. | Passes `raw_text`, `star_rating`. Still no `skip_reason` logged. |
+| 5. Step 5, Template Library Load | GET `mafv9by73ebama7`, limit 200. | None |
+| 6. Step 6, Build Template Map | Throws if the library is empty. Adds `templates`. | Passes `raw_text`, `star_rating`. |
+
+Checks on Steps 3 and 4 during the Sep 29-Oct 1 data detour found nothing wrong with either. ✅
+
+### Axis derivation and routing (nodes 7-8)
+
+**Step 7** is unchanged in logic. It derives `stability_axis`, `pain_axis`, `urgency_level_default` (Immediate if Systemic recurrence or Critical intensity, Standard if High, otherwise Monitoring), and `commercial_risk_preflag` (true for Dignity-Risk or Masked Negative signals). It now also passes `raw_text` and `star_rating`.
+
+**Step 8** is unchanged. T1 goes up to Step 9a. Everything else goes down to Step 9c.
+
+### T1 branch (nodes 9-13)
+
+**Step 9a, T1 Template Selection.** The hash, filter and selection are unchanged. It sets `solution_type`, `emotional_axis`, `signal_based_consideration`, `urgency_level`, `commercial_risk_flag` (always false), `governance_flag` (always "None"), `behavioral_interpretation` (null) and `t1_template_id`. **`tone_style` is removed.**
+
+**Step 9b, T1 Governance Screen.** ✅ Fixed Sep 9. It sets `governance_flag` to "Flag" when `signal_type` is "Dignity-Risk Signal" **or** `pain_point_domain_confirmed` equals exactly "Trust, Dignity & Belonging". The old check used the wrong field and never fired. Since the fix it also passes `pain_point_domain_confirmed`, `raw_text` and `star_rating`.
+
+**Step 9b1, T1 Escalation Filter (new).** It lowercases `raw_text` and looks for terms in nine families. The first family that matches wins, and it sets `t1_escalation_triggered` and `t1_escalation_family`.
+
+| Family | Terms (English and Spanish) |
+|---|---|
+| Policy / procedure | policy, rule, not allowed, no permit, política, regla, no permitido |
+| Staff action | told me, said to me, refused, denied, me dijo, me dijeron, se negó |
+| Discrimination / dignity | discriminat, racist, rude because, discrimina, racista |
+| Health / allergy | allerg, sick, food poisoning, alergia, enfermo, intoxica |
+| Physical safety | injur, fell, hurt, accident, lesion, me caí, accidente |
+| Misconduct / violence | assault, threat, yelled at, harass, agredi, amenaz, acos |
+| Financial / fraud | overcharge, stole, scam, cobr, estafa, robo |
+| Legal | lawsuit, lawyer, sue, demanda, abogado |
+| Privacy | recorded me, camera, privacy, grabaron, cámara, privacidad |
+
+If a family matches, the tier becomes "T2" and the original tier is saved in `original_tier_before_escalation`. The record is re-routed. It is never reclassified in place. The design deliberately favors recall over precision, because a false match only costs one Claude call.
+
+**Step 9b1-IF, Escalation Check (new).** True goes to Step 9c. False goes to Step 9b2. ✅ Wiring confirmed.
+
+**Step 9b2, T1 Response Contract Builder (new).** It builds the contract with no AI.
+- **Positive record** (`dominant_pole` is not Negative): `experiential`, `not_applicable`, `normal`, posture `neutral_acknowledgment`, closing `appreciative_close`.
+- **Negative record:** `guest_report_only`. Risk is `high_liability` if `governance_flag` is "Flag", otherwise `elevated`. Claim type is `policy_procedural` if the pain-point category contains "polic", otherwise `experiential`.
+  - High-liability: posture `escalate_to_human`, closing `no_public_close_escalate`, `halt_reason` "high_liability_guest_signal".
+  - Otherwise: posture `acknowledge_without_fault_admission`, closing `offline_contact_invitation` when `star_rating` is 3 or below, else `neutral_close`.
+- **`must_reflect`:** one entry. The concept is the enriched pain point. With `raw_text` it is a `direct_guest_statement` whose `source_span` is the first 200 characters of the review. Without `raw_text` it is an `upstream_inference` pointing at `enriched_pain_point`. Relevance is always "medium".
+- **Fixed values:** `may_reflect` is empty. `must_not_introduce` is a fixed list (refund amounts, vouchers, discounts, unauthorized promises, operational prescriptions, apology, admission of fault, assumed cause). Restriction types are fixed when `commercial_risk_flag` is true. `contract_builder_version` is "t1-v1.0" and `ruleset_version` is "t1-ruleset-v1.0".
+- ⚠️ The Chat #333 edit adds `decision_trace` (three short reasons) and passes `star_rating`.
+
+### T2/T3 branch (nodes 14-17)
+
+**Step 9c, Build Claude Prompt (rewritten).** The system prompt now has these blocks:
+- Role. BRA reasons about strategy and builds the contract. It does not write language, classify emotion, or set tone.
+- The hard no-apology / no-fault / no-assumed-cause rule.
+- The 1-3 star closing strategy. For ordinary complaints: acknowledge the actual complaint specifically, then invite the guest to continue privately, all in one message. For high-liability: `escalate_to_human`, a serious acknowledgment that takes no position on fault, drafted but held for review.
+- Mixed reviews. Positive and negative content must both appear in the contract.
+- Sourcing. Quote the guest exactly from the raw text, or use `upstream_inference`. Never invent a quote.
+- A 17-field JSON output (Section 6).
+- A relevance cap computed in code from `interpretation_confidence`: high means no cap, medium caps at medium, anything else caps at low.
+- Language. For `lang` = es, Spanish for the strategy text and concept text. Quoted `source_span` stays in the guest's original language.
+
+The user prompt carries tier, signal type, intensity, recurrence, prior records, interpretation confidence, language, the two pre-derived axes, HSI's two interpretation fields, the masked hypothesis, and the raw review text when present. On a retry it opens with "PREVIOUS ATTEMPT FAILED: [reason]". ⚠️ The Chat #333 edit adds a STAR RATING line. `tone_style` is gone, and the prompt now says "for VRYOH". ✅
+
+**Step 9d, Build Claude Request Body.** Model claude-sonnet-4-6, temperature 0.3, **`max_tokens` 2000** (raised from 500, then 1000; ✅ confirmed). ⚠️ The Chat #333 edit adds `raw_text` and `star_rating` to its pass-through.
+
+**Step 9e, Claude API Call.** Unchanged. Credential `uMahlx4nOC5YJh0Z`, `retryOnFail` with 3 tries and 5000 ms between.
+
+**Step 9f, Output Parsing (rewritten).** It strips code fences and parses the JSON. A new error message reports `stop_reason`, the parse error, and the start and end of the reply. It requires 16 fields, with `halt_reason` optional, and checks five enums plus the provenance rules for `must_reflect` and `may_reflect`. It also throws if risk is `high_liability` while `governance_flag` is "None". It sets `solution_type` to "Claude-Governed Response Strategy". ⚠️ The Chat #333 edit passes `raw_text` and `star_rating`, and sets the T2/T3 version constants "t2t3-v1.0" and "t2t3-ruleset-v1.0". Without it, every T2/T3 record fails Step 9g's required-field check.
+
+### Validation (nodes 18-19)
+
+**Step 9g, Response Contract Validator (new).** It serves both branches and branches on the tier field.
+- **Checks:** required contract fields are present, risk is not `high_liability` with `governance_flag` "None", T1 `verification_state` is only `not_applicable` or `guest_report_only`, and `must_reflect` is not empty.
+- **Result tags:** `pass`, `repaired`, `retry` or `escalate`.
+- **T1 repair:** if every error is mechanically repairable (closing, restriction types, posture, version constants, schema version), it applies one repair and tags `repaired`.
+- **T2/T3 retry:** on the first failure it tags `retry` and builds a plain-text failure reason.
+- **Escalate:** any other failure sets `governance_flag` "Halt", a `halt_reason` and `human_review_required` true.
+- ⚠️ The retry condition currently relies on a flag that earlier nodes drop. The Chat #333 fix is `$runIndex === 0`.
+
+**Step 9g-IF, Retry Check (new).** If `validation_status` equals "retry" it goes back to Step 9c. Otherwise it goes to Step 10. ✅ Wired.
+
+### Governance, write and handoff (nodes 20-29)
+
+**Steps 10, 11, 12.** The logic is unchanged. Step 10 merges `commercial_risk_flag` with the pre-flag. Step 11 throws on a Halt. Step 12 builds `BRA-YYYYMMDD-HHMMSS-NNN` and a timestamp. Both are generated in UTC, which is 4 hours ahead of New York. ⚠️ On Oct 4 all three still used the old fixed field list and still carried `tone_style`, so they dropped the entire contract. Chat #333 supplied full rewrites.
+
+**Step 13, Build NocoDB POST Body.** ✅ Updated. `tone_style` is removed (19 columns written, not 20). `Error Log` is now a JSON string: `{"meta": {contract_builder_version, ruleset_version, decision_trace}, "error": <validation errors when escalated, else null>}`. No new column.
+
+**Step 14, NocoDB POST.** Unchanged. `retryOnFail` is on.
+
+**Step 15, Capture BRA Record ID.** It reads Step 13's output and adds `bra_record_id`. It passes the contract fields and drops `tone_style`.
+
+**Step 16, Build Patch Body.** Still dead code. It computes a patch body that Step 17 ignores, and the values are identical. It now passes the new fields.
+
+**Step 17, Patch HSI.** Unchanged. It sends a hardcoded `{"BRA Status": "Complete"}` in JSON mode.
+
+**Step 18, Build RDA Payload.** `tone_style` is removed and 13 fields are added (Section 11).
+
+**Step 19, RDA Trigger.** POST in JSON mode with a 5000 ms timeout. In the copy it must point at the RDA copy's own Production URL, not the live `scx-rda`. ⚠️ Not confirmed. It still has no retry or `onError`.
+
+---
+
+## 5. TEMPLATE SELECTION LOGIC (T1)
+
+**Table:** `mafv9by73ebama7`, limit 200. The algorithm is unchanged:
+1. Filter templates by `Signal Category` equal to `dominant_pole` (default "Negative").
+2. Fall back to the full list if nothing matches.
+3. Hash `hsi_record_id`, take the absolute value, and select `pool[seed % pool.length]`.
+4. The same ID always gets the same template.
+
+Fields used: `Template Name` becomes `solution_type`, `Signal-Based Consideration` is copied, and `Id` becomes `t1_template_id`.
+
+Step 9b2 does not use the template's text. The Template Library has no closing-objective column, and none was approved. So the T1 repair rule "re-pull the closing from the template default" is not implementable. Step 9g uses the constant "neutral_close".
+
+⚠️ **Open Gap #7:** the library's row count and domain breakdown (older docs say 21 templates across 13 domains) are still unverified.
+
+---
+
+## 6. CLAUDE GENERATION (T2/T3)
+
+**Model:** claude-sonnet-4-6. **Max tokens:** 2000. **Temperature:** 0.3. **Retry:** the HTTP call retries 3 times, and the contract loop gets one extra Claude attempt (Step 9g).
+
+**Output, 17 fields:**
+
+| Field | Values |
+|---|---|
+| emotional_axis | short phrase |
+| signal_based_consideration | internal guidance |
+| urgency_level | Immediate / Standard / Monitoring |
+| commercial_risk_flag | true / false |
+| governance_flag | None / Flag / Halt |
+| behavioral_interpretation | 2-3 sentences |
+| must_reflect | list of entries: concept, action, priority, source_type, source_span / upstream_origin / verification_source, relevance_confidence |
+| may_reflect | same shape, optional |
+| must_not_introduce | list |
+| commercial_restriction_types | refund / discount / price_promise / compensation / … |
+| primary_claim_type | experiential / policy_procedural / factual_allegation |
+| verification_state | not_applicable / guest_report_only / corroborated / disputed |
+| highest_risk_class | normal / elevated / high_liability |
+| strictest_epistemic_posture | acknowledge_without_fault_admission / neutral_acknowledgment / escalate_to_human |
+| closing_objective | warm_return_invitation / appreciative_close / offline_contact_invitation / neutral_close / no_public_close_escalate |
+| halt_reason | contract_validation_failure / high_liability_guest_signal / null |
+| schema_version | response_contract_v1 |
+
+`direct_apology` is retired and never offered. `tone_style` is removed.
+
+---
+
+## 7. GOVERNANCE AND HALT ENFORCEMENT
+
+**Layers, in order:**
+1. **Escalation filter (Step 9b1).** Sensitive T1 text goes to Claude.
+2. **Pre-flag (Step 7).** Dignity-Risk and Masked Negative signals set `commercial_risk_preflag`.
+3. **T1 governance screen (Step 9b).** The Trust/Dignity domain sets the Flag. ✅ Working since Sep 9.
+4. **Contract validator (Step 9g).** It catches the high-liability / "None" contradiction and missing contract parts.
+5. **Governance Gate (Step 10)** and **Halt Check (Step 11).**
+
+**Response rules the contract enforces**
+- Any negative content, at any star rating: `acknowledge_without_fault_admission`.
+- High-liability: `escalate_to_human`. It is still drafted, but tagged non-publishable until a human reviews it. Every review gets a draft.
+- 1-3 stars (ordinary): one public reply that specifically names the complaint and invites a private conversation.
+- Purely positive: `neutral_acknowledgment`.
+- Mixed reviews: the worst-case component sets the classification fields, but the draft must address both the negative and positive content.
+- Warmth about how the guest felt is allowed. Verdicts on who was right are not. (Water-policy test: "a concern we take genuinely to heart" passed. "The expectation… is a reasonable one" failed.)
+- Staff names are allowed in public drafts. Physical descriptions of staff are not.
+
+**Halt is no longer Claude-only.** Step 9g can also set a Halt (a T1 record that cannot be repaired, or a T2/T3 record that fails twice). Step 11 stops all of them with a bare error. ⚠️ **No NocoDB error row is written**, so a Halt leaves no queryable trace. This is Known Issue #2, and it matters more now that contract failures also end here.
+
+---
+
+## 8. NOCODB SCHEMA: BRA TABLE (AS-BUILT)
+
+**Table ID:** `mwqejw7swhd2cf4`. There are no new columns in this build.
+
+| Field | Column ID | Type | Notes |
+|---|---|---|---|
+| Id | cqhl5wo1rpy2vc1 | AutoNumber | PK |
+| CreatedAt | ccubjogeriwz0xh | CreatedTime | |
+| UpdatedAt | cza32911ocgxp8o | LastModifiedTime | |
+| nc_created_by | cth83185j3kfxr4 | CreatedBy | |
+| nc_updated_by | c6szypwqqlmy3bd | LastModifiedBy | |
+| nc_order | cu4tt20d28kr2vc | Order | |
+| BRA Run ID | c0stj9fqfv7wy28 | SingleLineText | UTC |
+| HSI Record ID | crcwvyjd314gdoi | Number | Idempotency key |
+| ALA Record ID | cy8bkmmwsu2ln9p | Number | |
+| BRA Timestamp | cwm3jlnavpzhc0k | DateTime | UTC |
+| Confirmed Response Tier | c1wxt0dahaba1gk | SingleSelect | Shows T2 for T1 records the filter escalated |
+| Solution Type | c7e7uz0qjofye43 | SingleLineText | |
+| Emotional Axis | cr29nwidcj1xf9v | SingleLineText | |
+| Pain Axis | c41gpmen16vtasq | SingleLineText | |
+| Stability Axis | co5ftokzdbm2jxi | LongText | |
+| Signal-Based Consideration | c1hxcnmeeqrbzbi | LongText | Internal only |
+| Tone Style | c7kuxqatixafm4m | SingleSelect | **Unused by the copy** (null). Live still writes it. |
+| Urgency Level | csflij8bs3kt5jh | SingleSelect | |
+| Commercial Risk Flag | cin44vbhvritv3g | Checkbox | |
+| Governance Flag | clzu9hmhv6s6y8i | SingleSelect | None / Flag / Halt |
+| Behavioral Interpretation | c2puj03fxtudpu5 | LongText | Null for T1 |
+| T1 Template ID | ccmp19jn8fxdgk9 | Number | |
+| lang | copiu2uvg3e9k4n | SingleLineText | |
+| RDA Status | c7ry8uje9tnajjb | SingleSelect | "Pending" on write |
+| Error Log | c3crsub617hnuee | LongText | **Copy writes JSON `{"meta":{…},"error":…}` on every record.** Live writes null. |
+| Client ID | c9d2u363imabus1 | SingleLineText | |
+
+Contract fields, `raw_text` and `star_rating` are never written to this table. They travel to RDA in the payload only.
+
+✅ **Observed row 1557** (Oct 4 test, T1, HSI 1806, ALA 5824): `Error Log` held the `meta`/`error` structure with `error` null, and Tone Style was null. Both version fields and `decision_trace` were also null, because Steps 10-12 dropped them.
+
+---
+
+## 9. TOKEN BUDGET
+
+- T1 records: zero Claude tokens by default. The escalation filter now sends some of them to Claude. That share is unmeasured and depends on the keyword list.
+- T2/T3 records: one call, `max_tokens` 2000. A failed first attempt costs one more.
+- ⚠️ **Open Gap #8:** the old efficiency figures (~75% reduction) are not re-measured, and the real T1/T2/T3 split is still unverified.
+- One T2/T3 test run took 1m 54s before failing at Step 9f. The reason for the length is not diagnosed.
+
+---
+
+## 10. KEY DESIGN DECISIONS
+
+- **Hybrid design is permanent.** T1 is deterministic for cost and auditability.
+- **Re-routing, not reclassifying.** BRA accepts HSI's tier, except that a T1 record tripping the escalation filter goes to Claude with its tier set to T2.
+- **Contract is payload-only.** No new NocoDB columns. Version numbers and `decision_trace` live in `Error Log`'s `meta` key and never go to RDA.
+- **Two version fields only:** `contract_builder_version` and `ruleset_version`.
+- **`decision_trace`:** always written on T1. For T2/T3 the plan is to write it only on failure or escalation. ⚠️ Not built for T2/T3 yet.
+- **Closing, tone and claim handling are split.** BRA owns strategy and boundaries. RDA owns tone, using Client Config. There is no client-facing dropdown for BRA's governance logic. One standard applies to every client.
+- **Retry limits.** T2/T3 gets one Claude retry. T1 gets one deterministic repair and never a blind retry.
+- **RDA trigger uses JSON body mode.** Step 18 builds a plain object accordingly.
+- **Build in copies.** The Response Contract is built in duplicate workflows for BRA and RDA, tested together, and only then put live.
+- **Rule learned:** whenever a field is added, every node that rebuilds the record from a fixed field list must be updated.
+
+---
+
+## 11. DOWNSTREAM HANDOFF TO RDA
+
+**URL:** live `http://161.35.133.49:5678/webhook/scx-rda`. The copy uses the RDA copy's own Production URL. Do not rename the copy to `scx-rda`. Method POST, JSON body, 5000 ms timeout.
+
+**40 fields:**
+
+| Group | Fields |
+|---|---|
+| IDs | bra_record_id, hsi_record_id, ess_record_id, eip_record_id, ala_record_id, prior_run_id, client_id |
+| BRA strategy | confirmed_response_tier, governance_flag, human_review_required, solution_type, emotional_axis, pain_axis, stability_axis, signal_based_consideration, urgency_level, commercial_risk_flag, behavioral_interpretation |
+| Context | lang, enriched_emotion_tag, enriched_pain_point, pain_point_sub_category, signal_type, intensity_level, emotion_hypothesis, keywords, reviewer_handle, **raw_text**, **star_rating** |
+| Contract (new) | must_reflect, may_reflect, must_not_introduce, commercial_restriction_types, primary_claim_type, verification_state, highest_risk_class, strictest_epistemic_posture, closing_objective, halt_reason, schema_version |
+
+**Removed:** `tone_style`. **Still not sent:** `dominant_pole`, `masked_emotion_hypothesis`, version fields, `decision_trace`.
+
+**What RDA must do:**
+- Follow the contract.
+- Treat `escalate_to_human` as "draft, but mark non-publishable".
+- Add the guest-facing contact for every 1-3 star draft, not only high-liability. RDA should confirm which Client Config field holds that address.
+- Apply the water-policy boundary and the staff-description rule.
+- Take tone from Client Config.
+- Remove its own fault-admission and claim-verification logic.
+
+⚠️ The live RDA still expects `tone_style`. Do not point the live BRA copy at the live RDA.
+
+---
+
+## 12. KNOWN ISSUES
+
+| # | Issue | Where | Severity | Status |
+|---|---|---|---|---|
+| 1 | Trust/Dignity check used the wrong field | Step 9b | High | ✅ **Fixed Sep 9** (live and copy) |
+| 2 | Halt writes no NocoDB trace | Step 11 | High | Open. More important now (see Section 7). |
+| 3 | **The copy is not data-isolated.** In the Oct 4 test it wrote row 1557 to the real BRA table and marked real HSI record 1806 "Complete". | Steps 3, 14, 17 | High | Open |
+| 4 | New fields dropped at Steps 9d, 9f, 10, 11, 12 | Copy | High | ⚠️ Chat #333 fix specified, not confirmed |
+| 5 | Retry loop can repeat without limit. The "already retried" flag is lost. One run was canceled at exactly 10 minutes. | Steps 9g, 9c, 9d, 9f | High | ⚠️ Diagnosed from the code, not from run counts. Fix: `$runIndex === 0`. |
+| 6 | Step 9f threw "Invalid JSON" on a Spanish T2/T3 record. Cause unknown (cut-off reply or an unescaped quote). | Step 9f | High | `max_tokens` 2000 and the new error message are in. Rerun not yet seen. |
+| 7 | Step 9f's inline checks stop the run before Step 9g can retry them. This includes the high-liability contradiction. | Steps 9f, 9g | Medium | Open decision |
+| 8 | Step 9g writes `halt_reason` "contract_validation_failed_after_retry", which is outside the locked list | Step 9g | Low | Open decision |
+| 9 | The T1 repair is not re-validated, and the template-default repair rule cannot be done | Step 9g | Low | Open |
+| 10 | T1 contract is crude: single-keyword claim type, `relevance_confidence` fixed at "medium" (ignores the HSI cap), `may_reflect` always empty (mixed reviews not represented), complaints inside positive reviews not detected | Step 9b2 | Medium | Accepted for v1? See Section 13 |
+| 11 | Filter keyword list is a first draft. It matches inside words (for example "sue" in "issue"), which only costs extra Claude calls. It cannot fire when `raw_text` is empty. `original_tier_before_escalation` and the family are dropped at Step 9c. | Steps 9b1, 9c | Medium | Open |
+| 12 | `decision_trace` not produced for T2/T3 | Steps 9c, 9f | Low | Open |
+| 13 | Spread operator used in Steps 9b1 and 9g. The project rule says avoid it. It ran in the Oct 4 T1 test. | Steps 9b1, 9g | Low | Watch |
+| 14 | BRA's `must_not_introduce` does not include "no verdict on policy or facts" or "no physical staff descriptions" | Steps 9b2, 9c | Medium | Open decision |
+| 15 | Feature flag `response_contract_enabled` not built. The duplicate workflow is the safety net. | Step 18 | Low | Accepted |
+| 16 | Dead patch-body code | Steps 16/17 | Low | Open |
+| 17 | No retry or `onError` on the RDA call | Step 19 | Medium | Open, tracked separately |
+| 18 | `commercial_risk_flag` not type-checked | Step 9f | Low | Open |
+| 19 | No `skip_reason` on duplicate-skip | Step 4 | Low | Open |
+
+---
+
+## 13. OPEN ITEMS
+
+**A. Fixes already specified. Apply, then retest.** All of these come from Chat #333:
+- Step 9b2: add `decision_trace`, pass `star_rating`.
+- Step 9c: pass `star_rating`, add the STAR RATING line to the prompt.
+- Step 9d: pass `raw_text`, `star_rating`.
+- Step 9f: pass `raw_text`, `star_rating`, set the T2/T3 version constants.
+- Step 9g: `$runIndex === 0`.
+- Steps 10, 11, 12: full replacements.
+
+**Then rerun** one T1 record and one Spanish T2/T3 record. Before the rerun, confirm that the live BRA is off and that Step 19 points at the RDA copy.
+
+**B. Decisions for Miguel**
+
+| # | Decision | My recommendation |
+|---|---|---|
+| D1 | Copy isolation: separate NocoDB tables for the copy, or a test guard | Separate tables, or at minimum disable Steps 14 and 17 during tests |
+| D2 | Remove the inline contradiction check from Step 9f | Yes. Step 9g exists now. |
+| D3 | `halt_reason` text in Step 9g | Change to `contract_validation_failure` (the locked value) |
+| D4 | Add the two RDA-side boundaries to BRA's `must_not_introduce` | Yes. One line in each of 9b2 and 9c. |
+| D5 | Send `dominant_pole` and `masked_emotion_hypothesis` to RDA | Only if RDA's copy will use them |
+| D6 | T1 weaknesses in Known Issue #10 | Accept for the first test, revisit with real results |
+| D7 | Give Step 11 a NocoDB error write (Gap #5) | Yes, before go-live |
+
+**C. Carried gaps:** #6 pipeline-wide fixes (dead patch body, missing retry), #7 template count, #8 token figures, #9 `skip_reason`.
+
+**D. Closed:** #1 (the name "Brand Response Architect" is used everywhere), #2 (the copy's prompt says VRYOH; live unconfirmed), #3, #4.
+
+**E. Deferred:** the 72-record golden test set, until the copies produce real output. The full BRA-copy to RDA-copy test comes after RDA's copy is finished.
+
+---
+
+## 14. n8n WORKFLOW DETAILS
+
+| Item | Live | Copy |
+|---|---|---|
+| Workflow name | SCX-BRA | Duplicate (name not confirmed) |
+| Webhook path | /scx-bra | ⚠️ Not confirmed |
+| Nodes | 24 | 29 |
+| Anthropic credential | uMahlx4nOC5YJh0Z | same |
+| NocoDB credential | DT9tnRgqYpPc3rXo | same |
+| NocoDB URL / base | http://nocodb:8080 / pq249fix22t3ofv | same (**shared tables**) |
+| BRA table | mwqejw7swhd2cf4 | same |
+| Template library | mafv9by73ebama7 | same |
+| HSI table patched | mb8nv8t3nk6xzed | same |
+| Model | claude-sonnet-4-6, 500 tokens, 0.3 | claude-sonnet-4-6, 2000 tokens, 0.3 |
+| RDA target | scx-rda (live) | RDA copy's Production URL |
+| n8n | 2.4.6, self-hosted | same |
+
+---
+
+## 15. RELATED DOCUMENTS
+
+- **Upstream:** the HSI HOW document (tier routing lives in HSI Step 16).
+- **Downstream:** the RDA HOW document, plus the BRA-to-RDA handoff document (Oct 3, with the Section 8 addendum).
+- **Live workflow source:** `agents/BRA/BRA - current code` (read in full Oct 2).
+- **Build plan:** `agents/BRA/BRA Updating Plan/`, which holds the Build Checklist v2.4 and the GPT and Gemini audits. The original handoff is `agents/BRA/RESPONSE CONTRACT BUILDER + CONTRACT VALIDATOR.md`.
+- **Template Library:** NocoDB `mafv9by73ebama7`, count unverified.
+
+---
+
+## CHANGELOG
+
+**v6.0 (Chat #335 · October 6, 2026)**
+- Added the Response Contract: 11 new payload fields from Step 9b2 (T1) and Steps 9c/9f (T2/T3).
+- Added 5 nodes (9b1, 9b1-IF, 9b2, 9g, 9g-IF). Node count is 29 in the copy.
+- Removed `tone_style` from BRA. RDA takes tone from Client Config.
+- Added the no-apology, no-fault, no-assumed-cause rule and the 1-3 star closing pattern.
+- Step 2 now extracts `raw_text` and `star_rating` (31 fields). The live workflow extracts 29.
+- Step 9b's Trust/Dignity check fixed Sep 9 (replaces v4.0 Known Issue #1 and Gap #4).
+- Step 9d `max_tokens` 500 → 2000. Step 9f validates the new fields.
+- Step 13 writes `Error Log` as `meta`/`error` JSON.
+- Step 18 sends 40 fields (28 minus `tone_style`, plus 13 new fields).
+- Corrected the SIA position in the chain.
+- Added Oct 4 test findings: copy not isolated, dropped fields, retry-loop gap, Step 9f JSON failure.
+- Closed Gaps #1-4. Opened D1-D7.
+- Sep 29-Oct 1 data-quality detour recorded as resolved. Root cause was an accidental duplicate workflow left running.
+
+**v5.0:** filed on GitHub with v4.0 content, and no separate v5.0 content exists.
+
+**v4.0 (Chat #98 · August 22, 2026):** full 24-node audit of the live workflow. **v3.3 (Chat #77 · April 19, 2026):** Chat #74 payload additions and the 87% baseline. **v3.2 (Chat #73 · March 25, 2026):** first 19-node pipeline documented, hybrid model locked.
+
+*VRYOH Intelligence · SCX_BRA_HOW_v6.0 · Chat #335 · October 6, 2026 · Solofella LLC. Sources: the v4.0 audit, the live code read on Oct 2, and copy edits and test results through Chat #334.*
+
+---
+
+**Next step:** apply the Section 13A fixes and confirm each one, then rerun the two test records.
