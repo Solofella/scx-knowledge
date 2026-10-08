@@ -93,7 +93,6 @@
 - **$25 per location per month. Confirmed final and per location (Oct 7).**
 - Includes: reply drafting and a client portal with daily and weekly results.
 - Monthly results: available as a paid add-on.
-- This replaces the earlier $100 introductory / $150 regular tiers.
 - **Open:** total cost per client at this price is unknown. Only one cost is documented: about $0.0072 per processed review for the P2 classification call.
 
 **Commercial reasoning (owner's stance, Oct 7):** operators treat review response, signals, and SEO as low priority, which pushes the price down. The product must therefore be basic, visual, and self-serve, with no manual onboarding.
@@ -374,23 +373,6 @@
 - The P1 record ID is the traceability key across all tables.
 - Client ID originates at the CSV source. A record without one is skipped.
 - A Field Traceability Map is required before any new build, with fields declared at their source before node one.
-
----
-
-## 9. Unreconciled Conflicts (Flagged, Not Resolved)
-
-1. **P2 node count:** 29 (v7.5) versus 26 (project records).
-2. **B2 node count:** 30 versus 38.
-3. **P6 table state:** "frozen, no new columns" (project records) versus "not frozen, 21 fields" (v7.5).
-4. **P6 document version and date:** v6.0, Jul 25 (v7.5) versus v7.1, Sep 8 (project records). The chat-number-to-date mapping is itself inconsistent across sources.
-5. **P6 status wording:** "Modified" versus "Modify."
-6. **S1 version and node count:** v3.0 and "not separately counted" (v7.5) versus v2.0 and about 33 (project records).
-7. **Approval write-back loop:** project records describe a built sheet-to-workflow-to-P6 path (3-node workflow plus two P6 steps) and, elsewhere, say the write-back is not built. Both cannot be current.
-8. **B2 document version:** v5.0 (v7.5) versus v7.0 (project records). The v7.0 file labeled itself "Chat #108," was not adopted, and stays ⚠️ MEDIUM until cross-checked live.
-9. **P1 batch-integrity step:** tautology (v7.5) versus "reverted to prior working version" (project records). The meaning of "working" is not stated.
-10. **P4 step 16:** project records confirm the P5 fix only. Whether P4's own check is fixed is not stated.
-11. **P6 enrichment lookups:** the zero-row bug is recorded as fixed, but English-only language handling is still recorded as open. Treated as partially fixed.
-12. **Chat-number dates:** several earlier documents carry chat numbers whose dates disagree with each other.
 
 ---
 
