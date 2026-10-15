@@ -1,0 +1,51 @@
+The Privacy Policy must state, in plain language:
+VRYOH Privacy Policy
+Last updated: October 14, 2026
+
+1. WHO WE ARE
+VRYOH is a service operated by Solofella LLC, a Wyoming limited liability company; NorthWest ("VRYOH," "we," "us"). Contact: intelligence@vryoh.com. Mailing address: Don’t have a business email address and not going to put my own address.
+
+2. WHAT THIS POLICY COVERS
+This policy covers the VRYOH website, your VRYOH account, and the data we receive when a business owner connects their Google Business Profile.
+
+3. INFORMATION WE ACCESS
+With the business owner's authorization, we access from Google: reviews (text, star rating, date), reviewer display names as shown publicly on Google, and the replies posted to those reviews.
+We also store the authorization credentials that let us connect to the owner's profile, and identifying details of the profile (business name, location identifier).
+From you directly: name, email, business name, locations, and brand-voice settings you provide when you create an account.
+We never receive your Google password.
+
+4. HOW WE USE IT
+Only to draft replies for the owner's approval, publish replies the owner has approved, and show the owner results and trends.
+Google offers a single permission level for managing a Business Profile, which is broader than we need. We use it only to read reviews and publish approved replies. We do not change business information, hours, photos, or any other listing details.
+Nothing is published without approval from a person.
+
+5. WHAT WE DO NOT DO
+We do not sell this data. We do not use it for advertising. We do not use Google user data to develop, improve, or train generalized AI or machine-learning models. [CONFIRM BEFORE PUBLISHING.] HOW?? make a prompt to share with Gemini to ask. 
+We do not transfer Google user data to others except to the service providers in section 6, as required by law, or with the owner's consent.
+
+6. SERVICE PROVIDERS
+We use service providers to process data on our behalf, only to provide the service: AI processing [Anthropic, OpenAI; Vryoh uses the API inputs in both cases] and hosting [DigitalOcean; CONFIRM add to the prompt for Gemini to ask about this]. They may not use this data for their own purposes or to train their models. [CONFIRM THESE PROVIDERS' CURRENT TERMS BEFORE PUBLISHING. Add to the prompt for Gemini]
+
+7. STORAGE AND ACCESS
+We protect data with reasonable technical and organizational safeguards [CONFIRM SPECIFICS, e.g. encrypted connections, restricted access, encrypted credentials] You should know, you make Vryoh entirely. Data is accessible only to the business owner and to authorized VRYOH personnel and service providers who need it to run the service, and to an agency or partner the owner has authorized in writing. No system is perfectly secure.
+
+8. RETENTION AND DELETION
+We keep data while the account is active. When the owner disconnects Google, we stop collecting new data and delete the stored access credentials within 7 DAYS. The owner can request deletion of their account and data at any time by emailing intelligence@vryoh.com. We will delete it within 30 DAYS, except backups, which are overwritten within 90 DAYS, and data we must keep by law.
+
+9. YOUR CHOICES
+The owner can revoke VRYOH's access at any time at myaccount.google.com/connections or by contacting us. The owner can also ask us for a copy of their data, ask for corrections, or ask for deletion.
+
+10. REVIEWER INFORMATION
+Reviews and reviewer names are public on Google. We process them only on behalf of the business owner to draft a reply for the owner's approval.
+
+11. CHILDREN
+VRYOH is for businesses and is not directed to children.
+
+12. CHANGES
+We will update this page and its "Last updated" date when this policy changes. For material changes, we will email account owners.
+
+13. GOOGLE API SERVICES USER DATA POLICY
+VRYOH's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.
+
+14. CONTACT
+Solofella LLC, intelligence@vryoh.com, [ADDRESS TO BE CONFIRMED, no address yet, i soon as i get one i will update this information].
