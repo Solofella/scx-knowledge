@@ -1,0 +1,665 @@
+Chat #388 · October 14, 2026
+
+# VRYOH — U.S. Automatic-Renewal and Subscription Law Review
+**Research date:** October 14, 2026  
+**Company:** Solofella LLC (Wyoming)  
+**Product:** VRYOH — B2B SaaS  
+**Subscription prices:** $30/month/location or $300/year/location  
+**Governing law:** New York; courts in Rockland County, NY
+
+## Executive findings
+
+The most important distinction is between **laws protecting individual consumers** and **laws governing contracts between businesses**.
+
+VRYOH is intended exclusively for business customers. Several prominent state automatic-renewal laws expressly define consumers as individuals purchasing for personal, family, or household purposes. That distinction substantially affects which statutory requirements apply.
+
+However, operating B2B does not establish a blanket exemption from every automatic-renewal law.
+
+### Five preliminary conclusions
+
+**1. New York has two materially different automatic-renewal statutes.**
+
+New York General Business Law Article 29-BB addresses consumer subscriptions. Its definition of consumer is limited to individuals purchasing for personal, family, or household purposes.
+
+New York General Obligations Law § 5-903 is broader: it expressly recognizes companies and corporations. However, it applies to specified service, maintenance, or repair contracts involving real or personal property. Whether it covers VRYOH's SaaS subscription requires separate legal analysis. [NYSenate.gov](https://www.nysenate.gov/legislation/laws/GOB/5-903?utm_source=chatgpt.com)
+
+**2. The FTC's 2024 Click-to-Cancel Rule is not currently enforceable.**
+
+The Eighth Circuit vacated that rule on July 8, 2025.
+
+The FTC confirmed the vacatur in its March 2026 rulemaking documents. The earlier, narrower Negative Option Rule remains, alongside other applicable federal laws. [Federal Trade Commission](https://www.ftc.gov/system/files/ftc_gov/pdf/2025-12-Final-Public.pdf?utm_source=chatgpt.com)
+
+**3. The business-customer distinction matters for Florida.**
+
+Florida Statutes § 501.165 expressly excludes individuals entering covered contracts as part of their business activities.
+
+That supports excluding genuine VRYOH business purchases from this particular Florida automatic-renewal statute. It does not exempt them from all Florida contract or deceptive-practices laws. [Online Sunshine](https://www.leg.state.fl.us/Statutes/index.cfm/Ch0466/index.cfm?App_mode=Display_Statute\&URL=0500-0599%2F0501%2FSections%2F0501.165.html\&utm_source=chatgpt.com)
+
+**4. VRYOH's proposed annual-renewal reminder is useful, but Section 5 needs clarification.**
+
+Your promised 30-day annual reminder is a reasonable contractual protection. However, several laws prescribe specific notice windows, and some calculate the window from the **cancellation deadline**, not simply the renewal date.
+
+A 30-day reminder therefore should not be assumed universally compliant.
+
+**5. VRYOH's billing model contains an unresolved contractual question.**
+
+For monthly subscribers joining on any day other than the 25th, the current clause does not explain:
+
+- What the customer pays on signup.
+- Whether the initial partial month is prorated.
+- Whether the next charge occurs on the upcoming 25th.
+- Whether the initial payment covers a full month or only part of one.
+
+This ambiguity is independently worth correcting, even if no state statute dictates a particular proration method.
+
+**Source classification:** The statutory distinctions and FTC vacatur are directly verified from official sources. The assessment of VRYOH's contract and recommended operational practices is analysis, not a judicial determination of applicability.
+
+---
+
+# 1. New York automatic-renewal laws
+
+## 1.1 General Business Law §§ 527 and 527-a
+
+**Confidence: HIGH — statutory text verified.**
+
+**Official sources:**
+
+- Definitions: https://www.nysenate.gov/legislation/laws/GBS/527
+- Requirements: https://www.nysenate.gov/legislation/laws/GBS/527-A
+- Both pages identify their most recent revision as **November 7, 2025**.
+
+The definition is decisive:
+
+> “Consumer” means any individual who seeks or acquires [...] for personal, family, or household purposes.
+
+This is from § 527(3). [NYSenate.gov](https://www.nysenate.gov/legislation/laws/GBS/527?utm_source=chatgpt.com)
+
+### What the law states
+
+For covered consumer subscriptions, § 527-a requires:
+
+| Practice | New York requirement |
+|---|---|
+| Signup disclosure | Material renewal terms clearly displayed before requesting consent or billing information |
+| Consent | Affirmative consent before charging |
+| Confirmation | Prompt, retainable notice containing subscription and cancellation terms |
+| Cancellation | Simple process, as easy as enrollment, available through the enrollment medium |
+| Annual renewal notice | 15–45 days before the cancellation deadline for qualifying subscriptions |
+| Price increases | Consent to the increase or a specified cancellation/pro-rata refund protection |
+| Material changes | Notice 5 business days to 30 days before the change |
+| Free trials | Additional notice requirements for qualifying trials | :chatgpt-content-reference{index="4"}
+
+
+**Important price-increase distinction:** Your proposed “at least 30 days' notice” clause is not equivalent to New York's consumer rules.
+
+Section 527-a contains two different requirements:
+
+First, under § 527-a(1)(b-1), a covered price increase requires affirmative consent **or** a cancellation opportunity lasting at least 14 days after the charge, with the specified pro-rata refund.
+
+Second, § 527-a(1)(g) specifies a notice window for material changes, including price increases:
+
+> “at least five business days prior, but no more than thirty days prior”
+
+Source: https://www.nysenate.gov/legislation/laws/GBS/527-A
+
+**Conclusion for VRYOH:** Because you sell business-use SaaS, the statute's definition generally excludes those transactions.
+
+**Confidence: HIGH** on the consumer-purpose definition; **MEDIUM** on applying it to every possible VRYOH purchase because actual purchaser identity and use must be considered.
+
+## 1.2 General Obligations Law § 5-903
+
+**Confidence: HIGH** for statutory text; **LOW** for applicability to VRYOH.
+
+**Source:** https://www.nysenate.gov/legislation/laws/GOB/5-903
+
+**Most recent revision shown:** September 22, 2014.
+
+The statute expressly includes commercial entities:
+
+> “person” means an individual, firm, company, partnership or corporation.
+
+For covered contracts, renewal provisions may be unenforceable unless the provider delivers specified written notice.
+
+The statute requires notice:
+
+> “at least fifteen days and not more than thirty days”
+
+before the contractual deadline for giving nonrenewal notice. It specifies personal delivery or certified mail and excludes renewal periods of one month or less. [NYSenate.gov](https://www.nysenate.gov/legislation/laws/GOB/5-903?utm_source=chatgpt.com)
+
+### Does it cover SaaS?
+
+The statute concerns service, maintenance, or repair **to or for real or personal property**.
+
+VRYOH provides hosted software, review analysis, and response drafting.
+
+I could not verify from the statute alone whether these services qualify under § 5-903.
+
+**Conclusion:** Annual B2B renewal applicability is an attorney-review item. Do not assume the consumer-only limitation of § 527-a also applies to § 5-903.
+
+A further issue: if § 5-903 applies, an email reminder alone may not satisfy its specified delivery requirements.
+
+---
+
+# 2. Other states — B2B applicability
+
+The following comparison is limited to state laws and official agency materials I could substantiate. It is **not a certified all-50-state survey**.
+
+| State | Official law | B2B treatment | Confidence |
+|---|---|---|---|
+| **New York** | GBL §§ 527–527-a | Consumer-only definition; business-purpose purchases generally outside scope | HIGH |
+| **New York** | GOL § 5-903 | Expressly includes companies; SaaS applicability unresolved | MEDIUM |
+| **California** | BPC §§ 17601–17602 | Individual personal/family/household consumer definition; ordinary B2B outside scope | HIGH |
+| **Florida** | Fla. Stat. § 501.165 | Explicitly excludes purchases made as part of business activities | HIGH |
+| **Vermont** | 9 V.S.A. §§ 2451a, 2454a | **Can cover business-use purchases** | HIGH |
+| **Maine** | 10 M.R.S. § 1210-C | Online software expressly covered; B2B applicability needs interpretation | MEDIUM |
+
+### California
+
+**Official source:** California Attorney General  
+https://www.oag.ca.gov/news/press-releases/attorney-general-bonta-issues-consumer-alert-california%E2%80%99s-automatic-renewal-law
+
+**Published:** September 4, 2025.
+
+The Attorney General states:
+
+> “The law was recently amended, effective July 1, 2025, to make it stronger.”
+
+The official guidance confirms that covered California subscriptions require affirmative consent, online cancellation for online enrollment, qualifying annual renewal notices, annual reminders, and advance fee-change notices. [California DOJ AG Office](https://www.oag.ca.gov/news/press-releases/attorney-general-bonta-issues-consumer-alert-california%E2%80%99s-automatic-renewal-law?utm_source=chatgpt.com)
+
+The underlying statute defines consumer by personal, family, or household use. The AG's page does not reproduce that definition, and **I could not directly open the California Legislature's statute page** because its server returned HTTP 403.
+
+Therefore, the precise text of the consumer definition was corroborated through search results but not through an opened official legislative page. I would have the attorney confirm the current statutory definition directly before treating the B2B exclusion as settled.
+
+**California renewal reminder:** 15–45 days before renewal for qualifying annual subscriptions.
+
+**California price-change notice:** 7–30 days before the change, for covered consumer subscriptions.
+
+**Additional California requirement:** Maintaining verification of affirmative consent for the prescribed record-retention period is addressed in the updated statute. The current text should be independently confirmed against the official legislative database.
+
+### Florida
+
+**Official source:**  
+https://www.leg.state.fl.us/Statutes/index.cfm/Ch0466/index.cfm?App_mode=Display_Statute&URL=0500-0599/0501/Sections/0501.165.html
+
+**Version:** 2026 Florida Statutes. No separate page-update date was displayed.
+
+Florida § 501.165 explicitly states that consumer:
+
+> “does not include an individual engaged in business”
+
+when entering the covered contract as part of business activities. [Online Sunshine](https://www.leg.state.fl.us/Statutes/index.cfm/Ch0466/index.cfm?App_mode=Display_Statute\&URL=0500-0599%2F0501%2FSections%2F0501.165.html\&utm_source=chatgpt.com)
+
+**Conclusion:** HIGH confidence that this particular automatic-renewal statute does not govern ordinary restaurant-business subscriptions.
+
+### Vermont — a material exception
+
+**Official source:**  
+https://legislature.vermont.gov/statutes/section/09/063/02451a
+
+**Statutory version:** Legislature site states it incorporates the 2025 session. No page-specific update date was displayed.
+
+Vermont's definition expressly encompasses certain purchases:
+
+> “for the use or benefit of the person’s business” [Vermont General Assembly](https://legislature.vermont.gov/statutes/section/09/063/02451a?utm_source=chatgpt.com)
+
+
+That means calling VRYOH “B2B” does not automatically eliminate Vermont's automatic-renewal requirements.
+
+**Automatic-renewal statute:**  
+https://legislature.vermont.gov/statutes/section/09/063/02454a
+
+For covered contracts beginning with a term of at least one year and renewing for more than one month, § 2454a requires clearly stated renewal terms, a separate affirmative opt-in, and a reminder.
+
+Its reminder timing is:
+
+> “not less than 30 days and not more than 60 days”
+
+before the earliest applicable renewal, termination, or cancellation deadline. [Vermont General Assembly](https://legislature.vermont.gov/statutes/section/09/063/02454a?utm_source=chatgpt.com)
+
+Online enrollment must also permit online termination.
+
+**Conclusion: HIGH.** Vermont is a confirmed example of a state where the business-purpose distinction does not, by itself, remove statutory protection.
+
+### Maine
+
+**Official source:**  
+https://legislature.maine.gov/statutes/10/title10sec1210-C.html
+
+**Current page data extracted:** October 5, 2026.
+
+Maine explicitly includes:
+
+> “Online software”
+
+Its amended statute also requires affirmative consent and cancellation through the same method used for enrollment.
+
+For covered extended subscriptions, the reminder must be sent **no more than 30 days before renewal**. [Maine State Legislature](https://legislature.maine.gov/statutes/10/title10sec1210-C.html?utm_source=chatgpt.com)
+
+I could not verify that every business-use SaaS transaction falls within Maine's definition of consumer.
+
+**Conclusion: MEDIUM** for B2B applicability; HIGH for the statutory requirements where the law applies.
+
+### Which requirements are most demanding?
+
+Rather than ranking entire state legal systems, the following are the more demanding **verified requirements relevant to your proposed subscription design**:
+
+- Vermont: annual B2B-relevant renewal notices and separate affirmative renewal opt-in.
+- California: detailed consumer disclosures, consent verification, online cancellation, and annual reminders.
+- New York: consumer price-increase consent or specified refund protection.
+- New York GOL § 5-903: potentially significant B2B notice formalities if the services fall within its scope.
+
+**Unverified:** Whether additional states impose B2B-specific requirements on VRYOH's subscriptions. A 50-state commercial-contract review remains necessary before claiming nationwide compliance.
+
+---
+
+# 3. FTC — federal law in October 2026
+
+## Click-to-Cancel Rule
+
+**Confidence: HIGH.**
+
+**Official source:**  
+https://www.ftc.gov/system/files/ftc_gov/pdf/p064202negativeoptionruleanprm.pdf
+
+**Document date:** March 2026.
+
+The FTC states:
+
+> “In July 2025, the Eighth Circuit vacated the amended Rule.”
+
+The FTC further explains that this reinstated the previous Negative Option Rule, first adopted in 1973. [Federal Trade Commission](https://www.ftc.gov/system/files/ftc_gov/pdf/p064202negativeoptionruleanprm.pdf?utm_source=chatgpt.com)
+
+Consequently, it would be incorrect to tell your attorney that the FTC's 2024 Click-to-Cancel Rule currently imposes its intended requirements on VRYOH.
+
+### Pending rulemaking
+
+**Official source:**  
+https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-seeks-public-comment-response-advance-notice-proposed-rulemaking-regarding-negative-option
+
+**Published:** March 2026.
+
+The FTC sought comment on whether to amend the existing rule or adopt different approaches, including provisions from the vacated rule. [Federal Trade Commission](https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-seeks-public-comment-response-advance-notice-proposed-rulemaking-regarding-negative-option?trk=article-ssr-frontend-pulse_little-text-block\&utm_source=chatgpt.com)
+
+**Status I could verify:** The FTC began the rulemaking inquiry in March 2026.
+
+**I could not verify** that a replacement final rule had been adopted by October 14, 2026.
+
+## ROSCA and B2B subscriptions
+
+**Official source:**  
+https://www.ftc.gov/business-guidance/blog/2014/07/acc-cen-tuate-negative
+
+**Published:** July 2014. No later page-update date verified.
+
+The FTC describes ROSCA's requirements for covered internet negative-option sales:
+
+> “gets consumers’ express informed consent before charging their accounts”
+
+The other requirements include clear material disclosures and a simple cancellation mechanism. [Federal Trade Commission](https://www.ftc.gov/business-guidance/blog/2014/07/acc-cen-tuate-negative?utm_source=chatgpt.com)
+
+**Important limitation:** ROSCA uses the word *consumer*. The FTC guidance I examined does not conclusively establish whether ordinary business entities purchasing restaurant-management SaaS qualify.
+
+I could not verify that ROSCA applies to every genuine B2B SaaS subscription.
+
+**Confidence: MEDIUM** for the consumer-business applicability analysis; HIGH for ROSCA's requirements where applicable.
+
+## FTC Act Section 5
+
+**Official source:**  
+https://www.ftc.gov/about-ftc/mission/enforcement-authority
+
+The FTC states:
+
+> “unfair or deceptive acts or practices in or affecting commerce [...] are [...] declared unlawful.” [Federal Trade Commission](https://www.ftc.gov/about-ftc/mission/enforcement-authority?utm_source=chatgpt.com)
+
+
+Section 5 is broader than ROSCA's specific subscription requirements.
+
+**Conclusion:** VRYOH should not interpret the absence of an applicable consumer automatic-renewal statute as permission to conceal recurring charges, misrepresent cancellation rights, or engage in deceptive enrollment practices.
+
+---
+
+# 4. Required subscription practices
+
+This section distinguishes **confirmed legal requirements for covered transactions** from recommended terms for VRYOH's B2B subscriptions.
+
+| Practice | Verified statutory position | Recommendation for VRYOH |
+|---|---|---|
+| **A. Disclosure before payment** | Required by NY and CA consumer statutes and ROSCA for covered transactions | Display price, billing frequency, renewal, and cancellation immediately before payment |
+| **B. Affirmative consent** | Required by several state statutes; Vermont can cover business purchases | Use a separate, unchecked automatic-renewal consent checkbox |
+| **C. Confirmation email** | Retainable confirmation required by NY and CA consumer statutes | Email the plan, price, next billing date, renewal terms, and cancellation link |
+| **D. Annual reminder** | Notice windows vary: NY 15–45 days before cancellation deadline; CA 15–45 days before renewal; VT 30–60 days | Send 30 days before annual renewal, with consideration of additional notices where necessary |
+| **E. Online cancellation** | Required for covered online subscriptions in CA and VT | Provide self-service cancellation inside VRYOH's client portal |
+| **F. Price increases** | NY and CA consumer statutes contain specific requirements | Notify in advance; do not treat notice alone as sufficient in every state |
+| **G. Refunds/proration** | Requirements vary; NY provides a particular price-increase cancellation/refund remedy | Nonrefundable prepaid periods may be retained as a proposed B2B term, subject to applicable law |
+
+**Sources:** [NY § 527-a](https://www.nysenate.gov/legislation/laws/GBS/527-A), [California Attorney General](https://www.oag.ca.gov/news/press-releases/attorney-general-bonta-issues-consumer-alert-california%E2%80%99s-automatic-renewal-law), [Vermont § 2454a](https://legislature.vermont.gov/statutes/section/09/063/02454a), [FTC ROSCA guidance](https://www.ftc.gov/business-guidance/blog/2014/07/acc-cen-tuate-negative).
+
+### The 30-day annual reminder issue
+
+Your proposed notice is broadly compatible with several statutory windows.
+
+For example, California's Attorney General specifies:
+
+> “at least 15 days but no more than 45 days before renewal.”
+
+Source: California DOJ, September 4, 2025. [California DOJ AG Office](https://www.oag.ca.gov/news/press-releases/attorney-general-bonta-issues-consumer-alert-california%E2%80%99s-automatic-renewal-law?utm_source=chatgpt.com)
+
+Vermont allows notices 30–60 days before the relevant deadline.
+
+**However, I cannot verify that one notice sent exactly 30 days before renewal satisfies every state law.**
+
+Notice calculations may depend on the cancellation deadline, date of receipt, delivery method, or whether the relevant statute covers business customers.
+
+**Recommendation — educated compliance judgment:** Use 30 days as VRYOH's baseline contractual reminder, but do not represent it as universally sufficient until the attorney completes the state analysis.
+
+---
+
+# 5. Billing dates and mid-month subscriptions
+
+**Confidence: MEDIUM — statutory research did not establish a universal proration rule.**
+
+I did not find an applicable federal or reviewed state automatic-renewal provision prescribing the 25th as an impermissible billing date.
+
+I also could not verify a general rule requiring a SaaS provider to prorate subscriptions when enrollment occurs mid-month.
+
+That does not prove such rules are absent from every state.
+
+### VRYOH's two possible monthly models
+
+**Model A — Fixed billing date**
+
+Every customer renews on the 25th.
+
+Example:
+
+A customer signs up October 10.
+
+The customer receives a prorated initial subscription through October 24, then pays $30 per location on October 25 for the next monthly period.
+
+**Model B — Signup anniversary**
+
+A customer who subscribes October 10 renews November 10, December 10, and so forth.
+
+Every customer receives a full billing period from their initial payment.
+
+### Recommendation
+
+For the system you described, **Model A is the better match**, provided the initial partial period is clearly priced before payment.
+
+This is a business recommendation, **not a statutory requirement**.
+
+A checkout should clearly display:
+
+> Initial prorated charge: $[amount], covering [start date] through [end date]. Your next charge will be $30 per location on [date], with monthly renewal thereafter.
+
+The applicable charge should be calculated and displayed by the actual billing system.
+
+I would not put a fixed proration formula into Section 5 until you have decided whether the system will use calendar days, fixed 30-day periods, or another disclosed method.
+
+---
+
+# 6. Spanish-language subscriptions
+
+**Confidence: LOW for a nationwide legal mandate; HIGH for the value of consistent language.**
+
+I could not verify an automatic-renewal statute requiring every B2B SaaS company to provide its subscription terms in the language selected on its website.
+
+There are jurisdiction-specific language laws in other types of transactions.
+
+For example, Vermont § 2454(e) addresses home-solicitation sales negotiated in languages other than English:
+
+> “all of the disclosures required by this section shall be given in that language.”
+
+**Official source:**  
+https://legislature.vermont.gov/statutes/section/09/063/02454
+
+**Statutory version:** Through the 2025 legislative session; no separate page-update date shown. [Vermont General Assembly](https://legislature.vermont.gov/statutes/section/09/063/02454?utm_source=chatgpt.com)
+
+This is **not evidence** that the same obligation automatically applies to VRYOH's online SaaS subscriptions.
+
+California also has non-English contract requirements in certain transaction categories, but I could not verify that they cover VRYOH's ordinary B2B SaaS contracts.
+
+### Recommendation
+
+Present the subscription disclosures, automatic-renewal consent, confirmation, and cancellation instructions in the language selected by the business customer.
+
+For example, if the customer subscribes using Spanish, provide the renewal disclosures and confirmation in Spanish.
+
+This reduces the risk of customers misunderstanding their obligations. It should be treated as a recommended practice, not as a verified nationwide statutory mandate.
+
+---
+
+# 7. VRYOH Section 5 — contractual review
+
+## 7.1 Problems and gaps
+
+**Source classification:** Direct examination of the Section 5 you provided, compared with the official statutes above.
+
+| Current provision | Finding | Assessment |
+|---|---|---|
+| "$30 per location per month" | Clear monthly unit price | Acceptable as drafted |
+| "$25 per location per month billed once a year" | Annual total of $300/location is not explicit | Disclosure gap |
+| "Billed on the 25th" | Does not address mid-month enrollment | Ambiguous |
+| Annual renewal on signup anniversary | Clear basic renewal schedule | Acceptable as drafted |
+| "Unless you cancel before renewal" | Cancellation deadline lacks precision | Ambiguous |
+| "[30] days before annual renewal" | Brackets remain; reminder content is unspecified | Incomplete |
+| "You may cancel at any time" | No cancellation method provided | Missing |
+| Service continues through paid period | Clear | Acceptable as drafted |
+| Nonrefundable fees | No explicit treatment of statutory exceptions beyond general wording | Legally conditional |
+| 30-day price-change notice | Does not specify how notice is delivered or when new prices apply | Incomplete |
+| Business-only SaaS | No express customer-purpose statement | Missing B2B clarification |
+
+**Important:** These are drafting findings. I cannot classify the existing clause as categorically unlawful for VRYOH because applicability of several consumer statutes remains unresolved.
+
+### Particular concern: annual subscription pricing
+
+The current wording could allow a customer to mistake the annual option for a $25 monthly charge.
+
+The accurate description is:
+
+**$300 per location per year, equivalent to $25 per month, billed annually in advance.**
+
+That is clearer than using the monthly equivalent alone.
+
+---
+
+# 8. Proposed revised Section 5
+
+**Status: Draft for attorney review — not certified legally compliant.**
+
+This version includes the requested commercial structure and practices substantiated or supported by the research.
+
+It assumes VRYOH will actually provide online cancellation, confirmation emails, and annual renewal notices.
+
+## 5. PRICING, BILLING, AUTOMATIC RENEWAL, CANCELLATION AND REFUNDS
+
+**5.1 Subscription Plans and Pricing**
+
+VRYOH offers subscription services exclusively for business and commercial use.
+
+Subscription pricing is stated in United States dollars and is calculated per business location.
+
+The available plans are:
+
+**Monthly Plan:** $30 per location per month.
+
+**Annual Plan:** $300 per location per year, equivalent to $25 per month, billed annually in advance.
+
+Applicable taxes, if any, will be added to the subscription price.
+
+**5.2 Automatic Renewal**
+
+All subscriptions renew automatically unless canceled before the next scheduled renewal.
+
+Monthly subscriptions automatically renew each month, with recurring billing on the 25th day of the month.
+
+Annual subscriptions automatically renew for successive one-year periods on the anniversary of the original subscription date.
+
+By subscribing, the customer authorizes Solofella LLC to charge the selected payment method according to the subscription plan and applicable renewal schedule.
+
+The applicable price, billing frequency, renewal terms, and cancellation instructions will be disclosed before the customer completes payment.
+
+**5.3 Initial Monthly Billing**
+
+Customers who subscribe to a monthly plan between scheduled billing dates may receive a prorated initial charge covering the period from activation through the day preceding the next billing date.
+
+The initial charge and the date and amount of the next recurring charge will be displayed before payment confirmation.
+
+Subsequent monthly charges will occur on the 25th of each month.
+
+**5.4 Subscription Confirmation**
+
+Following subscription activation, VRYOH will send an electronic confirmation containing the selected plan, applicable charges, billing frequency, renewal terms, and cancellation instructions.
+
+**5.5 Cancellation**
+
+Customers may cancel their subscriptions at any time through the cancellation function available in their VRYOH account.
+
+Cancellation stops future automatic renewals.
+
+Unless otherwise required by applicable law, cancellation does not immediately terminate access to services already paid for. The subscription remains active until the end of the current paid billing period.
+
+Customers must cancel before the next scheduled renewal charge to prevent renewal.
+
+VRYOH will provide electronic confirmation of cancellation.
+
+**5.6 Annual Renewal Reminders**
+
+VRYOH will send an electronic renewal reminder approximately 30 days before a scheduled annual renewal.
+
+The reminder will include the renewal date, applicable subscription price, renewal period, and instructions for cancellation.
+
+Any additional notices required by applicable law will also be provided.
+
+**5.7 Price Changes**
+
+Solofella LLC may change subscription prices by providing customers with advance notice.
+
+VRYOH will ordinarily provide at least 30 days' advance notice of a price increase.
+
+Price changes will apply to a future renewal period and not retroactively to a billing period already paid for.
+
+Where applicable law requires additional notice, affirmative consent, cancellation rights, or refunds, those requirements will govern.
+
+**5.8 Refunds**
+
+Subscription fees are non-refundable except where required by applicable law or expressly agreed to by Solofella LLC.
+
+Cancellation does not ordinarily entitle the customer to a refund or prorated credit for the unused portion of a paid subscription period.
+
+Any refund rights required by applicable law remain unaffected.
+
+---
+
+## 8.1 What this draft does not resolve
+
+The proposed text remains conditional in four areas.
+
+**First:** Section 5.3 assumes prorated billing is supported by VRYOH's payment system. The actual calculation has not been confirmed.
+
+**Second:** Section 5.5 assumes online cancellation is operational. I have not tested VRYOH's client portal.
+
+**Third:** Section 5.6 contains an approximate 30-day reminder. The attorney must confirm whether an exact delivery window is necessary for particular customers.
+
+**Fourth:** The annual price-change language does not establish whether affirmative consent must be collected for covered transactions.
+
+The draft should not be published as finalized terms until those items are reconciled.
+
+---
+
+# 9. What is confidently established?
+
+The following conclusions are tied directly to official sources.
+
+| Finding | Confidence | Official source |
+|---|---|---|
+| NY GBL Article 29-BB defines consumers by personal, family, or household purposes | HIGH | [NY § 527](https://www.nysenate.gov/legislation/laws/GBS/527) |
+| NY § 527-a imposes disclosure, consent, cancellation, reminder, and price-change protections for covered consumers | HIGH | [NY § 527-a](https://www.nysenate.gov/legislation/laws/GBS/527-A) |
+| NY GOL § 5-903 expressly includes commercial entities | HIGH | [NY § 5-903](https://www.nysenate.gov/legislation/laws/GOB/5-903) |
+| Florida § 501.165 excludes specified business-purpose purchases | HIGH | [Florida § 501.165](https://www.leg.state.fl.us/Statutes/index.cfm/Ch0466/index.cfm?App_mode=Display_Statute&URL=0500-0599/0501/Sections/0501.165.html) |
+| Vermont's consumer definition can encompass business-use purchases | HIGH | [Vermont § 2451a](https://legislature.vermont.gov/statutes/section/09/063/02451a) |
+| Vermont imposes separate affirmative renewal consent and a 30–60-day notice window for covered annual contracts | HIGH | [Vermont § 2454a](https://legislature.vermont.gov/statutes/section/09/063/02454a) |
+| California strengthened its consumer automatic-renewal rules effective July 1, 2025 | HIGH | [California DOJ](https://www.oag.ca.gov/news/press-releases/attorney-general-bonta-issues-consumer-alert-california%E2%80%99s-automatic-renewal-law) |
+| The FTC's 2024 Click-to-Cancel Rule was vacated July 8, 2025 | HIGH | [FTC 2026 ANPRM](https://www.ftc.gov/system/files/ftc_gov/pdf/p064202negativeoptionruleanprm.pdf) |
+| The FTC initiated new negative-option rulemaking consideration in March 2026 | HIGH | [FTC announcement](https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-seeks-public-comment-response-advance-notice-proposed-rulemaking-regarding-negative-option) |
+
+**Important qualification:** Not every confirmed statutory requirement in this table is confirmed to apply to VRYOH's actual customers.
+
+The strongest confirmed B2B-relevant state finding is Vermont's broader consumer definition.
+
+---
+
+# 10. What I could not verify
+
+The following should remain unresolved rather than being presented as legal conclusions:
+
+1. Whether NY General Obligations Law § 5-903 applies to VRYOH's hosted SaaS services.
+2. Whether the original NY GBL consumer-only exclusions resolve every possible subscription made by an individual operating a business.
+3. Whether ROSCA applies to VRYOH's ordinary entity-to-entity SaaS contracts.
+4. Whether additional states impose automatic-renewal requirements on VRYOH's B2B contracts.
+5. Whether Maine's subscription statute encompasses every type of business-use SaaS subscription.
+6. Whether a California statute requiring non-English contracts or disclosures applies to VRYOH.
+7. Whether any applicable state requires prorated refunds for VRYOH's ordinary commercial subscriptions.
+8. Whether any state prescribes the initial billing treatment for customers joining between the 25th and their next renewal date.
+9. Whether a single annual reminder sent exactly 30 days before renewal is sufficient nationwide.
+10. Whether a 2026 federal final rule replaced the vacated FTC Click-to-Cancel Rule after the March 2026 rulemaking notice. I found no verification of such a replacement.
+
+I also could not complete a comprehensive 50-state statutory audit from official sources during this research. States not discussed should be treated as **unreviewed**, not as states without applicable requirements.
+
+---
+
+# 11. Questions for VRYOH's attorney
+
+These are the questions most likely to determine whether Section 5 is ready for publication.
+
+| Priority | Question |
+|---|---|
+| **1 — Critical** | Does NY GOL § 5-903 apply to VRYOH's SaaS subscriptions, including annual renewals? |
+| **2 — Critical** | Which state automatic-renewal laws can apply to genuine B2B software subscriptions, particularly those purchased by sole proprietors? |
+| **3 — Critical** | Does Vermont § 2454a apply to VRYOH's annual B2B subscriptions? |
+| **4 — High** | Can the NY governing-law and Rockland County forum provisions limit claims under the mandatory laws of a customer's state? |
+| **5 — High** | Does ROSCA apply to VRYOH's B2B transactions? |
+| **6 — High** | Is a separate, unchecked automatic-renewal checkbox legally necessary for the markets VRYOH intends to serve? |
+| **7 — High** | What renewal reminder schedule and delivery methods will satisfy the applicable statutes? |
+| **8 — High** | Can VRYOH enforce a no-refund/no-proration clause across its intended commercial customer base? |
+| **9 — Medium** | Do Spanish-language subscriptions create additional disclosure or contract-language obligations? |
+| **10 — Medium** | Are there mandatory cancellation and refund rights that cannot be waived in VRYOH's Terms of Service? |
+
+### One additional contractual issue
+
+Your Terms of Service specify New York governing law and courts in Rockland County.
+
+**That does not automatically establish that every customer's home-state consumer-protection or commercial-contract law is displaced.**
+
+Whether those provisions are enforceable against particular customers depends on the relevant choice-of-law, jurisdiction, and mandatory statutory rules.
+
+I did not verify that issue through controlling case law in this review. It needs attorney analysis before treating New York law as exclusively applicable.
+
+---
+
+# Final assessment
+
+**CLAIM:** VRYOH can rely on its B2B structure to avoid all automatic-renewal compliance obligations.
+
+**EVIDENCE FOR:** New York GBL § 527, Florida § 501.165, and California's consumer-focused automatic-renewal framework distinguish consumer transactions from ordinary business-purpose purchases.
+
+**EVIDENCE AGAINST:** Vermont's statute expressly includes certain business-purpose purchases. New York GOL § 5-903 also expressly includes commercial entities, although its application to SaaS is unresolved.
+
+**CONCLUSION: The claim is not supported.**
+
+### My recommended contractual approach
+
+Use a single, transparent subscription process for all VRYOH customers, with clear pricing, affirmative renewal consent, confirmation emails, self-service cancellation, annual reminders, and advance notice of price changes.
+
+This is an **operational risk-reduction recommendation**, not a claim that all these practices are legally mandatory for every VRYOH customer.
+
+Most importantly, keep the annual plan clearly identified as **$300 per location per year**, and specify the actual treatment of first-month billing.
+
+**Overall confidence:**
+
+- ✅ **HIGH:** Verified statutory language, FTC vacatur, Vermont's business-use definition, and the deficiencies directly observable in Section 5.
+- ⚠️ **MEDIUM:** Application of consumer statutes to unusual business-purchaser circumstances and the suitability of the proposed uniform subscription process.
+- ❌ **LOW:** Nationwide legal compliance, SaaS coverage under NY GOL § 5-903, and any assertion that all B2B subscriptions are exempt.
+
+**Publication status:** The revised Section 5 is a working draft for attorney review. It is not yet verified as compliant for nationwide B2B enrollment.
